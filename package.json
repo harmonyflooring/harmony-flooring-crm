@@ -1,0 +1,6 @@
+{
+  "name": "harmony-flooring-crm",
+  "scripts": {
+    "start": "npx serve . --listen 3000"
+  }
+}
