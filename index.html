@@ -56,9 +56,10 @@ body { font-family: 'Segoe UI', Arial, sans-serif; background: #f0ede8; color: #
 #app { display: none; flex-direction: column; flex: 1; overflow: hidden; }
 
 /* HEADER */
-header { background: #2c5f2e; color: white; padding: 10px 18px; display: flex; align-items: center; gap: 12px; flex-shrink: 0; box-shadow: 0 2px 8px rgba(0,0,0,0.2); }
-.header-logo { font-size: 1rem; font-weight: 800; letter-spacing: 0.3px; white-space: nowrap; }
-.header-user { display: flex; align-items: center; gap: 8px; background: rgba(255,255,255,0.12); border-radius: 20px; padding: 4px 12px 4px 6px; cursor: pointer; transition: background 0.2s; }
+header { background: #2c5f2e; color: white; padding: 10px 18px; display: flex; align-items: center; gap: 12px; flex-shrink: 0; box-shadow: 0 2px 8px rgba(0,0,0,0.2); overflow-x: auto; -webkit-overflow-scrolling: touch; }
+header::-webkit-scrollbar { display: none; }
+.header-logo { font-size: 1rem; font-weight: 800; letter-spacing: 0.3px; white-space: nowrap; flex-shrink: 0; }
+.header-user { display: flex; align-items: center; gap: 8px; background: rgba(255,255,255,0.12); border-radius: 20px; padding: 4px 12px 4px 6px; cursor: pointer; transition: background 0.2s; flex-shrink: 0; }
 .header-user:hover { background: rgba(255,255,255,0.2); }
 .user-dot { width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.8rem; font-weight: 800; color: white; }
 .header-user span { font-size: 0.85rem; font-weight: 600; }
@@ -67,7 +68,7 @@ header { background: #2c5f2e; color: white; padding: 10px 18px; display: flex; a
 .layout-btn { width: 32px; height: 28px; border-radius: 5px; border: none; background: transparent; color: rgba(255,255,255,0.6); cursor: pointer; font-size: 1rem; display: flex; align-items: center; justify-content: center; transition: all 0.15s; }
 .layout-btn:hover { background: rgba(255,255,255,0.15); color: white; }
 .layout-btn.active { background: white; color: #2c5f2e; }
-.filter-toggle { display: flex; align-items: center; gap: 6px; font-size: 0.8rem; color: rgba(255,255,255,0.8); cursor: pointer; user-select: none; }
+.filter-toggle { display: flex; align-items: center; gap: 6px; font-size: 0.8rem; color: rgba(255,255,255,0.8); cursor: pointer; user-select: none; flex-shrink: 0; white-space: nowrap; }
 .filter-toggle input { cursor: pointer; accent-color: #e8a020; width: 15px; height: 15px; }
 
 /* STEP STRIP */
