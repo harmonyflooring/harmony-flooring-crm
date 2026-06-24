@@ -455,7 +455,54 @@ header::-webkit-scrollbar { display: none; }
 
   /* ── SETTINGS ── */
   .settings-body { padding:14px; }
+
+  /* ── SCHEDULE ── */
+  .sched-topbar { flex-wrap:wrap; gap:6px; }
+  .sched-week { flex-direction:column; overflow-x:auto; }
+  .sched-day-col { min-width:260px; }
+  .sched-bottom-panels { flex-direction:column; }
+  .sched-panel { min-width:unset; }
 }
+
+/* ── SCHEDULE VIEW ── */
+#scheduleView { display:none; flex:1; overflow:hidden; flex-direction:column; background:#f0ede8; }
+.sched-topbar { background:white; border-bottom:1px solid #e0ddd8; padding:10px 18px; display:flex; align-items:center; gap:10px; flex-shrink:0; }
+.sched-topbar h2 { font-size:1rem; font-weight:700; color:#2c2c2c; flex:1; text-align:center; }
+.sched-week-nav { display:flex; align-items:center; gap:6px; }
+.sched-nav-btn { background:#f0ede8; border:1.5px solid #e0ddd8; border-radius:7px; padding:5px 12px; font-size:0.85rem; font-weight:700; cursor:pointer; color:#2c2c2c; transition:all 0.15s; }
+.sched-nav-btn:hover { background:#e0ddd8; }
+.sched-nav-btn.today { background:#2c5f2e; color:white; border-color:#2c5f2e; }
+.sched-scroll { flex:1; overflow:auto; padding:14px 16px; }
+.sched-week { display:flex; gap:10px; min-height:300px; }
+.sched-day-col { min-width:200px; flex:1; display:flex; flex-direction:column; background:white; border-radius:10px; overflow:hidden; box-shadow:0 1px 4px rgba(0,0,0,0.07); }
+.sched-day-col.today-col { box-shadow:0 0 0 2.5px #2c5f2e, 0 2px 8px rgba(0,0,0,0.1); }
+.sched-day-hdr { padding:9px 11px 7px; display:flex; align-items:center; justify-content:space-between; border-bottom:1px solid #f0ede8; }
+.sched-day-name { font-size:0.75rem; font-weight:800; text-transform:uppercase; letter-spacing:0.5px; color:#2c5f2e; }
+.sched-day-date { font-size:0.7rem; color:#aaa; }
+.sched-day-hdr.today-hdr .sched-day-name { color:#2c5f2e; }
+.sched-copy-btn { background:none; border:none; cursor:pointer; font-size:0.75rem; color:#aaa; padding:2px 5px; border-radius:5px; transition:all 0.15s; white-space:nowrap; }
+.sched-copy-btn:hover { background:#e8f5e9; color:#2c5f2e; }
+.sched-jobs { flex:1; padding:6px 8px; display:flex; flex-direction:column; gap:5px; overflow-y:auto; }
+.sched-job { background:#faf9f7; border-radius:7px; padding:8px 10px; border-left:3px solid #4d7b79; font-size:0.78rem; position:relative; cursor:default; }
+.sched-job.repair-job { border-left-color:#c0392b; }
+.sched-job-addr { font-weight:700; color:#2c2c2c; margin-bottom:2px; padding-right:40px; }
+.sched-job-notes { color:#888; font-size:0.72rem; line-height:1.4; white-space:pre-wrap; }
+.sched-job-btns { position:absolute; top:6px; right:6px; display:flex; gap:3px; opacity:0; transition:opacity 0.15s; }
+.sched-job:hover .sched-job-btns { opacity:1; }
+.sched-job-btn { background:none; border:none; cursor:pointer; font-size:0.75rem; padding:2px 4px; border-radius:4px; color:#aaa; }
+.sched-job-btn:hover { background:#eee; color:#333; }
+.sched-add-btn { margin:6px 8px 8px; padding:7px; border:1.5px dashed #ddd; border-radius:7px; background:none; cursor:pointer; color:#aaa; font-size:0.78rem; transition:all 0.15s; width:calc(100% - 16px); text-align:center; }
+.sched-add-btn:hover { border-color:#2c5f2e; color:#2c5f2e; background:#f0faf0; }
+.sched-bottom-panels { display:flex; gap:10px; margin-top:10px; }
+.sched-panel { flex:1; min-width:240px; background:white; border-radius:10px; overflow:hidden; box-shadow:0 1px 4px rgba(0,0,0,0.07); }
+.sched-panel-hdr { padding:10px 12px 8px; border-bottom:1px solid #f0ede8; display:flex; align-items:center; justify-content:space-between; }
+.sched-panel-title { font-size:0.72rem; font-weight:800; text-transform:uppercase; letter-spacing:0.5px; }
+.sched-panel-title.pending { color:#e8a020; }
+.sched-panel-title.repairs { color:#c0392b; }
+.sched-panel-jobs { padding:6px 8px; display:flex; flex-direction:column; gap:5px; min-height:60px; }
+.sched-panel-add { margin:0 8px 8px; padding:6px; border:1.5px dashed #ddd; border-radius:7px; background:none; cursor:pointer; color:#aaa; font-size:0.75rem; transition:all 0.15s; width:calc(100% - 16px); text-align:center; }
+.sched-panel-add:hover { border-color:#2c5f2e; color:#2c5f2e; background:#f0faf0; }
+.sched-empty-day { color:#ccc; font-size:0.75rem; text-align:center; padding:14px 8px; }
 </style>
 </head>
 <body>
@@ -491,6 +538,7 @@ header::-webkit-scrollbar { display: none; }
       <button class="layout-btn" onclick="setLayout('table')" id="lbTable" title="Table View">≡</button>
       <button class="layout-btn" onclick="setLayout('chart')" id="lbChart" title="Progress Chart">▶</button>
     </div>
+    <button class="hdr-msg-btn" id="hdrSchedBtn" onclick="toggleScheduleView()" title="Schedule">📅</button>
     <button class="hdr-msg-btn" id="hdrMsgBtn" onclick="toggleMsgView()" title="Messages & Tasks">
       💬
       <span class="hdr-msg-count" id="hdrMsgCount"></span>
@@ -612,6 +660,23 @@ header::-webkit-scrollbar { display: none; }
     </div>
   </div>
 
+  <!-- SCHEDULE VIEW -->
+  <div id="scheduleView">
+    <div class="sched-topbar">
+      <button class="back-btn" onclick="showDashboard()">← Back</button>
+      <div class="sched-week-nav">
+        <button class="sched-nav-btn" onclick="schedWeekPrev()">‹ Prev</button>
+        <h2 id="schedWeekLabel">Week</h2>
+        <button class="sched-nav-btn" onclick="schedWeekNext()">Next ›</button>
+      </div>
+      <button class="sched-nav-btn today" onclick="schedGoToday()">Today</button>
+    </div>
+    <div class="sched-scroll" id="schedScroll">
+      <div class="sched-week" id="schedWeek"></div>
+      <div class="sched-bottom-panels" id="schedBottom"></div>
+    </div>
+  </div>
+
   <!-- DETAIL VIEW -->
   <div id="detail">
     <div class="detail-top">
@@ -629,6 +694,28 @@ header::-webkit-scrollbar { display: none; }
     <div class="detail-body">
       <div class="steps-nav" id="stepsNav"></div>
       <div class="step-form" id="stepContent"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════ SCHEDULE ENTRY MODAL -->
+<div class="modal-overlay" id="schedModal">
+  <div class="modal" style="max-width:460px">
+    <h2 id="schedModalTitle">Add Job</h2>
+    <div class="form-group">
+      <label>Address / Job Description <span class="req">*</span></label>
+      <input type="text" id="schedAddr" placeholder="e.g. 47 Harmony Ave, Lakewood">
+    </div>
+    <div class="form-group">
+      <label>Notes (materials, sq ft, lock box, etc.)</label>
+      <textarea id="schedNotes" rows="4" placeholder="e.g. attic 378sqf luan southbay, lb 0613"></textarea>
+    </div>
+    <input type="hidden" id="schedEntryId">
+    <input type="hidden" id="schedEntryType">
+    <input type="hidden" id="schedEntryDate">
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeSchedModal()">Cancel</button>
+      <button class="btn btn-green" onclick="saveSchedEntry()">Save</button>
     </div>
   </div>
 </div>
@@ -1008,6 +1095,8 @@ const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 // ── IN-MEMORY CACHE ──────────────────────────
 let _customers = [];
 let _messages  = [];
+let _scheduleEntries = [];
+let _schedWeekStart  = mondayOf(new Date());
 
 // ── ROW MAPPERS (JS camelCase ↔ DB snake_case) ──
 const C = {
@@ -1074,14 +1163,17 @@ async function removeMessage(id) {
 
 // ── FETCH ALL DATA ON STARTUP ──
 async function fetchAll() {
-  const [{ data: custs, error: e1 }, { data: msgs, error: e2 }] = await Promise.all([
+  const [{ data: custs, error: e1 }, { data: msgs, error: e2 }, { data: sched, error: e3 }] = await Promise.all([
     db.from('customers').select('*'),
-    db.from('messages').select('*')
+    db.from('messages').select('*'),
+    db.from('schedule_entries').select('*').order('sort_order')
   ]);
   if(e1) console.error('Failed to load customers:', e1);
   if(e2) console.error('Failed to load messages:', e2);
+  if(e3) console.error('Failed to load schedule:', e3);
   _customers = (custs || []).map(C.fromRow);
   _messages  = (msgs  || []).map(Msg.fromRow);
+  _scheduleEntries = sched || [];
 }
 
 // ── REAL-TIME: sync when another salesman makes a change ──
@@ -1444,7 +1536,9 @@ async function createCustomer(){
 function showDashboard(){
   document.getElementById('detail').style.display='none';
   document.getElementById('msgView').style.display='none';
+  document.getElementById('scheduleView').style.display='none';
   document.getElementById('hdrMsgBtn').classList.remove('active');
+  document.getElementById('hdrSchedBtn').classList.remove('active');
   Object.keys(LAYOUT_IDS).forEach(k=>{
     const el=document.getElementById(LAYOUT_IDS[k]);
     if(k===activeLayout) el.style.display = (k==='grid'||k==='table'||k==='chart')?'block':'flex';
@@ -1751,9 +1845,11 @@ function toggleMsgView() {
 function hideAllViews() {
   document.getElementById('msgView').style.display = 'none';
   document.getElementById('settingsView').style.display = 'none';
+  document.getElementById('scheduleView').style.display = 'none';
   document.getElementById('detail').style.display = 'none';
   Object.keys(LAYOUT_IDS).forEach(k => document.getElementById(LAYOUT_IDS[k]).style.display = 'none');
   document.getElementById('hdrMsgBtn').classList.remove('active');
+  document.getElementById('hdrSchedBtn').classList.remove('active');
 }
 
 // Count unread messages for current profile
@@ -2225,6 +2321,211 @@ fetchAll().then(() => {
   console.error('Supabase load failed:', err);
   renderProfileScreen();
 });
+
+// ════════════════════════════════════════════
+// SCHEDULING CALENDAR
+// ════════════════════════════════════════════
+
+function mondayOf(date) {
+  const d = new Date(date);
+  const day = d.getDay(); // 0=Sun
+  const diff = (day === 0) ? -6 : 1 - day;
+  d.setDate(d.getDate() + diff);
+  d.setHours(0,0,0,0);
+  return d;
+}
+
+function dateStr(d) {
+  return d.toISOString().slice(0,10);
+}
+
+function toggleScheduleView() {
+  const sv = document.getElementById('scheduleView');
+  const isOpen = sv.style.display === 'flex';
+  if(isOpen) {
+    showDashboard();
+  } else {
+    hideAllViews();
+    sv.style.display = 'flex';
+    document.getElementById('hdrSchedBtn').classList.add('active');
+    renderScheduleView();
+  }
+}
+
+function schedWeekPrev() {
+  _schedWeekStart = new Date(_schedWeekStart);
+  _schedWeekStart.setDate(_schedWeekStart.getDate() - 7);
+  renderScheduleView();
+}
+function schedWeekNext() {
+  _schedWeekStart = new Date(_schedWeekStart);
+  _schedWeekStart.setDate(_schedWeekStart.getDate() + 7);
+  renderScheduleView();
+}
+function schedGoToday() {
+  _schedWeekStart = mondayOf(new Date());
+  renderScheduleView();
+}
+
+function renderScheduleView() {
+  const todayStr = dateStr(new Date());
+  const days = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+  const dates = days.map((_,i) => {
+    const d = new Date(_schedWeekStart);
+    d.setDate(d.getDate() + i);
+    return d;
+  });
+
+  // Week label
+  const from = dates[0];
+  const to   = dates[5];
+  const fmtOpts = { month:'short', day:'numeric' };
+  document.getElementById('schedWeekLabel').textContent =
+    from.toLocaleDateString('en-US',fmtOpts) + ' – ' + to.toLocaleDateString('en-US', {...fmtOpts, year:'numeric'});
+
+  // Day columns
+  document.getElementById('schedWeek').innerHTML = days.map((day, i) => {
+    const d = dates[i];
+    const ds = dateStr(d);
+    const isToday = ds === todayStr;
+    const dayJobs = _scheduleEntries.filter(e => e.type === 'job' && e.scheduled_date === ds)
+      .sort((a,b) => a.sort_order - b.sort_order);
+
+    const dayNum = d.toLocaleDateString('en-US', { month:'short', day:'numeric' });
+
+    const jobCards = dayJobs.length
+      ? dayJobs.map(e => schedJobCard(e)).join('')
+      : `<div class="sched-empty-day">No jobs</div>`;
+
+    return `<div class="sched-day-col${isToday?' today-col':''}">
+      <div class="sched-day-hdr${isToday?' today-hdr':''}">
+        <div>
+          <div class="sched-day-name">${day}</div>
+          <div class="sched-day-date">${dayNum}</div>
+        </div>
+        <button class="sched-copy-btn" onclick="copyDaySchedule('${ds}','${day}')">📋 Copy</button>
+      </div>
+      <div class="sched-jobs" id="dayJobs_${ds}">${jobCards}</div>
+      <button class="sched-add-btn" onclick="openSchedModal('job','${ds}')">+ Add Job</button>
+    </div>`;
+  }).join('');
+
+  // Pending + Repairs bottom panels
+  const pending = _scheduleEntries.filter(e => e.type === 'pending').sort((a,b) => a.sort_order - b.sort_order);
+  const repairs = _scheduleEntries.filter(e => e.type === 'repair').sort((a,b) => a.sort_order - b.sort_order);
+
+  document.getElementById('schedBottom').innerHTML = `
+    <div class="sched-panel">
+      <div class="sched-panel-hdr">
+        <span class="sched-panel-title pending">⏳ Pending Jobs</span>
+        <span style="font-size:0.72rem;color:#aaa">${pending.length} job${pending.length!==1?'s':''}</span>
+      </div>
+      <div class="sched-panel-jobs">
+        ${pending.length ? pending.map(e => schedJobCard(e)).join('') : '<div class="sched-empty-day">No pending jobs</div>'}
+      </div>
+      <button class="sched-panel-add" onclick="openSchedModal('pending',null)">+ Add Pending Job</button>
+    </div>
+    <div class="sched-panel">
+      <div class="sched-panel-hdr">
+        <span class="sched-panel-title repairs">🔧 Repairs</span>
+        <span style="font-size:0.72rem;color:#aaa">${repairs.length} item${repairs.length!==1?'s':''}</span>
+      </div>
+      <div class="sched-panel-jobs">
+        ${repairs.length ? repairs.map(e => schedJobCard(e, true)).join('') : '<div class="sched-empty-day">No repairs</div>'}
+      </div>
+      <button class="sched-panel-add" onclick="openSchedModal('repair',null)">+ Add Repair</button>
+    </div>`;
+}
+
+function schedJobCard(e, isRepair) {
+  const cls = (e.type === 'repair' || isRepair) ? 'sched-job repair-job' : 'sched-job';
+  const notesHtml = e.notes ? `<div class="sched-job-notes">${esc(e.notes)}</div>` : '';
+  return `<div class="${cls}" id="sje_${e.id}">
+    <div class="sched-job-addr">${esc(e.address)}</div>
+    ${notesHtml}
+    <div class="sched-job-btns">
+      <button class="sched-job-btn" title="Edit" onclick="openSchedModal('${e.type}','${e.scheduled_date||''}','${e.id}')">✏️</button>
+      <button class="sched-job-btn" title="Delete" onclick="deleteSchedEntry('${e.id}')">🗑</button>
+    </div>
+  </div>`;
+}
+
+function openSchedModal(type, date, id) {
+  const entry = id ? _scheduleEntries.find(e => e.id === id) : null;
+  document.getElementById('schedEntryId').value   = entry ? entry.id : '';
+  document.getElementById('schedEntryType').value = type;
+  document.getElementById('schedEntryDate').value = date || '';
+  document.getElementById('schedAddr').value       = entry ? entry.address : '';
+  document.getElementById('schedNotes').value      = entry ? (entry.notes || '') : '';
+  const titles = { job:'Add Job', pending:'Add Pending Job', repair:'Add Repair' };
+  document.getElementById('schedModalTitle').textContent = entry ? 'Edit Entry' : (titles[type] || 'Add Entry');
+  document.getElementById('schedModal').classList.add('open');
+  setTimeout(() => document.getElementById('schedAddr').focus(), 80);
+}
+
+function closeSchedModal() {
+  document.getElementById('schedModal').classList.remove('open');
+}
+
+async function saveSchedEntry() {
+  const addr = document.getElementById('schedAddr').value.trim();
+  if(!addr) { alert('Please enter an address or job description.'); return; }
+  const id   = document.getElementById('schedEntryId').value;
+  const type = document.getElementById('schedEntryType').value;
+  const date = document.getElementById('schedEntryDate').value || null;
+  const notes = document.getElementById('schedNotes').value.trim();
+
+  const existing = id ? _scheduleEntries.find(e => e.id === id) : null;
+  const maxOrder = _scheduleEntries.filter(e => e.scheduled_date === date && e.type === type)
+    .reduce((m,e) => Math.max(m, e.sort_order||0), 0);
+
+  const row = {
+    id: id || crypto.randomUUID(),
+    type,
+    scheduled_date: date,
+    address: addr,
+    notes,
+    sort_order: existing ? (existing.sort_order || 0) : maxOrder + 1
+  };
+
+  const idx = _scheduleEntries.findIndex(e => e.id === row.id);
+  if(idx !== -1) _scheduleEntries[idx] = row; else _scheduleEntries.push(row);
+
+  const { error } = await db.from('schedule_entries').upsert(row);
+  if(error) console.error('Schedule save error:', error);
+
+  closeSchedModal();
+  renderScheduleView();
+}
+
+async function deleteSchedEntry(id) {
+  if(!confirm('Remove this entry?')) return;
+  _scheduleEntries = _scheduleEntries.filter(e => e.id !== id);
+  await db.from('schedule_entries').delete().eq('id', id);
+  renderScheduleView();
+}
+
+function copyDaySchedule(dateStr, dayName) {
+  const d = new Date(dateStr + 'T12:00:00');
+  const dateLabel = d.toLocaleDateString('en-US', { weekday:'long', month:'long', day:'numeric' });
+  const jobs = _scheduleEntries
+    .filter(e => e.type === 'job' && e.scheduled_date === dateStr)
+    .sort((a,b) => a.sort_order - b.sort_order);
+
+  if(!jobs.length) { showToast('No jobs on ' + dayName); return; }
+
+  const lines = [dateLabel, ''];
+  jobs.forEach((e, i) => {
+    lines.push(`${i+1}. ${e.address}`);
+    if(e.notes) lines.push(`   ${e.notes}`);
+  });
+
+  navigator.clipboard.writeText(lines.join('\n')).then(() => {
+    showToast('📋 ' + dayName + ' copied!');
+  }).catch(() => {
+    prompt('Copy this schedule:', lines.join('\n'));
+  });
+}
 </script>
 </body>
 </html>
