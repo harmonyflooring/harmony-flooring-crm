@@ -90,13 +90,11 @@ header { background: #2c5f2e; color: white; padding: 10px 18px; display: flex; a
   box-shadow: 0 1px 4px rgba(0,0,0,0.12);
 }
 .step-btn:hover .step-circle {
-  background: #555;
-  border-color: #555;
+  filter: brightness(0.82);
   box-shadow: 0 4px 12px rgba(0,0,0,0.22);
 }
 .step-btn.sf-active .step-circle {
-  background: #444;
-  border-color: #444;
+  filter: brightness(0.72);
   box-shadow: 0 4px 14px rgba(0,0,0,0.28);
   transform: scale(1.12);
 }
@@ -748,7 +746,7 @@ header { background: #2c5f2e; color: white; padding: 10px 18px; display: flex; a
 // ════════════════════════════════════════════
 // STEP DEFINITIONS
 // ════════════════════════════════════════════
-const STEP_COLORS = Array(13).fill('#757575');
+const STEP_COLORS = Array(13).fill('#1a3a6b');
 
 const STEPS = [
   { title:"Initial Inquiry", desc:"Customer contacts us. Capture basic info and project overview.", fields:[
