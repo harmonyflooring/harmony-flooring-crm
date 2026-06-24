@@ -352,13 +352,109 @@ header::-webkit-scrollbar { display: none; }
 .empty-state p { margin-top:8px; font-size:0.9rem; }
 
 @media(max-width:680px){
-  body { overflow:auto; height:auto; }
+  /* ── BODY ── */
+  body { overflow:auto; height:auto; min-height:100vh; }
+
+  /* ── HEADER ── */
+  header { padding:8px 12px; gap:8px; }
+  .header-logo { font-size:0.85rem; }
+  .header-spacer { min-width:4px; flex:0; }
+  .filter-toggle { font-size:0.75rem; }
+
+  /* ── STEP STRIP ── */
+  .step-strip-bar { padding:8px 10px; gap:8px; }
+  .step-btn { min-width:54px; }
+  .step-circle { width:34px; height:34px; font-size:0.73rem; }
+  .step-btn:not(:last-child)::after { top:17px; }
+  .step-btn-label { font-size:0.53rem; max-width:54px; }
+  .step-count-badge { right:calc(50% - 22px); }
+
+  /* ── SEARCH BAR ── */
+  .search-bar { flex-wrap:wrap; padding:8px 12px; }
+  .search-bar select { width:100%; }
+
+  /* ── CARD GRID ── */
+  #layoutGrid { padding:10px; }
+  .card-grid { grid-template-columns:1fr; }
+
+  /* ── SIDEBAR LAYOUT ── */
   .sb-layout { flex-direction:column; }
-  .sb-left { width:100%; max-height:40vh; }
-  .detail-body { flex-direction:column; }
-  .steps-nav { width:100%; }
+  .sb-left { width:100%; max-height:38vh; }
+  .sb-right { padding:12px 14px; }
+  .sb-stats { gap:8px; }
+  .sb-stat { min-width:80px; padding:10px 12px; }
+  .sb-stat .n { font-size:1.3rem; }
+
+  /* ── KANBAN ── */
+  .kanban-board { padding:10px 8px; }
+  .kanban-col { width:200px; }
+
+  /* ── TABLE ── */
+  #layoutTable { padding:8px; }
+
+  /* ── DETAIL VIEW ── */
+  .detail-top { padding:10px 14px; }
+  .detail-top h2 { font-size:1rem; }
+  .detail-body { flex-direction:column; overflow:visible; }
+  .steps-nav {
+    width:100%; height:auto; max-height:none;
+    overflow-x:auto; overflow-y:hidden;
+    display:flex; flex-direction:row;
+    padding:6px 8px; gap:4px;
+    border-right:none; border-bottom:1px solid #e8e5e0;
+    -webkit-overflow-scrolling:touch;
+  }
+  .steps-nav::-webkit-scrollbar { display:none; }
+  .step-nav-item {
+    flex-direction:row; white-space:nowrap;
+    margin-bottom:0; flex-shrink:0;
+    padding:7px 10px; font-size:0.75rem;
+  }
+  .step-form { padding:14px 16px; }
   .form-row { grid-template-columns:1fr; }
-  .kanban-board { padding:10px; }
+  .step-actions { gap:8px; }
+  .step-actions .btn { flex:1; min-height:42px; }
+
+  /* ── MODALS ── */
+  .modal-overlay { align-items:flex-end; padding:0; }
+  .modal {
+    border-radius:16px 16px 0 0;
+    max-width:100%;
+    max-height:88vh;
+    padding:20px 18px 28px;
+    width:100%;
+  }
+  .modal-actions { flex-direction:column-reverse; }
+  .modal-actions .btn { width:100%; min-height:44px; }
+
+  /* ── MESSAGING ── */
+  .msg-layout { flex-direction:column; }
+  .msg-sidebar {
+    width:100%; flex-direction:row;
+    overflow-x:auto; overflow-y:hidden;
+    min-height:auto; flex-shrink:0;
+  }
+  .msg-sidebar::-webkit-scrollbar { display:none; }
+  .msg-sidebar-head { display:none; }
+  .msg-nav-btn { padding:10px 12px; font-size:0.8rem; flex-shrink:0; white-space:nowrap; }
+  .msg-compose-btn { margin:8px 6px; flex-shrink:0; padding:8px 12px; font-size:0.78rem; white-space:nowrap; align-self:center; }
+  .msg-list-panel { width:100%; flex-shrink:0; max-height:40vh; border-right:none; border-bottom:1px solid #e8e5e0; }
+  .msg-detail-panel { min-height:50vh; }
+  .msg-detail-head { padding:14px 16px 10px; }
+  .msg-detail-body { padding:14px 16px; }
+  .msg-detail-actions { padding:0 16px 16px; flex-wrap:wrap; }
+  .msg-detail-actions .btn { flex:1; min-height:42px; }
+
+  /* ── PROFILE SCREEN ── */
+  #profileScreen { padding:30px 16px; }
+  #profileScreen h1 { font-size:1.5rem; }
+  .profile-card { padding:20px 24px; min-width:100px; }
+
+  /* ── TOAST ── */
+  .toast { bottom:10px; right:10px; left:10px; text-align:center; }
+
+  /* ── SETTINGS ── */
+  .settings-body { padding:14px; }
 }
 </style>
 </head>
