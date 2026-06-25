@@ -476,6 +476,9 @@ header::-webkit-scrollbar { display: none; }
 #scheduleView.side-panel { position:fixed !important; right:0; bottom:0; width:420px; z-index:40; box-shadow:-4px 0 24px rgba(0,0,0,0.15); border-left:2px solid #d0cdc8; flex:none !important; }
 #scheduleView.side-panel .sched-topbar { flex-wrap:wrap; padding:8px 12px; gap:6px; }
 #scheduleView.side-panel .sched-week-nav { flex:1; min-width:160px; }
+#scheduleView.side-panel .sched-scroll { overflow-x:hidden; }
+#scheduleView.side-panel .sched-week { flex-direction:column; gap:6px; }
+#scheduleView.side-panel .sched-day-col { min-width:unset; flex:none; }
 
 /* ── SCHEDULE: MONTH VIEW ── */
 .sched-month-wrap { display:flex; flex-direction:column; gap:4px; }
@@ -503,7 +506,7 @@ header::-webkit-scrollbar { display: none; }
 .sched-job.crm-job .sched-job-installer-col { background:#e3f0ff; border-right-color:#c0d8f8; }
 .sched-job-main { flex:1; padding:7px 10px 7px 8px; min-width:0; }
 .sched-job-addr { font-weight:700; color:#2c2c2c; margin-bottom:2px; padding-right:42px; font-size:0.78rem; }
-.sched-installer-input { display:block; width:100%; font-size:0.65rem; font-weight:700; border:1px dashed #a8cca8; background:white; color:#2c5f2e; text-align:center; padding:3px 2px; border-radius:4px; cursor:pointer; transition:all 0.15s; line-height:1.35; word-break:break-word; }
+.sched-installer-input { display:block; width:100%; font-size:0.65rem; font-weight:700; border:1px solid #a8cca8; background:white; color:#2c5f2e; text-align:center; padding:3px 2px; border-radius:4px; cursor:pointer; transition:all 0.15s; line-height:1.35; word-break:break-word; }
 .sched-installer-input:hover { border-color:#2c5f2e; background:#f8fff8; }
 .sched-installer-input:focus { border:1.5px solid #2c5f2e; background:white; outline:none; cursor:text; }
 .sched-installer-input::placeholder { color:#bbb; font-size:0.6rem; font-weight:400; }
