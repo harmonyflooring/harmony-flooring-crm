@@ -473,7 +473,9 @@ header::-webkit-scrollbar { display: none; }
 .sched-side-toggle.active { background:#2c5f2e; color:white; border-color:#2c5f2e; }
 
 /* ── SCHEDULE: SIDE PANEL ── */
-#scheduleView.side-panel { position:fixed !important; right:0; top:0; bottom:0; width:420px; z-index:40; box-shadow:-4px 0 24px rgba(0,0,0,0.15); border-left:2px solid #d0cdc8; flex:none !important; }
+#scheduleView.side-panel { position:fixed !important; right:0; bottom:0; width:420px; z-index:40; box-shadow:-4px 0 24px rgba(0,0,0,0.15); border-left:2px solid #d0cdc8; flex:none !important; }
+#scheduleView.side-panel .sched-topbar { flex-wrap:wrap; padding:8px 12px; gap:6px; }
+#scheduleView.side-panel .sched-week-nav { flex:1; min-width:160px; }
 
 /* ── SCHEDULE: MONTH VIEW ── */
 .sched-month-wrap { display:flex; flex-direction:column; gap:4px; }
@@ -494,10 +496,17 @@ header::-webkit-scrollbar { display: none; }
 .sched-month-add-btn { background:none; border:none; cursor:pointer; font-size:0.62rem; color:#ccc; padding:1px 3px; transition:color 0.15s; display:block; width:100%; text-align:left; }
 .sched-month-add-btn:hover { color:#2c5f2e; }
 
-/* ── SCHEDULE: INSTALLER ── */
-.sched-installer-input { display:block; font-size:0.72rem; border:none; background:none; color:#2c5f2e; font-weight:600; padding:1px 4px; border-radius:3px; width:100%; transition:background 0.15s; margin-bottom:2px; }
-.sched-installer-input:hover, .sched-installer-input:focus { background:#f0faf0; outline:1px solid #2c5f2e; }
-.sched-installer-input::placeholder { color:#ccc; font-weight:400; }
+/* ── SCHEDULE: JOB CARD TWO-COLUMN LAYOUT (installer on left) ── */
+.sched-job { display:flex !important; padding:0 !important; align-items:stretch; }
+.sched-job-installer-col { width:64px; flex-shrink:0; background:#f0faf0; border-right:1px solid #dff0df; display:flex; align-items:center; justify-content:center; padding:5px 4px; }
+.sched-job.repair-job .sched-job-installer-col { background:#fdf0f0; border-right-color:#f0dede; }
+.sched-job.crm-job .sched-job-installer-col { background:#e3f0ff; border-right-color:#c0d8f8; }
+.sched-job-main { flex:1; padding:7px 10px 7px 8px; min-width:0; }
+.sched-job-addr { font-weight:700; color:#2c2c2c; margin-bottom:2px; padding-right:42px; font-size:0.78rem; }
+.sched-installer-input { display:block; width:100%; font-size:0.65rem; font-weight:700; border:1px dashed #a8cca8; background:white; color:#2c5f2e; text-align:center; padding:3px 2px; border-radius:4px; cursor:pointer; transition:all 0.15s; line-height:1.35; word-break:break-word; }
+.sched-installer-input:hover { border-color:#2c5f2e; background:#f8fff8; }
+.sched-installer-input:focus { border:1.5px solid #2c5f2e; background:white; outline:none; cursor:text; }
+.sched-installer-input::placeholder { color:#bbb; font-size:0.6rem; font-weight:400; }
 
 /* ── SCHEDULE VIEW ── */
 #scheduleView { display:none; flex:1; overflow:hidden; flex-direction:column; background:#f0ede8; }
@@ -2440,20 +2449,31 @@ function schedGoToday() {
 }
 
 // ── Side panel toggle ──
+function getSidePanelTop() {
+  const sb = document.querySelector('.search-bar');
+  if(sb) return Math.round(sb.getBoundingClientRect().bottom);
+  const hdr = document.querySelector('#app > header');
+  if(hdr) return Math.round(hdr.getBoundingClientRect().bottom);
+  return 52;
+}
+
 function toggleSchedSidePanel() {
   _schedSidePanel = !_schedSidePanel;
-  document.getElementById('schedSideBtn').classList.toggle('active', _schedSidePanel);
+  const btn = document.getElementById('schedSideBtn');
+  btn.classList.toggle('active', _schedSidePanel);
+  btn.textContent = _schedSidePanel ? '⛶ Full Screen' : '⬛ Side Panel';
   const sv = document.getElementById('scheduleView');
   if(sv.style.display === 'flex') {
     if(_schedSidePanel) {
+      sv.style.top = getSidePanelTop() + 'px';
       sv.classList.add('side-panel');
-      // Show dashboard layouts behind the panel
       Object.keys(LAYOUT_IDS).forEach(k => {
         const el = document.getElementById(LAYOUT_IDS[k]);
         if(k === activeLayout) el.style.display = (k==='grid'||k==='table'||k==='chart') ? 'block' : 'flex';
       });
     } else {
       sv.classList.remove('side-panel');
+      sv.style.top = '';
       Object.keys(LAYOUT_IDS).forEach(k => document.getElementById(LAYOUT_IDS[k]).style.display = 'none');
     }
   }
@@ -2465,13 +2485,13 @@ function toggleScheduleView() {
   if(isOpen) {
     showDashboard();
     sv.classList.remove('side-panel');
+    sv.style.top = '';
   } else {
     if(_schedSidePanel) {
-      // Overlay on right while keeping dashboard visible
       sv.classList.add('side-panel');
+      sv.style.top = getSidePanelTop() + 'px';
       sv.style.display = 'flex';
       document.getElementById('hdrSchedBtn').classList.add('active');
-      // Ensure dashboard is showing
       Object.keys(LAYOUT_IDS).forEach(k => {
         const el = document.getElementById(LAYOUT_IDS[k]);
         if(k === activeLayout) el.style.display = (k==='grid'||k==='table'||k==='chart') ? 'block' : 'flex';
@@ -2490,10 +2510,9 @@ function closeSchedView() {
   const sv = document.getElementById('scheduleView');
   sv.style.display = 'none';
   sv.classList.remove('side-panel');
+  sv.style.top = '';
   document.getElementById('hdrSchedBtn').classList.remove('active');
-  if(!_schedSidePanel) {
-    showDashboard();
-  }
+  if(!_schedSidePanel) showDashboard();
 }
 
 // ── Main render dispatcher ──
@@ -2635,19 +2654,32 @@ function switchToWeekOfDate(ds) {
 function schedJobCard(e) {
   const isCrm    = e.type === 'crm';
   const isRepair = e.type === 'repair';
-  const cls = isCrm ? 'sched-job' : isRepair ? 'sched-job repair-job' : 'sched-job';
+  const cls = 'sched-job' + (isCrm ? ' crm-job' : isRepair ? ' repair-job' : '');
   const borderColor = isCrm ? '#1565c0' : isRepair ? '#c0392b' : '#4d7b79';
-  const installerHtml = !isCrm
-    ? `<input class="sched-installer-input" type="text" value="${esc(e.installer||'')}" placeholder="👷 Assign installer" onclick="event.stopPropagation()" onblur="saveInstallerInline('${e.id}',this.value)" onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();}">`
-    : (e.installer ? `<div style="font-size:0.7rem;color:#1565c0;font-weight:600;margin-bottom:2px">👷 ${esc(e.installer)}</div>` : '');
+
+  const installerCol = isCrm
+    ? `<div class="sched-job-installer-col"><span style="font-size:0.62rem;color:#1565c0;font-weight:700;text-align:center;word-break:break-word">${esc(e.installer)||'CRM'}</span></div>`
+    : `<div class="sched-job-installer-col">
+        <input class="sched-installer-input" type="text"
+          value="${esc(e.installer||'')}"
+          placeholder="Add&#10;installer"
+          title="Click to assign installer"
+          onclick="event.stopPropagation()"
+          onblur="saveInstallerInline('${e.id}',this.value)"
+          onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();}">
+      </div>`;
+
   const notesHtml = e.notes ? `<div class="sched-job-notes">${esc(e.notes)}</div>` : '';
   const btns = !isCrm
     ? `<div class="sched-job-btns"><button class="sched-job-btn" title="Edit" onclick="openSchedModal('${e.type}','${e.scheduled_date||''}','${e.id}')">✏️</button><button class="sched-job-btn" title="Delete" onclick="deleteSchedEntry('${e.id}')">🗑</button></div>`
-    : `<div class="sched-job-btns"><span style="font-size:0.62rem;color:#1565c0;background:#e3f0ff;border-radius:3px;padding:1px 5px">CRM</span></div>`;
+    : `<div class="sched-job-btns" style="opacity:1"><span style="font-size:0.58rem;color:#1565c0;background:#e3f0ff;border-radius:3px;padding:1px 4px">CRM</span></div>`;
+
   return `<div class="${cls}" id="sje_${e.id}" style="border-left-color:${borderColor}">
-    ${installerHtml}
-    <div class="sched-job-addr">${esc(e.address)}</div>
-    ${notesHtml}
+    ${installerCol}
+    <div class="sched-job-main">
+      <div class="sched-job-addr">${esc(e.address)}</div>
+      ${notesHtml}
+    </div>
     ${btns}
   </div>`;
 }
