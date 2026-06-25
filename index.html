@@ -464,6 +464,41 @@ header::-webkit-scrollbar { display: none; }
   .sched-panel { min-width:unset; }
 }
 
+/* ── SCHEDULE: VIEW TOGGLE ── */
+.sched-view-toggle { display:flex; gap:2px; background:#f0ede8; border-radius:7px; padding:3px; flex-shrink:0; }
+.sched-view-btn { padding:4px 12px; border-radius:5px; border:none; font-size:0.78rem; font-weight:700; cursor:pointer; background:transparent; color:#888; transition:all 0.15s; }
+.sched-view-btn.active { background:white; color:#2c5f2e; box-shadow:0 1px 3px rgba(0,0,0,0.1); }
+.sched-side-toggle { background:#f0ede8; border:1.5px solid #e0ddd8; border-radius:7px; padding:4px 11px; font-size:0.78rem; font-weight:700; cursor:pointer; color:#888; transition:all 0.15s; white-space:nowrap; flex-shrink:0; }
+.sched-side-toggle:hover { background:#e0ddd8; }
+.sched-side-toggle.active { background:#2c5f2e; color:white; border-color:#2c5f2e; }
+
+/* ── SCHEDULE: SIDE PANEL ── */
+#scheduleView.side-panel { position:fixed !important; right:0; top:0; bottom:0; width:420px; z-index:40; box-shadow:-4px 0 24px rgba(0,0,0,0.15); border-left:2px solid #d0cdc8; flex:none !important; }
+
+/* ── SCHEDULE: MONTH VIEW ── */
+.sched-month-wrap { display:flex; flex-direction:column; gap:4px; }
+.sched-month-day-headers { display:grid; grid-template-columns:repeat(7,1fr); gap:4px; padding-bottom:4px; }
+.sched-month-day-hdr { text-align:center; font-size:0.65rem; font-weight:700; text-transform:uppercase; letter-spacing:0.4px; color:#aaa; padding:4px 2px; }
+.sched-month-grid { display:grid; grid-template-columns:repeat(7,1fr); gap:4px; }
+.sched-month-cell { background:white; border-radius:7px; min-height:86px; padding:5px 6px; cursor:pointer; box-shadow:0 1px 3px rgba(0,0,0,0.06); transition:box-shadow 0.15s; overflow:hidden; }
+.sched-month-cell:hover { box-shadow:0 2px 8px rgba(0,0,0,0.13); }
+.sched-month-cell.today-cell { box-shadow:0 0 0 2px #2c5f2e, 0 2px 6px rgba(0,0,0,0.1); }
+.sched-month-cell.other-month { background:rgba(255,255,255,0.45); }
+.sched-month-date-num { font-size:0.72rem; font-weight:700; width:22px; height:22px; display:flex; align-items:center; justify-content:center; border-radius:50%; margin-bottom:3px; flex-shrink:0; }
+.sched-month-date-num.is-today { background:#2c5f2e; color:white; }
+.sched-month-job { font-size:0.62rem; border-radius:3px; padding:1px 5px; margin-bottom:2px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.sched-month-job.type-job { background:#4d7b7922; color:#2c5f2e; border-left:2px solid #4d7b79; }
+.sched-month-job.type-repair { background:#c0392b22; color:#c0392b; border-left:2px solid #c0392b; }
+.sched-month-job.type-crm { background:#1565c022; color:#1565c0; border-left:2px solid #1565c0; }
+.sched-month-more { font-size:0.6rem; color:#aaa; padding:0 2px; }
+.sched-month-add-btn { background:none; border:none; cursor:pointer; font-size:0.62rem; color:#ccc; padding:1px 3px; transition:color 0.15s; display:block; width:100%; text-align:left; }
+.sched-month-add-btn:hover { color:#2c5f2e; }
+
+/* ── SCHEDULE: INSTALLER ── */
+.sched-installer-input { display:block; font-size:0.72rem; border:none; background:none; color:#2c5f2e; font-weight:600; padding:1px 4px; border-radius:3px; width:100%; transition:background 0.15s; margin-bottom:2px; }
+.sched-installer-input:hover, .sched-installer-input:focus { background:#f0faf0; outline:1px solid #2c5f2e; }
+.sched-installer-input::placeholder { color:#ccc; font-weight:400; }
+
 /* ── SCHEDULE VIEW ── */
 #scheduleView { display:none; flex:1; overflow:hidden; flex-direction:column; background:#f0ede8; }
 .sched-topbar { background:white; border-bottom:1px solid #e0ddd8; padding:10px 18px; display:flex; align-items:center; gap:10px; flex-shrink:0; }
@@ -663,13 +698,18 @@ header::-webkit-scrollbar { display: none; }
   <!-- SCHEDULE VIEW -->
   <div id="scheduleView">
     <div class="sched-topbar">
-      <button class="back-btn" onclick="showDashboard()">← Back</button>
+      <button class="back-btn" onclick="closeSchedView()">← Back</button>
       <div class="sched-week-nav">
-        <button class="sched-nav-btn" onclick="schedWeekPrev()">‹ Prev</button>
+        <button class="sched-nav-btn" onclick="schedPrev()">‹ Prev</button>
         <h2 id="schedWeekLabel">Week</h2>
-        <button class="sched-nav-btn" onclick="schedWeekNext()">Next ›</button>
+        <button class="sched-nav-btn" onclick="schedNext()">Next ›</button>
       </div>
       <button class="sched-nav-btn today" onclick="schedGoToday()">Today</button>
+      <div class="sched-view-toggle">
+        <button class="sched-view-btn active" id="schedBtnWeek" onclick="setSchedView('week')">Week</button>
+        <button class="sched-view-btn" id="schedBtnMonth" onclick="setSchedView('month')">Month</button>
+      </div>
+      <button class="sched-side-toggle" id="schedSideBtn" onclick="toggleSchedSidePanel()" title="Show calendar alongside dashboard">⬛ Side Panel</button>
     </div>
     <div class="sched-scroll" id="schedScroll">
       <div class="sched-week" id="schedWeek"></div>
@@ -707,8 +747,12 @@ header::-webkit-scrollbar { display: none; }
       <input type="text" id="schedAddr" placeholder="e.g. 47 Harmony Ave, Lakewood">
     </div>
     <div class="form-group">
+      <label>Installer</label>
+      <input type="text" id="schedInstaller" placeholder="e.g. Moshe, Team A">
+    </div>
+    <div class="form-group">
       <label>Notes (materials, sq ft, lock box, etc.)</label>
-      <textarea id="schedNotes" rows="4" placeholder="e.g. attic 378sqf luan southbay, lb 0613"></textarea>
+      <textarea id="schedNotes" rows="3" placeholder="e.g. attic 378sqf luan southbay, lb 0613"></textarea>
     </div>
     <input type="hidden" id="schedEntryId">
     <input type="hidden" id="schedEntryType">
@@ -2326,9 +2370,13 @@ fetchAll().then(() => {
 // SCHEDULING CALENDAR
 // ════════════════════════════════════════════
 
+let _schedViewMode  = 'week'; // 'week' | 'month'
+let _schedSidePanel = false;
+let _schedMonthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+
 function mondayOf(date) {
   const d = new Date(date);
-  const day = d.getDay(); // 0=Sun
+  const day = d.getDay();
   const diff = (day === 0) ? -6 : 1 - day;
   d.setDate(d.getDate() + diff);
   d.setHours(0,0,0,0);
@@ -2339,35 +2387,123 @@ function dateStr(d) {
   return d.toISOString().slice(0,10);
 }
 
+// ── CRM jobs that have a confirmed install date ──
+function getCrmCalendarJobs() {
+  const jobs = [];
+  (_customers || []).forEach(c => {
+    const sd10 = c.stepData?.[10]; // Schedule Installation step
+    if(sd10?.confirmed_install_date) {
+      jobs.push({
+        id: 'crm_' + c.id,
+        address: c.address || c.name,
+        notes: c.name + (sd10.crew_assigned ? ' · ' + sd10.crew_assigned : ''),
+        installer: sd10.crew_assigned || '',
+        scheduled_date: sd10.confirmed_install_date,
+        type: 'crm'
+      });
+    }
+  });
+  return jobs;
+}
+
+// ── Toggle between week / month view ──
+function setSchedView(mode) {
+  _schedViewMode = mode;
+  document.getElementById('schedBtnWeek').classList.toggle('active', mode === 'week');
+  document.getElementById('schedBtnMonth').classList.toggle('active', mode === 'month');
+  renderScheduleView();
+}
+
+// ── Prev / Next navigation (week or month) ──
+function schedPrev() {
+  if(_schedViewMode === 'month') {
+    _schedMonthStart = new Date(_schedMonthStart.getFullYear(), _schedMonthStart.getMonth() - 1, 1);
+  } else {
+    _schedWeekStart = new Date(_schedWeekStart);
+    _schedWeekStart.setDate(_schedWeekStart.getDate() - 7);
+  }
+  renderScheduleView();
+}
+function schedNext() {
+  if(_schedViewMode === 'month') {
+    _schedMonthStart = new Date(_schedMonthStart.getFullYear(), _schedMonthStart.getMonth() + 1, 1);
+  } else {
+    _schedWeekStart = new Date(_schedWeekStart);
+    _schedWeekStart.setDate(_schedWeekStart.getDate() + 7);
+  }
+  renderScheduleView();
+}
+function schedGoToday() {
+  _schedWeekStart  = mondayOf(new Date());
+  _schedMonthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+  renderScheduleView();
+}
+
+// ── Side panel toggle ──
+function toggleSchedSidePanel() {
+  _schedSidePanel = !_schedSidePanel;
+  document.getElementById('schedSideBtn').classList.toggle('active', _schedSidePanel);
+  const sv = document.getElementById('scheduleView');
+  if(sv.style.display === 'flex') {
+    if(_schedSidePanel) {
+      sv.classList.add('side-panel');
+      // Show dashboard layouts behind the panel
+      Object.keys(LAYOUT_IDS).forEach(k => {
+        const el = document.getElementById(LAYOUT_IDS[k]);
+        if(k === activeLayout) el.style.display = (k==='grid'||k==='table'||k==='chart') ? 'block' : 'flex';
+      });
+    } else {
+      sv.classList.remove('side-panel');
+      Object.keys(LAYOUT_IDS).forEach(k => document.getElementById(LAYOUT_IDS[k]).style.display = 'none');
+    }
+  }
+}
+
 function toggleScheduleView() {
   const sv = document.getElementById('scheduleView');
   const isOpen = sv.style.display === 'flex';
   if(isOpen) {
     showDashboard();
+    sv.classList.remove('side-panel');
   } else {
-    hideAllViews();
-    sv.style.display = 'flex';
-    document.getElementById('hdrSchedBtn').classList.add('active');
+    if(_schedSidePanel) {
+      // Overlay on right while keeping dashboard visible
+      sv.classList.add('side-panel');
+      sv.style.display = 'flex';
+      document.getElementById('hdrSchedBtn').classList.add('active');
+      // Ensure dashboard is showing
+      Object.keys(LAYOUT_IDS).forEach(k => {
+        const el = document.getElementById(LAYOUT_IDS[k]);
+        if(k === activeLayout) el.style.display = (k==='grid'||k==='table'||k==='chart') ? 'block' : 'flex';
+        else el.style.display = 'none';
+      });
+    } else {
+      hideAllViews();
+      sv.style.display = 'flex';
+      document.getElementById('hdrSchedBtn').classList.add('active');
+    }
     renderScheduleView();
   }
 }
 
-function schedWeekPrev() {
-  _schedWeekStart = new Date(_schedWeekStart);
-  _schedWeekStart.setDate(_schedWeekStart.getDate() - 7);
-  renderScheduleView();
-}
-function schedWeekNext() {
-  _schedWeekStart = new Date(_schedWeekStart);
-  _schedWeekStart.setDate(_schedWeekStart.getDate() + 7);
-  renderScheduleView();
-}
-function schedGoToday() {
-  _schedWeekStart = mondayOf(new Date());
-  renderScheduleView();
+function closeSchedView() {
+  const sv = document.getElementById('scheduleView');
+  sv.style.display = 'none';
+  sv.classList.remove('side-panel');
+  document.getElementById('hdrSchedBtn').classList.remove('active');
+  if(!_schedSidePanel) {
+    showDashboard();
+  }
 }
 
+// ── Main render dispatcher ──
 function renderScheduleView() {
+  if(_schedViewMode === 'month') renderMonthView();
+  else renderWeekView();
+}
+
+// ── WEEK VIEW ──
+function renderWeekView() {
   const todayStr = dateStr(new Date());
   const days = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
   const dates = days.map((_,i) => {
@@ -2376,26 +2512,26 @@ function renderScheduleView() {
     return d;
   });
 
-  // Week label
-  const from = dates[0];
-  const to   = dates[5];
+  const from = dates[0], to = dates[5];
   const fmtOpts = { month:'short', day:'numeric' };
   document.getElementById('schedWeekLabel').textContent =
-    from.toLocaleDateString('en-US',fmtOpts) + ' – ' + to.toLocaleDateString('en-US', {...fmtOpts, year:'numeric'});
+    from.toLocaleDateString('en-US', fmtOpts) + ' – ' + to.toLocaleDateString('en-US', {...fmtOpts, year:'numeric'});
 
-  // Day columns
+  const crmJobs = getCrmCalendarJobs();
+
   document.getElementById('schedWeek').innerHTML = days.map((day, i) => {
     const d = dates[i];
     const ds = dateStr(d);
     const isToday = ds === todayStr;
     const dayJobs = _scheduleEntries.filter(e => e.type === 'job' && e.scheduled_date === ds)
-      .sort((a,b) => a.sort_order - b.sort_order);
+      .sort((a,b) => (a.sort_order||0) - (b.sort_order||0));
+    const crmDay  = crmJobs.filter(e => e.scheduled_date === ds);
+    const dayNum  = d.toLocaleDateString('en-US', { month:'short', day:'numeric' });
 
-    const dayNum = d.toLocaleDateString('en-US', { month:'short', day:'numeric' });
-
-    const jobCards = dayJobs.length
-      ? dayJobs.map(e => schedJobCard(e)).join('')
-      : `<div class="sched-empty-day">No jobs</div>`;
+    const jobCards = [
+      ...dayJobs.map(e => schedJobCard(e)),
+      ...crmDay.map(e => schedJobCard(e))
+    ].join('') || `<div class="sched-empty-day">No jobs</div>`;
 
     return `<div class="sched-day-col${isToday?' today-col':''}">
       <div class="sched-day-hdr${isToday?' today-hdr':''}">
@@ -2410,9 +2546,8 @@ function renderScheduleView() {
     </div>`;
   }).join('');
 
-  // Pending + Repairs bottom panels
-  const pending = _scheduleEntries.filter(e => e.type === 'pending').sort((a,b) => a.sort_order - b.sort_order);
-  const repairs = _scheduleEntries.filter(e => e.type === 'repair').sort((a,b) => a.sort_order - b.sort_order);
+  const pending = _scheduleEntries.filter(e => e.type === 'pending').sort((a,b) => (a.sort_order||0) - (b.sort_order||0));
+  const repairs = _scheduleEntries.filter(e => e.type === 'repair').sort((a,b) => (a.sort_order||0) - (b.sort_order||0));
 
   document.getElementById('schedBottom').innerHTML = `
     <div class="sched-panel">
@@ -2431,32 +2566,107 @@ function renderScheduleView() {
         <span style="font-size:0.72rem;color:#aaa">${repairs.length} item${repairs.length!==1?'s':''}</span>
       </div>
       <div class="sched-panel-jobs">
-        ${repairs.length ? repairs.map(e => schedJobCard(e, true)).join('') : '<div class="sched-empty-day">No repairs</div>'}
+        ${repairs.length ? repairs.map(e => schedJobCard(e)).join('') : '<div class="sched-empty-day">No repairs</div>'}
       </div>
       <button class="sched-panel-add" onclick="openSchedModal('repair',null)">+ Add Repair</button>
     </div>`;
 }
 
-function schedJobCard(e, isRepair) {
-  const cls = (e.type === 'repair' || isRepair) ? 'sched-job repair-job' : 'sched-job';
+// ── MONTH VIEW ──
+function renderMonthView() {
+  const year     = _schedMonthStart.getFullYear();
+  const month    = _schedMonthStart.getMonth();
+  const todayStr = dateStr(new Date());
+  const lastDay  = new Date(year, month + 1, 0);
+  const crmJobs  = getCrmCalendarJobs();
+
+  document.getElementById('schedWeekLabel').textContent =
+    _schedMonthStart.toLocaleDateString('en-US', { month:'long', year:'numeric' });
+
+  const gridStart = mondayOf(new Date(year, month, 1));
+  const lastWeekMon = mondayOf(lastDay);
+  const gridEnd = new Date(lastWeekMon);
+  gridEnd.setDate(gridEnd.getDate() + 6);
+
+  const dayNames = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+  let html = `<div class="sched-month-wrap"><div class="sched-month-day-headers">`;
+  dayNames.forEach(n => { html += `<div class="sched-month-day-hdr">${n}</div>`; });
+  html += `</div><div class="sched-month-grid">`;
+
+  const d = new Date(gridStart);
+  while(d <= gridEnd) {
+    const ds = dateStr(d);
+    const isThisMonth = d.getMonth() === month;
+    const isToday = ds === todayStr;
+    const allJobs = [
+      ..._scheduleEntries.filter(e => e.type === 'job' && e.scheduled_date === ds),
+      ...crmJobs.filter(e => e.scheduled_date === ds)
+    ].sort((a,b) => (a.sort_order||0) - (b.sort_order||0));
+    const shown = allJobs.slice(0, 3);
+    const more  = allJobs.length - 3;
+    const jobsHtml = shown.map(e =>
+      `<div class="sched-month-job type-${e.type}" onclick="event.stopPropagation();openSchedModal('${e.type}','${ds}','${e.id}')" title="${esc(e.address)}${e.installer?' · '+esc(e.installer):''}">${esc(e.address)}</div>`
+    ).join('');
+
+    html += `<div class="sched-month-cell${isToday?' today-cell':''}${!isThisMonth?' other-month':''}" onclick="switchToWeekOfDate('${ds}')">
+      <div class="sched-month-date-num${isToday?' is-today':''}" style="${!isThisMonth?'color:#bbb':''}">${d.getDate()}</div>
+      ${jobsHtml}
+      ${more > 0 ? `<div class="sched-month-more">+${more} more</div>` : ''}
+      <button class="sched-month-add-btn" onclick="event.stopPropagation();openSchedModal('job','${ds}')">+ Add</button>
+    </div>`;
+    d.setDate(d.getDate() + 1);
+  }
+
+  html += `</div></div>`;
+  document.getElementById('schedWeek').innerHTML = html;
+  document.getElementById('schedBottom').innerHTML = '';
+}
+
+// Click a month cell → switch to week view for that week
+function switchToWeekOfDate(ds) {
+  _schedWeekStart = mondayOf(new Date(ds + 'T12:00:00'));
+  _schedViewMode = 'week';
+  document.getElementById('schedBtnWeek').classList.add('active');
+  document.getElementById('schedBtnMonth').classList.remove('active');
+  renderScheduleView();
+}
+
+// ── JOB CARD ──
+function schedJobCard(e) {
+  const isCrm    = e.type === 'crm';
+  const isRepair = e.type === 'repair';
+  const cls = isCrm ? 'sched-job' : isRepair ? 'sched-job repair-job' : 'sched-job';
+  const borderColor = isCrm ? '#1565c0' : isRepair ? '#c0392b' : '#4d7b79';
+  const installerHtml = !isCrm
+    ? `<input class="sched-installer-input" type="text" value="${esc(e.installer||'')}" placeholder="👷 Assign installer" onclick="event.stopPropagation()" onblur="saveInstallerInline('${e.id}',this.value)" onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();}">`
+    : (e.installer ? `<div style="font-size:0.7rem;color:#1565c0;font-weight:600;margin-bottom:2px">👷 ${esc(e.installer)}</div>` : '');
   const notesHtml = e.notes ? `<div class="sched-job-notes">${esc(e.notes)}</div>` : '';
-  return `<div class="${cls}" id="sje_${e.id}">
+  const btns = !isCrm
+    ? `<div class="sched-job-btns"><button class="sched-job-btn" title="Edit" onclick="openSchedModal('${e.type}','${e.scheduled_date||''}','${e.id}')">✏️</button><button class="sched-job-btn" title="Delete" onclick="deleteSchedEntry('${e.id}')">🗑</button></div>`
+    : `<div class="sched-job-btns"><span style="font-size:0.62rem;color:#1565c0;background:#e3f0ff;border-radius:3px;padding:1px 5px">CRM</span></div>`;
+  return `<div class="${cls}" id="sje_${e.id}" style="border-left-color:${borderColor}">
+    ${installerHtml}
     <div class="sched-job-addr">${esc(e.address)}</div>
     ${notesHtml}
-    <div class="sched-job-btns">
-      <button class="sched-job-btn" title="Edit" onclick="openSchedModal('${e.type}','${e.scheduled_date||''}','${e.id}')">✏️</button>
-      <button class="sched-job-btn" title="Delete" onclick="deleteSchedEntry('${e.id}')">🗑</button>
-    </div>
+    ${btns}
   </div>`;
+}
+
+async function saveInstallerInline(id, val) {
+  const idx = _scheduleEntries.findIndex(e => e.id === id);
+  if(idx === -1) return;
+  _scheduleEntries[idx] = { ..._scheduleEntries[idx], installer: val };
+  await db.from('schedule_entries').update({ installer: val }).eq('id', id);
 }
 
 function openSchedModal(type, date, id) {
   const entry = id ? _scheduleEntries.find(e => e.id === id) : null;
-  document.getElementById('schedEntryId').value   = entry ? entry.id : '';
-  document.getElementById('schedEntryType').value = type;
-  document.getElementById('schedEntryDate').value = date || '';
-  document.getElementById('schedAddr').value       = entry ? entry.address : '';
-  document.getElementById('schedNotes').value      = entry ? (entry.notes || '') : '';
+  document.getElementById('schedEntryId').value    = entry ? entry.id : '';
+  document.getElementById('schedEntryType').value  = type;
+  document.getElementById('schedEntryDate').value  = date || '';
+  document.getElementById('schedAddr').value        = entry ? entry.address : '';
+  document.getElementById('schedInstaller').value   = entry ? (entry.installer || '') : '';
+  document.getElementById('schedNotes').value       = entry ? (entry.notes || '') : '';
   const titles = { job:'Add Job', pending:'Add Pending Job', repair:'Add Repair' };
   document.getElementById('schedModalTitle').textContent = entry ? 'Edit Entry' : (titles[type] || 'Add Entry');
   document.getElementById('schedModal').classList.add('open');
@@ -2470,10 +2680,11 @@ function closeSchedModal() {
 async function saveSchedEntry() {
   const addr = document.getElementById('schedAddr').value.trim();
   if(!addr) { alert('Please enter an address or job description.'); return; }
-  const id   = document.getElementById('schedEntryId').value;
-  const type = document.getElementById('schedEntryType').value;
-  const date = document.getElementById('schedEntryDate').value || null;
-  const notes = document.getElementById('schedNotes').value.trim();
+  const id        = document.getElementById('schedEntryId').value;
+  const type      = document.getElementById('schedEntryType').value;
+  const date      = document.getElementById('schedEntryDate').value || null;
+  const installer = document.getElementById('schedInstaller').value.trim();
+  const notes     = document.getElementById('schedNotes').value.trim();
 
   const existing = id ? _scheduleEntries.find(e => e.id === id) : null;
   const maxOrder = _scheduleEntries.filter(e => e.scheduled_date === date && e.type === type)
@@ -2484,6 +2695,7 @@ async function saveSchedEntry() {
     type,
     scheduled_date: date,
     address: addr,
+    installer,
     notes,
     sort_order: existing ? (existing.sort_order || 0) : maxOrder + 1
   };
@@ -2505,18 +2717,18 @@ async function deleteSchedEntry(id) {
   renderScheduleView();
 }
 
-function copyDaySchedule(dateStr, dayName) {
-  const d = new Date(dateStr + 'T12:00:00');
+function copyDaySchedule(ds, dayName) {
+  const d = new Date(ds + 'T12:00:00');
   const dateLabel = d.toLocaleDateString('en-US', { weekday:'long', month:'long', day:'numeric' });
   const jobs = _scheduleEntries
-    .filter(e => e.type === 'job' && e.scheduled_date === dateStr)
-    .sort((a,b) => a.sort_order - b.sort_order);
+    .filter(e => e.type === 'job' && e.scheduled_date === ds)
+    .sort((a,b) => (a.sort_order||0) - (b.sort_order||0));
 
   if(!jobs.length) { showToast('No jobs on ' + dayName); return; }
 
   const lines = [dateLabel, ''];
   jobs.forEach((e, i) => {
-    lines.push(`${i+1}. ${e.address}`);
+    lines.push(`${i+1}. ${e.address}${e.installer ? ' — ' + e.installer : ''}`);
     if(e.notes) lines.push(`   ${e.notes}`);
   });
 
