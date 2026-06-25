@@ -503,7 +503,6 @@ header::-webkit-scrollbar { display: none; }
 .sched-job { display:flex !important; padding:0 !important; align-items:stretch; }
 .sched-job-installer-col { width:64px; flex-shrink:0; background:#f0faf0; border-right:1px solid #dff0df; display:flex; align-items:center; justify-content:center; padding:5px 4px; }
 .sched-job.repair-job .sched-job-installer-col { background:#fdf0f0; border-right-color:#f0dede; }
-.sched-job.crm-job .sched-job-installer-col { background:#e3f0ff; border-right-color:#c0d8f8; }
 .sched-job-main { flex:1; padding:7px 10px 7px 8px; min-width:0; }
 .sched-job-addr { font-weight:700; color:#2c2c2c; margin-bottom:2px; padding-right:42px; font-size:0.78rem; }
 .sched-installer-input { display:block; width:100%; font-size:0.65rem; font-weight:700; border:1px solid #a8cca8; background:white; color:#2c5f2e; text-align:center; padding:3px 2px; border-radius:4px; cursor:pointer; transition:all 0.15s; line-height:1.35; word-break:break-word; }
@@ -746,6 +745,21 @@ header::-webkit-scrollbar { display: none; }
     <div class="detail-body">
       <div class="steps-nav" id="stepsNav"></div>
       <div class="step-form" id="stepContent"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════ DAY DETAIL MODAL -->
+<div class="modal-overlay" id="dayDetailModal">
+  <div class="modal" style="max-width:560px">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+      <h2 id="dayDetailDate" style="font-size:1.15rem;color:#2c5f2e;margin:0"></h2>
+      <button class="back-btn" onclick="closeDayDetail()">✕ Close</button>
+    </div>
+    <div id="dayDetailJobs" style="display:flex;flex-direction:column;gap:10px;max-height:60vh;overflow-y:auto;padding-right:2px"></div>
+    <div style="margin-top:14px;border-top:1px solid #f0ede8;padding-top:12px;display:flex;gap:8px">
+      <button class="btn btn-green" id="dayDetailAddBtn">+ Add Job</button>
+      <button class="btn btn-secondary" id="dayDetailCopyBtn">📋 Copy Day</button>
     </div>
   </div>
 </div>
@@ -2556,12 +2570,12 @@ function renderWeekView() {
     ].join('') || `<div class="sched-empty-day">No jobs</div>`;
 
     return `<div class="sched-day-col${isToday?' today-col':''}">
-      <div class="sched-day-hdr${isToday?' today-hdr':''}">
+      <div class="sched-day-hdr${isToday?' today-hdr':''}" style="cursor:pointer" onclick="openDayDetail('${ds}')" title="Click to view full day">
         <div>
           <div class="sched-day-name">${day}</div>
           <div class="sched-day-date">${dayNum}</div>
         </div>
-        <button class="sched-copy-btn" onclick="copyDaySchedule('${ds}','${day}')">📋 Copy</button>
+        <button class="sched-copy-btn" onclick="event.stopPropagation();copyDaySchedule('${ds}','${day}')">📋 Copy</button>
       </div>
       <div class="sched-jobs" id="dayJobs_${ds}">${jobCards}</div>
       <button class="sched-add-btn" onclick="openSchedModal('job','${ds}')">+ Add Job</button>
@@ -2655,27 +2669,25 @@ function switchToWeekOfDate(ds) {
 
 // ── JOB CARD ──
 function schedJobCard(e) {
-  const isCrm    = e.type === 'crm';
   const isRepair = e.type === 'repair';
-  const cls = 'sched-job' + (isCrm ? ' crm-job' : isRepair ? ' repair-job' : '');
-  const borderColor = isCrm ? '#1565c0' : isRepair ? '#c0392b' : '#4d7b79';
+  const cls = 'sched-job' + (isRepair ? ' repair-job' : '');
+  const borderColor = isRepair ? '#c0392b' : '#4d7b79';
 
-  const installerCol = isCrm
-    ? `<div class="sched-job-installer-col"><span style="font-size:0.62rem;color:#1565c0;font-weight:700;text-align:center;word-break:break-word">${esc(e.installer)||'CRM'}</span></div>`
-    : `<div class="sched-job-installer-col">
-        <input class="sched-installer-input" type="text"
-          value="${esc(e.installer||'')}"
-          placeholder="Add&#10;installer"
-          title="Click to assign installer"
-          onclick="event.stopPropagation()"
-          onblur="saveInstallerInline('${e.id}',this.value)"
-          onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();}">
-      </div>`;
+  const installerCol = `<div class="sched-job-installer-col">
+    <input class="sched-installer-input" type="text"
+      value="${esc(e.installer||'')}"
+      placeholder="Add&#10;installer"
+      title="Click to assign installer"
+      onclick="event.stopPropagation()"
+      onblur="saveInstallerInline('${e.id}',this.value)"
+      onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();}">
+  </div>`;
 
   const notesHtml = e.notes ? `<div class="sched-job-notes">${esc(e.notes)}</div>` : '';
-  const btns = !isCrm
-    ? `<div class="sched-job-btns"><button class="sched-job-btn" title="Edit" onclick="openSchedModal('${e.type}','${e.scheduled_date||''}','${e.id}')">✏️</button><button class="sched-job-btn" title="Delete" onclick="deleteSchedEntry('${e.id}')">🗑</button></div>`
-    : `<div class="sched-job-btns" style="opacity:1"><span style="font-size:0.58rem;color:#1565c0;background:#e3f0ff;border-radius:3px;padding:1px 4px">CRM</span></div>`;
+  const btns = `<div class="sched-job-btns">
+    <button class="sched-job-btn" title="Edit" onclick="openSchedModal('${e.type}','${e.scheduled_date||''}','${e.id}')">✏️</button>
+    <button class="sched-job-btn" title="Delete" onclick="deleteSchedEntry('${e.id}')">🗑</button>
+  </div>`;
 
   return `<div class="${cls}" id="sje_${e.id}" style="border-left-color:${borderColor}">
     ${installerCol}
@@ -2688,6 +2700,16 @@ function schedJobCard(e) {
 }
 
 async function saveInstallerInline(id, val) {
+  if(id.startsWith('crm_')) {
+    const custId = id.slice(4);
+    const ci = _customers.findIndex(c => c.id === custId);
+    if(ci !== -1) {
+      const c = { ..._customers[ci], stepData: { ..._customers[ci].stepData } };
+      c.stepData[10] = { ...(c.stepData[10] || {}), crew_assigned: val };
+      await upsertCustomer(c);
+    }
+    return;
+  }
   const idx = _scheduleEntries.findIndex(e => e.id === id);
   if(idx === -1) return;
   _scheduleEntries[idx] = { ..._scheduleEntries[idx], installer: val };
@@ -2695,6 +2717,22 @@ async function saveInstallerInline(id, val) {
 }
 
 function openSchedModal(type, date, id) {
+  if(id && id.startsWith('crm_')) {
+    const custId = id.slice(4);
+    const c = _customers.find(x => x.id === custId);
+    if(!c) return;
+    const sd10 = c.stepData?.[10] || {};
+    document.getElementById('schedEntryId').value    = id;
+    document.getElementById('schedEntryType').value  = 'job';
+    document.getElementById('schedEntryDate').value  = date || sd10.confirmed_install_date || '';
+    document.getElementById('schedAddr').value        = c.address || '';
+    document.getElementById('schedInstaller').value   = sd10.crew_assigned || '';
+    document.getElementById('schedNotes').value       = c.name || '';
+    document.getElementById('schedModalTitle').textContent = 'Edit Install Job';
+    document.getElementById('schedModal').classList.add('open');
+    setTimeout(() => document.getElementById('schedAddr').focus(), 80);
+    return;
+  }
   const entry = id ? _scheduleEntries.find(e => e.id === id) : null;
   document.getElementById('schedEntryId').value    = entry ? entry.id : '';
   document.getElementById('schedEntryType').value  = type;
@@ -2721,6 +2759,19 @@ async function saveSchedEntry() {
   const installer = document.getElementById('schedInstaller').value.trim();
   const notes     = document.getElementById('schedNotes').value.trim();
 
+  if(id && id.startsWith('crm_')) {
+    const custId = id.slice(4);
+    const ci = _customers.findIndex(c => c.id === custId);
+    if(ci !== -1) {
+      const c = { ..._customers[ci], stepData: { ..._customers[ci].stepData } };
+      c.stepData[10] = { ...(c.stepData[10] || {}), crew_assigned: installer, confirmed_install_date: date };
+      await upsertCustomer(c);
+    }
+    closeSchedModal();
+    renderScheduleView();
+    return;
+  }
+
   const existing = id ? _scheduleEntries.find(e => e.id === id) : null;
   const maxOrder = _scheduleEntries.filter(e => e.scheduled_date === date && e.type === type)
     .reduce((m,e) => Math.max(m, e.sort_order||0), 0);
@@ -2746,10 +2797,69 @@ async function saveSchedEntry() {
 }
 
 async function deleteSchedEntry(id) {
+  if(id.startsWith('crm_')) {
+    if(!confirm('Remove this job from the calendar?\nThis will clear the install date in the CRM record.')) return;
+    const custId = id.slice(4);
+    const ci = _customers.findIndex(c => c.id === custId);
+    if(ci !== -1) {
+      const c = { ..._customers[ci], stepData: { ..._customers[ci].stepData } };
+      c.stepData[10] = { ...(c.stepData[10] || {}), confirmed_install_date: '' };
+      await upsertCustomer(c);
+    }
+    renderScheduleView();
+    return;
+  }
   if(!confirm('Remove this entry?')) return;
   _scheduleEntries = _scheduleEntries.filter(e => e.id !== id);
   await db.from('schedule_entries').delete().eq('id', id);
   renderScheduleView();
+}
+
+// ── DAY DETAIL VIEW ──
+function openDayDetail(ds) {
+  const d = new Date(ds + 'T12:00:00');
+  const dayLabel = d.toLocaleDateString('en-US', { weekday:'long', month:'long', day:'numeric', year:'numeric' });
+  document.getElementById('dayDetailDate').textContent = dayLabel;
+
+  const jobs = [
+    ..._scheduleEntries.filter(e => e.type === 'job' && e.scheduled_date === ds).sort((a,b) => (a.sort_order||0)-(b.sort_order||0)),
+    ...getCrmCalendarJobs().filter(e => e.scheduled_date === ds)
+  ];
+
+  document.getElementById('dayDetailJobs').innerHTML = jobs.length
+    ? jobs.map(e => `
+        <div style="background:#faf9f7;border-radius:10px;border-left:4px solid ${e.type==='repair'?'#c0392b':'#4d7b79'};display:flex;align-items:stretch;position:relative;overflow:hidden">
+          <div style="width:72px;flex-shrink:0;background:#f0faf0;border-right:1px solid #dff0df;display:flex;align-items:center;justify-content:center;padding:8px 5px;${e.type==='repair'?'background:#fdf0f0;border-right-color:#f0dede;':''}">
+            <input style="display:block;width:100%;font-size:0.72rem;font-weight:700;border:1px solid #a8cca8;background:white;color:#2c5f2e;text-align:center;padding:4px 3px;border-radius:4px;cursor:pointer;" type="text"
+              value="${esc(e.installer||'')}"
+              placeholder="Installer"
+              onclick="event.stopPropagation()"
+              onblur="saveInstallerInline('${e.id}',this.value)"
+              onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();}">
+          </div>
+          <div style="flex:1;padding:12px 14px;padding-right:88px">
+            <div style="font-size:0.95rem;font-weight:700;color:#2c2c2c;margin-bottom:4px">${esc(e.address)}</div>
+            ${e.notes?`<div style="font-size:0.82rem;color:#888;line-height:1.5">${esc(e.notes)}</div>`:''}
+          </div>
+          <div style="position:absolute;top:10px;right:10px;display:flex;gap:5px">
+            <button class="btn btn-secondary btn-sm" onclick="closeDayDetail();openSchedModal('${e.type}','${ds}','${e.id}')">✏️</button>
+            <button class="btn btn-danger btn-sm" onclick="deleteSchedEntryFromDetail('${e.id}','${ds}')">✕</button>
+          </div>
+        </div>`).join('')
+    : `<div style="text-align:center;color:#ccc;padding:40px 20px;font-size:0.9rem">No jobs scheduled for this day</div>`;
+
+  document.getElementById('dayDetailAddBtn').onclick = () => { closeDayDetail(); openSchedModal('job', ds); };
+  document.getElementById('dayDetailCopyBtn').onclick = () => copyDaySchedule(ds, d.toLocaleDateString('en-US',{weekday:'long'}));
+  document.getElementById('dayDetailModal').classList.add('open');
+}
+
+function closeDayDetail() {
+  document.getElementById('dayDetailModal').classList.remove('open');
+}
+
+async function deleteSchedEntryFromDetail(id, ds) {
+  await deleteSchedEntry(id);
+  openDayDetail(ds);
 }
 
 function copyDaySchedule(ds, dayName) {
