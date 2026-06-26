@@ -1342,7 +1342,7 @@ async function teamForgot() {
   const msg = document.getElementById('lpForgotMsg');
   btn.disabled = true; btn.textContent = 'Sending…';
   const { error } = await db.auth.resetPasswordForEmail(TEAM_EMAIL, {
-    redirectTo: window.location.origin + window.location.pathname
+    redirectTo: 'https://dashing-cucurucho.netlify.app'
   });
   btn.disabled = false; btn.textContent = 'Send Reset Link';
   msg.className = 'lp-msg ' + (error ? 'err' : 'ok');
@@ -2869,19 +2869,24 @@ document.getElementById('editModal').addEventListener('click',function(e){if(e.t
 // ════════════════════════════════════════════
 // INIT — check for saved profile
 // ════════════════════════════════════════════
-(async () => {
-  // If URL contains a password-reset token, show the reset panel
-  if(window.location.hash.includes('type=recovery')) {
+// Supabase fires PASSWORD_RECOVERY when the reset link is clicked
+// (works for both PKCE ?code= links and older #type=recovery hash links)
+db.auth.onAuthStateChange((event) => {
+  if(event === 'PASSWORD_RECOVERY') {
     document.getElementById('loginView').style.display = 'flex';
+    document.getElementById('profileScreen').style.display = 'none';
+    document.getElementById('app').style.display = 'none';
     lpShow('reset');
-  } else {
-    const { data: { session } } = await db.auth.getSession();
-    if(session) {
-      document.getElementById('loginView').style.display = 'none';
-      document.getElementById('profileScreen').style.display = 'flex';
-    }
-    // if no session, loginView is already visible from the HTML
   }
+});
+
+(async () => {
+  const { data: { session } } = await db.auth.getSession();
+  if(session) {
+    document.getElementById('loginView').style.display = 'none';
+    document.getElementById('profileScreen').style.display = 'flex';
+  }
+  // if no session, loginView stays visible (default in HTML)
   try {
     await fetchAll();
     subscribeRealtime();
