@@ -18,8 +18,24 @@ body { font-family: 'Segoe UI', Arial, sans-serif; background: #f0ede8; color: #
 .btn-danger { background: #c0392b; color: white; } .btn-danger:hover { background: #a93226; }
 .btn-sm { padding: 5px 12px; font-size: 0.78rem; }
 
+/* ── LOGIN SCREEN ── */
+#loginView { position:fixed; inset:0; display:flex; align-items:center; justify-content:center; z-index:9999; background:linear-gradient(145deg, #0d2b1e 0%, #1a4a2e 55%, #2c5f2e 100%); }
+.lp-card { background:white; border-radius:20px; padding:42px 38px; width:380px; max-width:92vw; box-shadow:0 28px 80px rgba(0,0,0,0.4); }
+.lp-logo { font-size:1.55rem; font-weight:800; color:#1a3a2e; text-align:center; margin-bottom:3px; }
+.lp-sub { font-size:0.83rem; color:#aaa; text-align:center; margin-bottom:26px; letter-spacing:0.3px; }
+.lp-input { width:100%; padding:11px 14px; border:1.5px solid #ddd; border-radius:8px; font-size:0.95rem; font-family:inherit; box-sizing:border-box; margin-bottom:12px; transition:border-color 0.2s; }
+.lp-input:focus { outline:none; border-color:#2c5f2e; }
+.lp-err { color:#c62828; font-size:0.8rem; margin-top:-6px; margin-bottom:10px; display:none; }
+.lp-foot { text-align:center; margin-top:14px; font-size:0.82rem; color:#bbb; }
+.lp-foot a { color:#2c5f2e; cursor:pointer; }
+.lp-foot a:hover { text-decoration:underline; }
+.lp-msg { font-size:0.82rem; text-align:center; margin-top:10px; display:none; padding:8px 12px; border-radius:7px; }
+.lp-msg.ok { background:#e8f5e9; color:#2c5f2e; }
+.lp-msg.err { background:#fce4e4; color:#c62828; }
+.lp-desc { font-size:0.84rem; color:#888; text-align:center; line-height:1.5; margin-bottom:20px; }
+
 /* ── PROFILE SCREEN ── */
-#profileScreen { display: flex; flex: 1; flex-direction: column; align-items: center; justify-content: center; padding: 40px 20px; background: linear-gradient(135deg, #0d2b5e 0%, #1a4a8a 60%, #2e6db4 100%); }
+#profileScreen { display: none; flex: 1; flex-direction: column; align-items: center; justify-content: center; padding: 40px 20px; background: linear-gradient(135deg, #0d2b5e 0%, #1a4a8a 60%, #2e6db4 100%); }
 #profileScreen h1 { color: white; font-size: 1.8rem; font-weight: 800; margin-bottom: 6px; }
 #profileScreen p { color: rgba(255,255,255,0.7); font-size: 0.95rem; margin-bottom: 40px; }
 .profile-grid { display: flex; gap: 18px; flex-wrap: wrap; justify-content: center; max-width: 600px; }
@@ -616,6 +632,38 @@ header::-webkit-scrollbar { display: none; }
 </head>
 <body>
 
+<!-- ═══════════════════════════════════ LOGIN VIEW -->
+<div id="loginView">
+  <!-- Sign In -->
+  <div class="lp-card" id="lpPanelLogin">
+    <div class="lp-logo">🌿 Harmony Flooring</div>
+    <div class="lp-sub">Team Portal</div>
+    <input type="password" class="lp-input" id="lpPass" placeholder="Enter team password" onkeydown="if(event.key==='Enter')teamSignIn()">
+    <div class="lp-err" id="lpErr"></div>
+    <button class="btn btn-primary" style="width:100%;padding:11px;font-size:0.95rem" onclick="teamSignIn()" id="lpSignInBtn">Sign In</button>
+    <div class="lp-foot"><a onclick="lpShow('forgot')">Forgot password?</a></div>
+  </div>
+  <!-- Forgot Password -->
+  <div class="lp-card" id="lpPanelForgot" style="display:none">
+    <div class="lp-logo">🌿 Harmony Flooring</div>
+    <div class="lp-sub">Reset Password</div>
+    <p class="lp-desc">A reset link will be sent to the team email address on file. Check your inbox and click the link to set a new password.</p>
+    <button class="btn btn-primary" style="width:100%;padding:11px;font-size:0.95rem" onclick="teamForgot()" id="lpForgotBtn">Send Reset Link</button>
+    <div class="lp-msg" id="lpForgotMsg"></div>
+    <div class="lp-foot"><a onclick="lpShow('login')">← Back to sign in</a></div>
+  </div>
+  <!-- Set New Password (after clicking reset link) -->
+  <div class="lp-card" id="lpPanelReset" style="display:none">
+    <div class="lp-logo">🌿 Harmony Flooring</div>
+    <div class="lp-sub">Set New Password</div>
+    <input type="password" class="lp-input" id="lpNewPass" placeholder="New password (min 6 characters)">
+    <input type="password" class="lp-input" id="lpNewPass2" placeholder="Confirm new password">
+    <div class="lp-err" id="lpResetErr"></div>
+    <button class="btn btn-primary" style="width:100%;padding:11px;font-size:0.95rem" onclick="teamUpdatePw()" id="lpResetBtn">Update Password</button>
+    <div class="lp-msg" id="lpResetMsg"></div>
+  </div>
+</div>
+
 <!-- ═══════════════════════════════════ PROFILE SCREEN -->
 <div id="profileScreen">
   <h1>🌿 Harmony Flooring</h1>
@@ -623,6 +671,8 @@ header::-webkit-scrollbar { display: none; }
   <div class="profile-grid" id="profileGrid"></div>
   <div class="profile-admin">
     <a onclick="openAsAdmin()">Open as Admin (view all)</a>
+    &nbsp;•&nbsp;
+    <a onclick="teamSignOut()">Sign Out</a>
   </div>
 </div>
 
@@ -1253,6 +1303,90 @@ const SUPABASE_URL  = 'https://hbgefoytekvokgdjxixa.supabase.co';
 const SUPABASE_KEY  = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhiZ2Vmb3l0ZWt2b2tnZGp4aXhhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIwMDM5MTgsImV4cCI6MjA5NzU3OTkxOH0.V35QASo-YbvC_RJWoZn_Rir7V8CkJlRLUZ6V1_ALxpM';
 const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
+// ════════════════════════════════════════════
+// TEAM AUTH — one shared Supabase Auth account
+// Set TEAM_EMAIL to match the account you created
+// in Supabase Dashboard → Authentication → Users
+// ════════════════════════════════════════════
+const TEAM_EMAIL = 'sales@harmonyflooring.net';
+
+function lpShow(panel) {
+  document.getElementById('lpPanelLogin').style.display  = panel==='login'  ? 'block' : 'none';
+  document.getElementById('lpPanelForgot').style.display = panel==='forgot' ? 'block' : 'none';
+  document.getElementById('lpPanelReset').style.display  = panel==='reset'  ? 'block' : 'none';
+}
+
+async function teamSignIn() {
+  const pw = document.getElementById('lpPass').value;
+  const errEl = document.getElementById('lpErr');
+  errEl.style.display = 'none';
+  if(!pw) return;
+  const btn = document.getElementById('lpSignInBtn');
+  btn.disabled = true; btn.textContent = 'Signing in…';
+  const { error } = await db.auth.signInWithPassword({ email: TEAM_EMAIL, password: pw });
+  btn.disabled = false; btn.textContent = 'Sign In';
+  if(error) {
+    errEl.textContent = 'Incorrect password. Please try again.';
+    errEl.style.display = 'block';
+    document.getElementById('lpPass').value = '';
+    document.getElementById('lpPass').focus();
+  } else {
+    document.getElementById('loginView').style.display = 'none';
+    document.getElementById('profileScreen').style.display = 'flex';
+    renderProfileScreen();
+  }
+}
+
+async function teamForgot() {
+  const btn = document.getElementById('lpForgotBtn');
+  const msg = document.getElementById('lpForgotMsg');
+  btn.disabled = true; btn.textContent = 'Sending…';
+  const { error } = await db.auth.resetPasswordForEmail(TEAM_EMAIL, {
+    redirectTo: window.location.origin + window.location.pathname
+  });
+  btn.disabled = false; btn.textContent = 'Send Reset Link';
+  msg.className = 'lp-msg ' + (error ? 'err' : 'ok');
+  msg.textContent = error ? ('Error: ' + error.message) : '✓ Reset link sent — check the team email inbox!';
+  msg.style.display = 'block';
+}
+
+async function teamUpdatePw() {
+  const p1 = document.getElementById('lpNewPass').value;
+  const p2 = document.getElementById('lpNewPass2').value;
+  const errEl = document.getElementById('lpResetErr');
+  const msg = document.getElementById('lpResetMsg');
+  errEl.style.display = 'none';
+  if(!p1 || p1.length < 6) { errEl.textContent = 'Password must be at least 6 characters.'; errEl.style.display='block'; return; }
+  if(p1 !== p2) { errEl.textContent = 'Passwords do not match.'; errEl.style.display='block'; return; }
+  const btn = document.getElementById('lpResetBtn');
+  btn.disabled = true; btn.textContent = 'Updating…';
+  const { error } = await db.auth.updateUser({ password: p1 });
+  btn.disabled = false; btn.textContent = 'Update Password';
+  if(error) {
+    errEl.textContent = 'Error: ' + error.message;
+    errEl.style.display = 'block';
+  } else {
+    msg.className = 'lp-msg ok';
+    msg.textContent = '✓ Password updated! Signing you in…';
+    msg.style.display = 'block';
+    setTimeout(() => {
+      document.getElementById('loginView').style.display = 'none';
+      document.getElementById('profileScreen').style.display = 'flex';
+      renderProfileScreen();
+    }, 1500);
+  }
+}
+
+function teamSignOut() {
+  db.auth.signOut();
+  clearSession();
+  document.getElementById('app').style.display = 'none';
+  document.getElementById('profileScreen').style.display = 'none';
+  document.getElementById('loginView').style.display = 'flex';
+  lpShow('login');
+  document.getElementById('lpPass').value = '';
+}
+
 // ── IN-MEMORY CACHE ──────────────────────────
 let _customers = [];
 let _messages  = [];
@@ -1376,9 +1510,7 @@ function renderProfileScreen() {
 }
 
 function selectProfile(name) {
-  const session = getSession();
-  if(session && session.name === name) { doLogin(name); return; }
-  showPasswordModal(name);
+  doLogin(name); // team already authenticated via Supabase Auth
 }
 
 function doLogin(name) {
@@ -2737,16 +2869,30 @@ document.getElementById('editModal').addEventListener('click',function(e){if(e.t
 // ════════════════════════════════════════════
 // INIT — check for saved profile
 // ════════════════════════════════════════════
-renderProfileScreen();
-fetchAll().then(() => {
-  subscribeRealtime();
-  renderProfileScreen();
-  const session = getSession();
-  if(session) doLogin(session.name);
-}).catch(err => {
-  console.error('Supabase load failed:', err);
-  renderProfileScreen();
-});
+(async () => {
+  // If URL contains a password-reset token, show the reset panel
+  if(window.location.hash.includes('type=recovery')) {
+    document.getElementById('loginView').style.display = 'flex';
+    lpShow('reset');
+  } else {
+    const { data: { session } } = await db.auth.getSession();
+    if(session) {
+      document.getElementById('loginView').style.display = 'none';
+      document.getElementById('profileScreen').style.display = 'flex';
+    }
+    // if no session, loginView is already visible from the HTML
+  }
+  try {
+    await fetchAll();
+    subscribeRealtime();
+    renderProfileScreen();
+    const s = getSession();
+    if(s) doLogin(s.name);
+  } catch(err) {
+    console.error('Supabase load failed:', err);
+    renderProfileScreen();
+  }
+})();
 
 // ════════════════════════════════════════════
 // SCHEDULING CALENDAR
