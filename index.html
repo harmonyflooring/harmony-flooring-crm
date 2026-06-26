@@ -357,6 +357,28 @@ header::-webkit-scrollbar { display: none; }
 .task-toggle.on::after { left:19px; }
 .task-extra { display:none; }
 .task-extra.show { display:block; }
+/* ── CHAT BUBBLES ── */
+.chat-bubbles { flex:1; overflow-y:auto; padding:14px 14px 6px; display:flex; flex-direction:column; gap:10px; background:#f4f6f8; min-height:0; }
+.chat-bubble-row { display:flex; gap:8px; align-items:flex-end; }
+.chat-bubble-row.mine { flex-direction:row-reverse; }
+.chat-avatar-sm { width:30px; height:30px; border-radius:50%; color:white; font-size:0.72rem; font-weight:800; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+.chat-bubble-wrap { max-width:75%; display:flex; flex-direction:column; gap:2px; }
+.chat-bubble-row.mine .chat-bubble-wrap { align-items:flex-end; }
+.chat-sender { font-size:0.68rem; font-weight:700; color:#999; padding:0 10px; }
+.chat-bubble { padding:9px 13px; font-size:0.87rem; line-height:1.5; word-break:break-word; white-space:pre-wrap; }
+.chat-theirs { background:white; color:#1a1a1a; border-radius:16px 16px 16px 4px; box-shadow:0 1px 4px rgba(0,0,0,0.08); }
+.chat-mine { background:#2c5f2e; color:white; border-radius:16px 16px 4px 16px; }
+.chat-ts { font-size:0.64rem; color:#c0c0c0; padding:0 10px; }
+.chat-reply-bar { display:flex; gap:8px; padding:10px 12px; border-top:1.5px solid #e8e5e0; background:white; flex-shrink:0; align-items:flex-end; }
+.chat-reply-input { flex:1; border:1.5px solid #e0ddd8; border-radius:10px; padding:8px 12px; font-size:0.86rem; font-family:inherit; resize:none; outline:none; max-height:80px; overflow-y:auto; line-height:1.4; background:#faf9f7; }
+.chat-reply-input:focus { border-color:#2c5f2e; background:white; }
+.chat-reply-btn { background:#2c5f2e; color:white; border:none; border-radius:10px; padding:8px 14px; font-size:0.9rem; font-weight:700; cursor:pointer; flex-shrink:0; transition:background 0.15s; }
+.chat-reply-btn:hover { background:#1e4220; }
+/* Sidebar profile */
+.msg-sidebar-profile { padding:14px 14px 10px; border-bottom:1px solid #f0ede8; display:flex; align-items:center; gap:10px; }
+.msg-sidebar-avatar { width:38px; height:38px; border-radius:50%; color:white; font-size:0.88rem; font-weight:800; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+.msg-sidebar-username { font-size:0.85rem; font-weight:700; color:#1a1a1a; }
+.msg-sidebar-status { font-size:0.7rem; color:#aaa; }
 /* ── SIDE PANEL MODE ── */
 #msgView.msg-side-panel { position:fixed; right:20px; bottom:20px; width:420px; height:640px; max-height:88vh; z-index:45; border-radius:16px; box-shadow:0 12px 48px rgba(0,0,0,0.22), 0 2px 8px rgba(0,0,0,0.1); border:1px solid #d8d4ce; overflow:hidden; flex:none !important; flex-direction:column; display:flex !important; }
 #msgView.msg-side-panel .msg-drag-handle { display:flex; }
@@ -502,7 +524,9 @@ header::-webkit-scrollbar { display: none; }
 
 /* ── SCHEDULE: SIDE PANEL ── */
 #scheduleView.side-panel { position:fixed !important; right:0; bottom:0; width:420px; z-index:40; box-shadow:-4px 0 24px rgba(0,0,0,0.15); border-left:2px solid #d0cdc8; flex:none !important; }
-#scheduleView.side-panel .sched-topbar { flex-wrap:wrap; padding:8px 12px; gap:6px; }
+#scheduleView.side-panel .sched-topbar { flex-wrap:wrap; padding:8px 12px; gap:6px; cursor:grab; user-select:none; }
+#scheduleView.side-panel .sched-topbar:active { cursor:grabbing; }
+#scheduleView.side-panel .sched-topbar button { cursor:pointer; }
 #scheduleView.side-panel .sched-week-nav { flex:1; min-width:160px; }
 #scheduleView.side-panel .sched-scroll { overflow-x:hidden; }
 #scheduleView.side-panel .sched-week { flex-direction:column; gap:6px; }
@@ -698,8 +722,9 @@ header::-webkit-scrollbar { display: none; }
     <!-- Drag handle — visible in side panel mode only -->
     <div class="msg-drag-handle" id="msgDragHandle" onmousedown="startMsgDrag(event)">
       <div class="msg-drag-title"><span class="msg-drag-dots">⠿</span> Messages</div>
-      <div style="display:flex;gap:6px">
+      <div style="display:flex;gap:5px">
         <button onclick="event.stopPropagation();openCompose()" title="New message" style="background:rgba(255,255,255,0.2);border:none;color:white;width:28px;height:28px;border-radius:6px;cursor:pointer;font-size:0.85rem;display:flex;align-items:center;justify-content:center;">✏️</button>
+        <button onclick="event.stopPropagation();setMsgMode('full')" title="Open full screen" style="background:rgba(255,255,255,0.2);border:none;color:white;width:28px;height:28px;border-radius:6px;cursor:pointer;font-size:0.9rem;display:flex;align-items:center;justify-content:center;">⛶</button>
         <button onclick="event.stopPropagation();exitMsgSidePanel()" title="Close" style="background:rgba(255,255,255,0.2);border:none;color:white;width:28px;height:28px;border-radius:6px;cursor:pointer;font-size:0.85rem;display:flex;align-items:center;justify-content:center;">✕</button>
       </div>
     </div>
@@ -723,6 +748,7 @@ header::-webkit-scrollbar { display: none; }
     <div class="msg-layout">
       <!-- Left nav (full screen only) -->
       <div class="msg-sidebar">
+        <div class="msg-sidebar-profile" id="msgSidebarProfile"></div>
         <div class="msg-sidebar-head">Folders</div>
         <button class="msg-nav-btn active" id="mnInbox" onclick="switchMsgTab('inbox')"><span class="msg-nav-icon">📥</span>Inbox<span class="msg-unread-badge" id="inboxBadge" style="display:none"></span></button>
         <button class="msg-nav-btn" id="mnTasks" onclick="switchMsgTab('tasks')"><span class="msg-nav-icon">✅</span>My Tasks<span class="msg-unread-badge" id="tasksBadge" style="display:none"></span></button>
@@ -760,7 +786,7 @@ header::-webkit-scrollbar { display: none; }
 
   <!-- SCHEDULE VIEW -->
   <div id="scheduleView">
-    <div class="sched-topbar">
+    <div class="sched-topbar" onmousedown="startSchedDrag(event)">
       <button class="back-btn" onclick="closeSchedView()">← Back</button>
       <div class="sched-week-nav">
         <button class="sched-nav-btn" onclick="schedPrev()">‹ Prev</button>
@@ -1245,12 +1271,16 @@ const Msg = {
   fromRow: r => ({
     id: r.id, from: r.from_name, to: r.to_names || [],
     subject: r.subject, body: r.body, timestamp: r.timestamp,
-    readBy: r.read_by || [], isTask: r.is_task, task: r.task_data
+    readBy: r.read_by || [], isTask: r.is_task, task: r.task_data,
+    threadId: r.thread_id || r.id,
+    parentId: r.parent_id || null
   }),
   toRow: m => ({
     id: m.id, from_name: m.from, to_names: m.to,
     subject: m.subject, body: m.body, timestamp: m.timestamp,
-    read_by: m.readBy, is_task: m.isTask, task_data: m.task
+    read_by: m.readBy, is_task: m.isTask, task_data: m.task,
+    thread_id: m.threadId || m.id,
+    parent_id: m.parentId || null
   })
 };
 
@@ -1985,6 +2015,9 @@ function setMsgMode(mode) {
     mv.classList.remove('msg-showing-detail');
     document.getElementById('msgBtnFull')?.classList.add('active');
     document.getElementById('msgBtnSide')?.classList.remove('active');
+    hideAllViews();
+    mv.style.display = 'flex';
+    document.getElementById('hdrMsgBtn').classList.add('active');
   }
   activeMsgId = null;
   renderMsgNav();
@@ -2083,6 +2116,12 @@ function renderMsgNav() {
   if(tb) { tb.textContent = tasks; tb.style.display = tasks > 0 ? 'flex' : 'none'; }
   const ctib = document.getElementById('ctInboxBadge');
   if(ctib) ctib.textContent = inbox > 0 ? ` (${inbox})` : '';
+  // Populate sidebar profile
+  const prof = document.getElementById('msgSidebarProfile');
+  if(prof && activeProfile) {
+    const color = smColor(activeProfile.name);
+    prof.innerHTML = `<div class="msg-sidebar-avatar" style="background:${color}">${smInitial(activeProfile.name)}</div><div><div class="msg-sidebar-username">${esc(activeProfile.name)}</div><div class="msg-sidebar-status">● Online</div></div>`;
+  }
 }
 
 function switchMsgTab(tab) {
@@ -2095,11 +2134,18 @@ function switchMsgTab(tab) {
 
 function getTabMessages() {
   const me = activeProfile?.name;
-  const msgs = loadMsgs();
-  if(activeMsgTab === 'inbox')  return msgs.filter(m => m.to.includes(me)).sort((a,b)=>b.timestamp-a.timestamp);
-  if(activeMsgTab === 'tasks')  return msgs.filter(m => m.isTask && m.to.includes(me)).sort((a,b)=>b.timestamp-a.timestamp);
-  if(activeMsgTab === 'sent')   return msgs.filter(m => m.from === me).sort((a,b)=>b.timestamp-a.timestamp);
-  return msgs.sort((a,b)=>b.timestamp-a.timestamp);
+  let msgs = loadMsgs();
+  if(activeMsgTab === 'inbox')  msgs = msgs.filter(m => m.to.includes(me));
+  else if(activeMsgTab === 'tasks')  msgs = msgs.filter(m => m.isTask && m.to.includes(me));
+  else if(activeMsgTab === 'sent')   msgs = msgs.filter(m => m.from === me);
+  // Group by thread — keep the latest message per thread as the representative
+  const threadMap = new Map();
+  msgs.forEach(m => {
+    const tid = m.threadId || m.id;
+    const existing = threadMap.get(tid);
+    if(!existing || m.timestamp > existing.timestamp) threadMap.set(tid, m);
+  });
+  return [...threadMap.values()].sort((a,b) => b.timestamp - a.timestamp);
 }
 
 const TAB_LABELS = {inbox:'Inbox', tasks:'My Tasks', sent:'Sent', all:'All Messages'};
@@ -2114,8 +2160,12 @@ function renderMsgList() {
     return;
   }
   el.innerHTML = msgs.map(m => {
-    const unread = m.to.includes(me) && !m.readBy.includes(me);
-    const isActive = m.id === activeMsgId;
+    const tid = m.threadId || m.id;
+    // Count replies in this thread
+    const threadAll = _messages.filter(x => (x.threadId||x.id) === tid);
+    const hasUnread = threadAll.some(x => x.to.includes(me) && !x.readBy.includes(me));
+    const replyCount = threadAll.length;
+    const isActive = tid === activeMsgId;
     const time = formatMsgTime(m.timestamp);
     const avatarName = activeMsgTab === 'sent' ? (m.to[0] || '?') : m.from;
     const avatarColor = smColor(avatarName);
@@ -2123,8 +2173,9 @@ function renderMsgList() {
       ? `<span class="msg-item-tag" style="background:${priorityColor(m.task.priority)}22;color:${priorityColor(m.task.priority)}">${m.task.priority}</span>` : '';
     const taskTag = m.isTask ? `<span class="msg-item-tag" style="background:#fff8e1;color:#c8881a">📋 Task</span>` : '';
     const doneTag = m.isTask && m.task?.completed ? `<span class="msg-item-tag" style="background:#e8f5e9;color:#2c5f2e">✓ Done</span>` : '';
+    const replyTag = replyCount > 1 ? `<span class="msg-item-tag" style="background:#f0f0f0;color:#888">💬 ${replyCount}</span>` : '';
     const toLine = activeMsgTab === 'sent' ? `→ ${m.to.join(', ')}` : m.from;
-    return `<div class="msg-item ${unread?'unread':''} ${isActive?'active':''}" onclick="openMessage('${m.id}')">
+    return `<div class="msg-item ${hasUnread?'unread':''} ${isActive?'active':''}" onclick="openMessage('${tid}')">
       <div class="msg-item-avatar" style="background:${avatarColor}">${smInitial(avatarName)}</div>
       <div class="msg-item-body">
         <div class="msg-item-row1">
@@ -2133,21 +2184,22 @@ function renderMsgList() {
         </div>
         <div class="msg-item-subject">${esc(m.subject)}</div>
         <div class="msg-item-preview">${esc(m.body.slice(0,80))}${m.body.length>80?'…':''}</div>
-        ${(taskTag||priorityTag||doneTag)?`<div class="msg-item-tags">${taskTag}${priorityTag}${doneTag}</div>`:''}
+        ${(taskTag||priorityTag||doneTag||replyTag)?`<div class="msg-item-tags">${taskTag}${priorityTag}${doneTag}${replyTag}</div>`:''}
       </div>
     </div>`;
   }).join('');
 }
 
-async function openMessage(id) {
-  activeMsgId = id;
+async function openMessage(threadId) {
+  activeMsgId = threadId;
   const me = activeProfile?.name;
-  const idx = _messages.findIndex(m=>m.id===id);
-  if(idx !== -1 && !_messages[idx].readBy.includes(me)) {
-    const m = {..._messages[idx], readBy:[..._messages[idx].readBy, me]};
-    await upsertMessage(m);
-    updateMsgBadge();
+  // Mark every unread message in this thread as read
+  const toUpdate = _messages.filter(m => (m.threadId||m.id) === threadId && m.to.includes(me) && !m.readBy.includes(me));
+  for(const msg of toUpdate) {
+    const updated = {...msg, readBy:[...msg.readBy, me]};
+    await upsertMessage(updated);
   }
+  if(toUpdate.length) updateMsgBadge();
   if(_msgMode === 'side') {
     document.getElementById('msgView').classList.add('msg-showing-detail');
   }
@@ -2159,48 +2211,69 @@ function renderMsgDetail() {
   const panel = document.getElementById('msgDetailPanel');
   const backBtn = `<div class="msg-detail-back"><button class="back-btn" onclick="msgDetailBack()">← Back to list</button></div>`;
   if(!activeMsgId) {
-    panel.innerHTML = `${_msgMode==='side'?backBtn:''}<div class="msg-detail-empty"><div class="msg-detail-empty-icon">💬</div>Select a message to read it</div>`;
+    panel.innerHTML = `${_msgMode==='side'?backBtn:''}<div class="msg-detail-empty"><div class="msg-detail-empty-icon">💬</div>Select a conversation</div>`;
     return;
   }
-  const m = _messages.find(x=>x.id===activeMsgId);
-  if(!m) { panel.innerHTML = `${_msgMode==='side'?backBtn:''}<div class="msg-detail-empty">Message not found.</div>`; return; }
+  // Get all messages in this thread, sorted oldest first
+  const threadMsgs = _messages.filter(x => (x.threadId||x.id) === activeMsgId).sort((a,b)=>a.timestamp-b.timestamp);
+  if(!threadMsgs.length) { panel.innerHTML = `${_msgMode==='side'?backBtn:''}<div class="msg-detail-empty">Conversation not found.</div>`; return; }
+  const original = threadMsgs[0];
   const me = activeProfile?.name;
-  const isRecipient = m.to.includes(me);
-  const fromColor = smColor(m.from);
+  const isRecipient = original.to.includes(me);
 
-  const taskBox = m.isTask ? `
+  const taskBox = original.isTask && original.task ? `
     <div class="msg-task-box">
       <h4>📋 Task Details</h4>
-      ${m.task.priority&&m.task.priority!=='Normal'?`<div class="task-row"><span class="tl">Priority</span><span class="tv" style="color:${priorityColor(m.task.priority)};font-weight:700">${m.task.priority}</span></div>`:''}
-      ${m.task.dueDate?`<div class="task-row"><span class="tl">Due Date</span><span class="tv">${new Date(m.task.dueDate).toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'})}</span></div>`:''}
-      ${m.task.notes?`<div class="task-row"><span class="tl">Notes</span><span class="tv">${esc(m.task.notes)}</span></div>`:''}
-      ${m.task.completed
-        ? `<div class="task-row"><span class="tl">Status</span><span class="tv" style="color:#2c5f2e;font-weight:700">✓ Completed by ${esc(m.task.completedBy)} on ${new Date(m.task.completedAt).toLocaleDateString()}</span></div>`
-        : isRecipient ? `<button class="msg-task-done-btn" onclick="markTaskDone('${m.id}')">✓ Mark Task Complete</button>` : `<div style="font-size:0.78rem;color:#aaa;margin-top:6px">Waiting for recipient to complete</div>`
+      ${original.task.priority&&original.task.priority!=='Normal'?`<div class="task-row"><span class="tl">Priority</span><span class="tv" style="color:${priorityColor(original.task.priority)};font-weight:700">${original.task.priority}</span></div>`:''}
+      ${original.task.dueDate?`<div class="task-row"><span class="tl">Due Date</span><span class="tv">${new Date(original.task.dueDate).toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'})}</span></div>`:''}
+      ${original.task.notes?`<div class="task-row"><span class="tl">Notes</span><span class="tv">${esc(original.task.notes)}</span></div>`:''}
+      ${original.task.completed
+        ? `<div class="task-row"><span class="tl">Status</span><span class="tv" style="color:#2c5f2e;font-weight:700">✓ Completed by ${esc(original.task.completedBy)} on ${new Date(original.task.completedAt).toLocaleDateString()}</span></div>`
+        : isRecipient ? `<button class="msg-task-done-btn" onclick="markTaskDone('${original.id}')">✓ Mark Task Complete</button>` : `<div style="font-size:0.78rem;color:#aaa;margin-top:6px">Waiting for recipient to complete</div>`
       }
     </div>` : '';
 
-  const toList = m.to.map(name => {
-    const c = smColor(name);
-    return `<span class="msg-sender-dot" style="background:${c}">${smInitial(name)}</span>${esc(name)}`;
+  // Participants for header
+  const participants = [...new Set([original.from, ...original.to])].map(n => {
+    return `<span class="msg-sender-dot" style="background:${smColor(n)}">${smInitial(n)}</span>${esc(n)}`;
   }).join(', ');
 
+  // Chat bubbles
+  const bubbles = threadMsgs.map(m => {
+    const isMine = m.from === me;
+    const color = smColor(m.from);
+    return `<div class="chat-bubble-row ${isMine?'mine':'theirs'}">
+      ${!isMine?`<div class="chat-avatar-sm" style="background:${color}">${smInitial(m.from)}</div>`:''}
+      <div class="chat-bubble-wrap">
+        ${!isMine?`<div class="chat-sender">${esc(m.from)}</div>`:''}
+        <div class="chat-bubble ${isMine?'chat-mine':'chat-theirs'}">${esc(m.body)}</div>
+        <div class="chat-ts">${formatMsgTime(m.timestamp)}</div>
+      </div>
+    </div>`;
+  }).join('');
+
   panel.innerHTML = `
-    ${_msgMode==='side' ? `<div class="msg-detail-back"><button class="back-btn" onclick="msgDetailBack()">← Back to list</button></div>` : ''}
+    ${_msgMode==='side' ? backBtn : ''}
     <div class="msg-detail-head">
-      <div class="msg-detail-subject">${esc(m.subject)}</div>
+      <div class="msg-detail-subject">${esc(original.subject)}</div>
       <div class="msg-detail-meta">
-        <span><span class="msg-sender-dot" style="background:${fromColor}">${smInitial(m.from)}</span><strong>${esc(m.from)}</strong></span>
-        <span>To: ${toList}</span>
-        <span>${new Date(m.timestamp).toLocaleString()}</span>
+        <span>${participants}</span>
+        ${threadMsgs.length > 1 ? `<span style="color:#aaa">· ${threadMsgs.length} messages</span>` : ''}
       </div>
     </div>
     ${taskBox}
-    <div class="msg-detail-body">${esc(m.body)}</div>
+    <div class="chat-bubbles" id="chatBubbles">${bubbles}</div>
+    <div class="chat-reply-bar">
+      <textarea class="chat-reply-input" id="chatReplyInput" placeholder="Reply to this conversation…" rows="1"
+        onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendThreadReply('${activeMsgId}');}"></textarea>
+      <button class="chat-reply-btn" onclick="sendThreadReply('${activeMsgId}')">↑</button>
+    </div>
     <div class="msg-detail-actions">
-      ${m.from !== me ? `<button class="btn btn-secondary btn-sm" onclick="openReply('${m.id}')">↩ Reply</button>` : ''}
-      ${me === m.from || me === 'Yisroel' ? `<button class="btn btn-danger btn-sm" onclick="deleteMessage('${m.id}')">Delete</button>` : ''}
+      ${me === original.from || me === 'Yisroel' ? `<button class="btn btn-danger btn-sm" onclick="deleteMessage('${original.id}')">🗑 Delete Thread</button>` : ''}
     </div>`;
+
+  // Scroll to bottom of chat
+  requestAnimationFrame(() => { const cb = document.getElementById('chatBubbles'); if(cb) cb.scrollTop = cb.scrollHeight; });
 }
 
 async function markTaskDone(id) {
@@ -2295,6 +2368,36 @@ function openCompose(replyTo) {
   modal.classList.add('open');
 }
 
+async function sendThreadReply(threadId) {
+  const input = document.getElementById('chatReplyInput');
+  const body = input?.value.trim();
+  if(!body) return;
+  const threadMsgs = _messages.filter(m => (m.threadId||m.id) === threadId).sort((a,b)=>a.timestamp-b.timestamp);
+  if(!threadMsgs.length) return;
+  const original = threadMsgs[0];
+  const me = activeProfile?.name;
+  const participants = new Set([...original.to, original.from]);
+  participants.delete(me);
+  const replyId = Date.now().toString();
+  const reply = {
+    id: replyId,
+    from: me,
+    to: [...participants],
+    subject: original.subject,
+    body,
+    timestamp: Date.now(),
+    readBy: [me],
+    isTask: false,
+    task: null,
+    threadId,
+    parentId: threadMsgs[threadMsgs.length-1].id
+  };
+  await upsertMessage(reply);
+  if(input) input.value = '';
+  renderMsgDetail();
+  renderMsgList();
+}
+
 function openReply(id) {
   const m = _messages.find(x=>x.id===id);
   if(m) openCompose(m);
@@ -2321,8 +2424,9 @@ async function sendMessage() {
   if(!finalTo.length) { alert('Please select at least one recipient.'); return; }
   if(!subject) { alert('Please enter a subject.'); return; }
   if(!body) { alert('Please write a message.'); return; }
+  const msgId = Date.now().toString();
   const msg = {
-    id: Date.now().toString(),
+    id: msgId,
     from: activeProfile?.name || 'Unknown',
     to: finalTo, subject, body,
     timestamp: Date.now(),
@@ -2333,7 +2437,9 @@ async function sendMessage() {
       dueDate: document.getElementById('taskDue').value,
       priority: document.getElementById('taskPriority').value,
       completed: false, completedBy: '', completedAt: ''
-    } : null
+    } : null,
+    threadId: msgId,  // each new message starts its own thread
+    parentId: null
   };
   await upsertMessage(msg);
   closeCompose();
@@ -2667,6 +2773,39 @@ function closeSchedView() {
   sv.style.top = '';
   document.getElementById('hdrSchedBtn').classList.remove('active');
   if(!_schedSidePanel) showDashboard();
+}
+
+// ── Calendar side panel drag ──
+let _schedDragging = false, _schedDragOffX = 0, _schedDragOffY = 0;
+
+function startSchedDrag(e) {
+  if(!_schedSidePanel) return;
+  if(e.target.tagName === 'BUTTON' || e.target.closest('button')) return;
+  _schedDragging = true;
+  const panel = document.getElementById('scheduleView');
+  const rect = panel.getBoundingClientRect();
+  _schedDragOffX = e.clientX - rect.left;
+  _schedDragOffY = e.clientY - rect.top;
+  e.preventDefault();
+  document.addEventListener('mousemove', onSchedDragMove);
+  document.addEventListener('mouseup', stopSchedDrag);
+}
+
+function onSchedDragMove(e) {
+  if(!_schedDragging) return;
+  const panel = document.getElementById('scheduleView');
+  const x = Math.max(0, Math.min(e.clientX - _schedDragOffX, window.innerWidth - panel.offsetWidth));
+  const y = Math.max(0, Math.min(e.clientY - _schedDragOffY, window.innerHeight - panel.offsetHeight));
+  panel.style.left   = x + 'px';
+  panel.style.top    = y + 'px';
+  panel.style.right  = 'auto';
+  panel.style.bottom = 'auto';
+}
+
+function stopSchedDrag() {
+  _schedDragging = false;
+  document.removeEventListener('mousemove', onSchedDragMove);
+  document.removeEventListener('mouseup', stopSchedDrag);
 }
 
 // ── Main render dispatcher ──
