@@ -2547,7 +2547,7 @@ function renderMsgDetail() {
   panel.innerHTML = `
     ${_msgMode==='side' ? backBtn : ''}
     <div class="msg-detail-head" style="position:relative">
-      ${canDelete ? `<button onclick="deleteMessage('${original.id}')" title="Delete thread" style="position:absolute;top:0;right:0;background:none;border:none;color:#e53e3e;font-size:1.35rem;cursor:pointer;padding:4px 8px;border-radius:6px;transition:all 0.15s" onmouseover="this.style.background='#fff5f5'" onmouseout="this.style.background='none'">🗑</button>` : ''}
+      ${canDelete ? `<button onclick="deleteMessage('${original.id}')" title="Delete thread" style="position:absolute;top:4px;right:6px;background:#fff0f0;border:1.5px solid #ffcdd2;color:#e53e3e;font-size:0.75rem;font-weight:700;cursor:pointer;padding:3px 9px;border-radius:6px;transition:all 0.15s;letter-spacing:0.3px" onmouseover="this.style.background='#fce4e4'" onmouseout="this.style.background='#fff0f0'">DELETE</button>` : ''}
       <div class="msg-detail-subject" style="padding-right:${canDelete?'28px':'0'}">${esc(original.subject)}</div>
       <div class="msg-detail-meta">
         <span>${participants}</span>
