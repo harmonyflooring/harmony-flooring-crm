@@ -243,8 +243,13 @@ header::-webkit-scrollbar { display: none; }
 .sn { width:20px; height:20px; border-radius:50%; background:#e0e0e0; color:#777; font-size:0.65rem; font-weight:700; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
 .sn.done-n { background:#5a9e5c; color:white; }
 .step-form { flex:1; overflow-y:auto; padding:20px 24px; }
+.step-form-inner { max-width:620px; }
 .step-form h3 { font-size:1rem; margin-bottom:4px; color:#2c5f2e; }
 .step-form .sdesc { font-size:0.8rem; color:#aaa; margin-bottom:16px; border-bottom:1px solid #f0f0f0; padding-bottom:10px; }
+.multichip-group { display:flex; flex-wrap:wrap; gap:7px; margin-top:5px; }
+.multichip-btn { padding:6px 14px; border-radius:20px; border:1.5px solid #ddd; font-size:0.82rem; cursor:pointer; transition:all 0.15s; user-select:none; background:white; color:#555; font-family:inherit; }
+.multichip-btn.selected { background:#2c5f2e; border-color:#2c5f2e; color:white; font-weight:600; }
+.multichip-btn:hover:not(.selected) { border-color:#2c5f2e; color:#2c5f2e; }
 .step-section-header { font-size:0.72rem; font-weight:800; text-transform:uppercase; letter-spacing:0.8px; color:#2c5f2e; background:#e8f5e9; border-radius:6px; padding:6px 10px; margin:18px 0 8px; }
 .form-group { margin-bottom:14px; }
 .form-group label { display:block; font-size:0.77rem; font-weight:600; color:#555; margin-bottom:4px; }
@@ -1096,22 +1101,17 @@ const STEPS = [
     {key:"lockbox",      label:"Lock Box?",          type:"select",  options:["No","Yes"], controls:true,     customerField:true},
     {key:"lockboxCode",  label:"Lock Box Code",      type:"text",    placeholder:"Code or location",          customerField:true, showIf:{field:"lockbox",value:"Yes"}}
   ]},
-  { title:"Customer Selection", desc:"Initial inquiry, consultation, and sample selection.", fields:[
+  { title:"Customer Selection", desc:"Initial inquiry, consultation details, and sample selection.", fields:[
     {key:"_h_inquiry",    type:"header", label:"Initial Inquiry"},
     {key:"inquiry_source",label:"How did they hear about us?",type:"select",options:["Phone","Email","Website","Referral","Walk-in","Social Media","Other"]},
     {key:"inquiry_date",  label:"Date of Inquiry",type:"date"},
-    {key:"project_overview",label:"Project Description",type:"textarea",placeholder:"Room type, rough size, timeline…"},
-    {key:"inquiry_notes", label:"Notes",type:"textarea",placeholder:"Any additional details from first contact"},
     {key:"_h_consult",    type:"header", label:"Consultation"},
-    {key:"consultation_date",label:"Consultation Date",type:"date"},
-    {key:"consultation_type",label:"Consultation Type",type:"select",options:["Showroom Visit","Phone Call","Video Call","In-Home"]},
-    {key:"flooring_type", label:"Type of Flooring Needed",type:"select",options:["Hardwood","LVP / Luxury Vinyl","Tile","Carpet","Laminate","Multiple / Mixed","Undecided"]},
-    {key:"budget_range",  label:"Budget Range",type:"select",options:["Under $2,000","$2,000 – $5,000","$5,000 – $10,000","$10,000 – $20,000","$20,000+","Flexible"]},
-    {key:"rooms_involved",label:"Rooms / Areas",type:"textarea",placeholder:"e.g. Living room, kitchen, 2 bedrooms"},
-    {key:"special_requirements",label:"Special Requirements",type:"textarea",placeholder:"Pets, allergies, subfloor concerns, transitions, stairs…"},
+    {key:"flooring_type", label:"Type of Flooring",type:"multichip",options:["Hardwood","LVP / Luxury Vinyl","Tile","Carpet","Laminate","Other"]},
+    {key:"project_overview",label:"Project Description",type:"textarea",placeholder:"Timeline, scope, any special details…"},
+    {key:"rooms_involved",label:"Rooms / Areas",type:"multichip",options:["Living Room","Kitchen","Master Bedroom","Bedroom","Dining Room","Hallway","Stairs","Basement","Office","Bathroom","Laundry","Other"]},
+    {key:"special_requirements",label:"Special Requirements",type:"textarea",placeholder:"Pets, allergies, subfloor concerns, transitions…"},
     {key:"_h_samples",    type:"header", label:"Sample Selection"},
-    {key:"showroom_date", label:"Showroom Visit Date",type:"date"},
-    {key:"products_shown",label:"Products Shown",type:"textarea",placeholder:"Product names/SKUs"},
+    {key:"products_shown",label:"Products Shown",type:"textarea",placeholder:"Product names / SKUs"},
     {key:"top_choices",   label:"Top 2–3 Choices",type:"textarea",placeholder:"Customer's preferred products"},
     {key:"samples_taken", label:"Samples Taken Home?",type:"select",options:["Yes","No"]},
     {key:"sample_notes",  label:"Notes",type:"textarea",placeholder:"Preferences, colors, concerns…"}
@@ -1752,6 +1752,12 @@ function renderStepsNav(c){
 }
 function switchStep(i){ currentStep=i; const c=customers().find(x=>x.id===currentId); renderStepsNav(c); renderStep(c,i); }
 
+function toggleChip(btn, inputId) {
+  btn.classList.toggle('selected');
+  const selected = [...btn.closest('.multichip-group').querySelectorAll('.multichip-btn.selected')].map(b => b.dataset.value);
+  document.getElementById(inputId).value = selected.join(',');
+}
+
 function handleFieldChange(key, val, si) {
   const step = STEPS[si];
   step.fields.forEach(f => {
@@ -1774,7 +1780,11 @@ function renderStep(c,si){
     const fgId=`id="fg_${f.key}"`;
     const hidden=f.showIf?(vals[f.showIf.field]===f.showIf.value?'':' style="display:none"'):'';
     let inner='';
-    if(f.type==='salesman_select'){
+    if(f.type==='multichip'){
+      const selVals=val?val.split(',').map(v=>v.trim()).filter(Boolean):[];
+      const chips=f.options.map(o=>`<button type="button" class="multichip-btn${selVals.includes(o)?' selected':''}" data-value="${esc(o)}" onclick="toggleChip(this,'f_${f.key}')">${esc(o)}</button>`).join('');
+      inner=`<label>${f.label}</label><input type="hidden" id="f_${f.key}" value="${esc(val)}"><div class="multichip-group">${chips}</div>`;
+    } else if(f.type==='salesman_select'){
       const smOpts=SALESMEN.filter(s=>s.name!=='Admin').map(s=>`<option value="${esc(s.name)}"${val===s.name?' selected':''}>${esc(s.name)}</option>`).join('');
       inner=`<label>${f.label}</label><select id="f_${f.key}"><option value="">— Select —</option>${smOpts}</select>`;
     } else if(f.type==='select'){
@@ -1793,7 +1803,7 @@ function renderStep(c,si){
   const isCurrent=si===c.step;
   const lastStep=STEPS.length-1;
   const nextBtn=isCurrent&&si<lastStep?`<button class="btn btn-primary" onclick="saveAndAdvance()">Save & Next Step →</button>`:si===lastStep&&isCurrent?`<button class="btn btn-green" onclick="saveStep()">Save & Mark Complete ✓</button>`:'';
-  document.getElementById('stepContent').innerHTML=`<h3>Step ${si+1}: ${step.title}</h3><div class="sdesc">${step.desc}</div>${fields}<div class="step-actions"><button class="btn btn-secondary" onclick="saveStep()">Save Notes</button>${nextBtn}<span class="saved-note" id="savedNote">✓ Saved</span></div>`;
+  document.getElementById('stepContent').innerHTML=`<div class="step-form-inner"><h3>Step ${si+1}: ${step.title}</h3><div class="sdesc">${step.desc}</div>${fields}<div class="step-actions"><button class="btn btn-secondary" onclick="saveStep()">Save Notes</button>${nextBtn}<span class="saved-note" id="savedNote">✓ Saved</span></div></div>`;
 }
 
 function collectStep(si){
