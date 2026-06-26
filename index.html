@@ -250,6 +250,9 @@ header::-webkit-scrollbar { display: none; }
 .multichip-btn { padding:6px 14px; border-radius:20px; border:1.5px solid #ddd; font-size:0.82rem; cursor:pointer; transition:all 0.15s; user-select:none; background:white; color:#555; font-family:inherit; }
 .multichip-btn.selected { background:#2c5f2e; border-color:#2c5f2e; color:white; font-weight:600; }
 .multichip-btn:hover:not(.selected) { border-color:#2c5f2e; color:#2c5f2e; }
+.multichip-change-btn { font-size:0.78rem; color:#2c5f2e; border:1.5px solid #2c5f2e; background:white; border-radius:7px; padding:5px 12px; cursor:pointer; font-weight:600; transition:all 0.15s; font-family:inherit; }
+.multichip-change-btn:hover { background:#e8f5e9; }
+.multichip-locked .multichip-btn { cursor:default; pointer-events:none; }
 .step-section-header { font-size:0.72rem; font-weight:800; text-transform:uppercase; letter-spacing:0.8px; color:#2c5f2e; background:#e8f5e9; border-radius:6px; padding:6px 10px; margin:18px 0 8px; }
 .form-group { margin-bottom:14px; }
 .form-group label { display:block; font-size:0.77rem; font-weight:600; color:#555; margin-bottom:4px; }
@@ -1086,7 +1089,7 @@ header::-webkit-scrollbar { display: none; }
 // ════════════════════════════════════════════
 // STEP DEFINITIONS
 // ════════════════════════════════════════════
-const STEP_COLORS = Array(12).fill('#4d7b79');
+const STEP_COLORS = Array(13).fill('#4d7b79');
 
 const STEPS = [
   { title:"Customer Intake", desc:"Customer contact information and job site details.", fields:[
@@ -1113,7 +1116,8 @@ const STEPS = [
     {key:"_h_samples",    type:"header", label:"Sample Selection"},
     {key:"products_shown",label:"Products Shown",type:"textarea",placeholder:"Product names / SKUs"},
     {key:"top_choices",   label:"Top 2–3 Choices",type:"textarea",placeholder:"Customer's preferred products"},
-    {key:"samples_taken", label:"Samples Taken Home?",type:"select",options:["Yes","No"]},
+    {key:"samples_taken", label:"Samples Taken Home?",type:"select",options:["Yes","No"],controls:true},
+    {key:"sample_taken_details",label:"Sample Details",type:"textarea",placeholder:"Which samples, quantities, product codes…",showIf:{field:"samples_taken",value:"Yes"}},
     {key:"sample_notes",  label:"Notes",type:"textarea",placeholder:"Preferences, colors, concerns…"}
   ]},
   { title:"Schedule Measure", desc:"Book the in-home measurement appointment and assign a technician.", fields:[
@@ -1127,10 +1131,12 @@ const STEPS = [
   ]},
   { title:"Measure Checklist", desc:"On-site measurement and full condition assessment of the job site.", fields:[
     {key:"measure_date",label:"Actual Measure Date",type:"date"},
-    {key:"total_sqft",label:"Total Square Footage",type:"text",placeholder:"e.g. 1,240 sq ft"},
     {key:"rooms_measured",label:"Rooms / Areas Measured",type:"textarea",placeholder:"e.g. Living room 320 sqft, Kitchen 180 sqft…"},
     {key:"subfloor_condition",label:"Subfloor Condition",type:"select",options:["Good – No Work Needed","Minor Repairs Needed","Major Repairs Needed","Needs Assessment"]},
-    {key:"existing_floor",label:"Existing Flooring Removal Needed?",type:"select",options:["Yes","No","Partial"]},
+    {key:"subfloor_type",label:"Subfloor Type",type:"multichip",options:["Wood","Concrete"]},
+    {key:"subfloor_notes",label:"Subfloor Notes",type:"textarea",placeholder:"Subfloor details, issues, repairs needed…"},
+    {key:"existing_floor",label:"Existing Flooring Removal Needed?",type:"select",options:["Yes","No","Partial"],controls:true},
+    {key:"existing_floor_types",label:"Type of Flooring to Remove",type:"multichip",options:["Carpet","Vinyl Click","Vinyl Glue Down","Laminate","Hardwood","Ceramic Tile","Sheet Vinyl"],showIf:{field:"existing_floor",value:"Yes"}},
     {key:"electric",label:"Electric",type:"select",options:["On","Off"]},
     {key:"hvac",label:"HVAC",type:"select",options:["On","Off"]},
     {key:"water",label:"Water",type:"select",options:["On","Off"]},
@@ -1143,24 +1149,14 @@ const STEPS = [
     {key:"special_conditions",label:"Special Conditions / Obstacles",type:"textarea",placeholder:"Uneven floors, tight areas, doorways…"},
     {key:"measure_notes",label:"Measure Notes",type:"textarea",placeholder:"Additional observations from the site visit…"}
   ]},
-  { title:"Estimate Prep", desc:"Generate a detailed written estimate covering all costs.", fields:[
-    {key:"estimate_date",label:"Estimate Prepared Date",type:"date"},
-    {key:"estimate_number",label:"Estimate #",type:"text",placeholder:"EST-2024-0042"},
-    {key:"materials_cost",label:"Materials Cost ($)",type:"text",placeholder:"0.00"},
-    {key:"labor_cost",label:"Labor Cost ($)",type:"text",placeholder:"0.00"},
-    {key:"removal_cost",label:"Removal / Disposal ($)",type:"text",placeholder:"0.00"},
-    {key:"subfloor_cost",label:"Subfloor Repair ($)",type:"text",placeholder:"0.00"},
-    {key:"total_estimate",label:"Total Estimate ($)",type:"text",placeholder:"0.00"},
-    {key:"lead_time",label:"Material Lead Time",type:"text",placeholder:"e.g. 1–2 weeks"},
-    {key:"estimate_notes",label:"Notes",type:"textarea",placeholder:"Line item explanations…"}
+  { title:"Estimate Sent", desc:"Confirm the estimate has been sent to the customer.", fields:[
+    {key:"estimate_sent",label:"Estimate Sent to Customer?",type:"select",options:["Yes","No"]}
   ]},
-  { title:"Estimate Review", desc:"Present estimate to customer, walk through each line item.", fields:[
-    {key:"presentation_date",label:"Presentation Date",type:"date"},
-    {key:"presentation_method",label:"Presented Via",type:"select",options:["In Person","Email","Phone","Video Call"]},
-    {key:"customer_reaction",label:"Customer Reaction",type:"select",options:["Ready to Sign","Needs Time","Requested Revision","Price Concern","Other"]},
-    {key:"financing_offered",label:"Financing Options Offered?",type:"select",options:["Yes","No","Not Needed"]},
-    {key:"revision_needed",label:"Revision Required?",type:"select",options:["No – Estimate Accepted","Yes – Minor Changes","Yes – Major Revision"]},
-    {key:"presentation_notes",label:"Notes",type:"textarea",placeholder:"Questions, objections, changes…"}
+  { title:"Estimate Approved", desc:"Has the customer approved the estimate?", fields:[
+    {key:"estimate_approved",label:"Estimate Approved?",type:"select",options:["Yes","No"],controls:true},
+    {key:"deposit_amount",label:"Deposit Amount ($)",type:"text",placeholder:"0.00",showIf:{field:"estimate_approved",value:"Yes"}},
+    {key:"install_date_target",label:"Target Installation Date",type:"date",showIf:{field:"estimate_approved",value:"Yes"}},
+    {key:"approval_notes",label:"Notes",type:"textarea",placeholder:"Any additional notes…",showIf:{field:"estimate_approved",value:"Yes"}}
   ]},
   { title:"Contract & Approval", desc:"Customer signs contract and pays deposit. Lock in install date.", fields:[
     {key:"contract_date",label:"Contract Signed Date",type:"date"},
@@ -1202,6 +1198,9 @@ const STEPS = [
     {key:"punch_resolved",label:"Punch List Resolved?",type:"select",options:["Yes – All Items Complete","Partial – Follow-up Needed","N/A – No Issues"]},
     {key:"customer_satisfaction",label:"Customer Satisfaction (Install)",type:"select",options:["Very Satisfied","Satisfied","Neutral","Unsatisfied"]},
     {key:"install_notes",label:"Notes",type:"textarea",placeholder:"Additional notes, photos taken…"}
+  ]},
+  { title:"Customer Invoiced", desc:"Confirm the invoice has been sent to the customer.", fields:[
+    {key:"invoiced",label:"Invoice Sent?",type:"select",options:["Yes","No"]}
   ]},
   { title:"Close-Out", desc:"Review completed job, collect final payment, request review or referral.", fields:[
     {key:"closeout_date",label:"Close-Out Date",type:"date"},
@@ -1753,9 +1752,18 @@ function renderStepsNav(c){
 function switchStep(i){ currentStep=i; const c=customers().find(x=>x.id===currentId); renderStepsNav(c); renderStep(c,i); }
 
 function toggleChip(btn, inputId) {
+  const cb = document.getElementById(inputId + '_changebtn');
+  if(cb && cb.style.display !== 'none') return; // locked — ignore clicks
   btn.classList.toggle('selected');
   const selected = [...btn.closest('.multichip-group').querySelectorAll('.multichip-btn.selected')].map(b => b.dataset.value);
   document.getElementById(inputId).value = selected.join(',');
+}
+
+function editChips(inputId) {
+  const group = document.getElementById(inputId + '_group');
+  if(group) { group.querySelectorAll('.multichip-btn').forEach(b => b.style.display = ''); group.classList.remove('multichip-locked'); }
+  const cb = document.getElementById(inputId + '_changebtn');
+  if(cb) cb.style.display = 'none';
 }
 
 function handleFieldChange(key, val, si) {
@@ -1782,8 +1790,15 @@ function renderStep(c,si){
     let inner='';
     if(f.type==='multichip'){
       const selVals=val?val.split(',').map(v=>v.trim()).filter(Boolean):[];
-      const chips=f.options.map(o=>`<button type="button" class="multichip-btn${selVals.includes(o)?' selected':''}" data-value="${esc(o)}" onclick="toggleChip(this,'f_${f.key}')">${esc(o)}</button>`).join('');
-      inner=`<label>${f.label}</label><input type="hidden" id="f_${f.key}" value="${esc(val)}"><div class="multichip-group">${chips}</div>`;
+      const locked=selVals.length>0;
+      const chips=f.options.map(o=>{
+        const isSel=selVals.includes(o);
+        const hide=locked&&!isSel?' style="display:none"':'';
+        return `<button type="button" class="multichip-btn${isSel?' selected':''}" data-value="${esc(o)}" onclick="toggleChip(this,'f_${f.key}')"${hide}>${esc(o)}</button>`;
+      }).join('');
+      const groupClass=locked?' multichip-locked':'';
+      const changeBtn=`<button type="button" class="multichip-change-btn" id="f_${f.key}_changebtn" onclick="editChips('f_${f.key}')" style="${locked?'':'display:none'}">✏️ Change selections</button>`;
+      inner=`<label>${f.label}</label><input type="hidden" id="f_${f.key}" value="${esc(val)}"><div class="multichip-group${groupClass}" id="f_${f.key}_group">${chips}</div><div style="margin-top:6px">${changeBtn}</div>`;
     } else if(f.type==='salesman_select'){
       const smOpts=SALESMEN.filter(s=>s.name!=='Admin').map(s=>`<option value="${esc(s.name)}"${val===s.name?' selected':''}>${esc(s.name)}</option>`).join('');
       inner=`<label>${f.label}</label><select id="f_${f.key}"><option value="">— Select —</option>${smOpts}</select>`;
@@ -1825,8 +1840,8 @@ async function saveStep(){
   c.stepData[currentStep]=stepData;
   Object.assign(c, customerProps);
   await upsertCustomer(c);
+  renderStep(c, currentStep); // re-render so multichip fields lock
   const n=document.getElementById('savedNote'); if(n){n.style.display='flex';setTimeout(()=>n.style.display='none',2000);}
-  // Refresh header if customer name changed
   if(customerProps.name!==undefined) { const dn=document.getElementById('detailName'); if(dn) dn.textContent=c.name; }
 }
 async function saveAndAdvance(){
