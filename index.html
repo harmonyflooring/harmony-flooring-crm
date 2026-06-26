@@ -269,6 +269,27 @@ header::-webkit-scrollbar { display: none; }
 .multichip-change-btn { font-size:0.78rem; color:#2c5f2e; border:1.5px solid #2c5f2e; background:white; border-radius:7px; padding:5px 12px; cursor:pointer; font-weight:600; transition:all 0.15s; font-family:inherit; }
 .multichip-change-btn:hover { background:#e8f5e9; }
 .multichip-locked .multichip-btn { cursor:default; pointer-events:none; }
+/* ── CUSTOMER TYPE TOGGLE ── */
+.ctype-toggle { display:flex; background:#f0ede8; border-radius:8px; padding:3px; gap:2px; margin-bottom:10px; }
+.ctype-btn { flex:1; padding:7px 10px; border:none; border-radius:6px; font-size:0.83rem; font-weight:600; cursor:pointer; background:transparent; color:#888; transition:all 0.15s; font-family:inherit; }
+.ctype-btn.active { background:white; color:#2c5f2e; box-shadow:0 1px 4px rgba(0,0,0,0.12); }
+.cust-search-box { position:relative; margin-bottom:6px; }
+.cust-search-box input { width:100%; padding:9px 12px; border:1.5px solid #ddd; border-radius:8px; font-size:0.85rem; font-family:inherit; box-sizing:border-box; }
+.cust-search-box input:focus { outline:none; border-color:#2c5f2e; }
+.csr-dropdown { border:1.5px solid #e0ddd8; border-radius:8px; overflow:hidden; margin-top:3px; background:white; box-shadow:0 4px 16px rgba(0,0,0,0.1); }
+.csr-item { padding:9px 12px; cursor:pointer; border-bottom:1px solid #f0ede8; transition:background 0.1s; }
+.csr-item:hover { background:#f0faf0; }
+.csr-item:last-child { border-bottom:none; }
+.csr-name { font-size:0.85rem; font-weight:600; color:#333; }
+.csr-meta { font-size:0.76rem; color:#999; margin-top:1px; }
+.csr-selected { padding:8px 12px; color:#2c5f2e; font-size:0.83rem; font-weight:600; background:#e8f5e9; border-radius:8px; margin-bottom:6px; }
+.csr-empty { padding:9px 12px; color:#bbb; font-size:0.82rem; }
+.jobsite-toggle { margin-top:10px; padding-top:10px; border-top:1px solid #f0ede8; }
+.jobsite-toggle-label { font-size:0.77rem; font-weight:600; color:#555; margin-bottom:6px; }
+/* ── COMPACT FORM GRID (Measure Checklist) ── */
+.compact-form-grid { display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; margin-bottom:14px; }
+.compact-form-grid .form-group { margin-bottom:0; }
+.compact-form-grid select, .compact-form-grid input[type="date"] { font-size:0.78rem; padding:6px 8px; }
 .step-section-header { font-size:0.72rem; font-weight:800; text-transform:uppercase; letter-spacing:0.8px; color:#2c5f2e; background:#e8f5e9; border-radius:6px; padding:6px 10px; margin:18px 0 8px; }
 .form-group { margin-bottom:14px; }
 .form-group label { display:block; font-size:0.77rem; font-weight:600; color:#555; margin-bottom:4px; }
@@ -1143,16 +1164,18 @@ const STEP_COLORS = Array(13).fill('#4d7b79');
 
 const STEPS = [
   { title:"Customer Intake", desc:"Customer contact information and job site details.", fields:[
-    {key:"name",         label:"Customer Name",      type:"text",    placeholder:"Full name",                 customerField:true},
-    {key:"phone",        label:"Phone",              type:"text",    placeholder:"(555) 555-5555",            customerField:true},
-    {key:"email",        label:"Email",              type:"text",    placeholder:"email@example.com",         customerField:true},
-    {key:"company",      label:"Company",            type:"text",    placeholder:"Company name (if any)",     customerField:true},
-    {key:"address",      label:"Address / Job Site", type:"text",    placeholder:"Full job site address",     customerField:true},
-    {key:"salesman",     label:"Salesman",           type:"salesman_select",                                  customerField:true},
-    {key:"contractor",   label:"Contractor",         type:"text",    placeholder:"Contractor name (if any)",  customerField:true},
-    {key:"contractorPhone",label:"Contractor Phone", type:"text",    placeholder:"(555) 555-5555",            customerField:true},
-    {key:"lockbox",      label:"Lock Box?",          type:"select",  options:["No","Yes"], controls:true,     customerField:true},
-    {key:"lockboxCode",  label:"Lock Box Code",      type:"text",    placeholder:"Code or location",          customerField:true, showIf:{field:"lockbox",value:"Yes"}}
+    {key:"customer_type",  label:"Customer Type",     type:"customer_type"},
+    {key:"name",           label:"Customer Name",     type:"text",    placeholder:"Full name",                customerField:true},
+    {key:"phone",          label:"Phone",             type:"text",    placeholder:"(555) 555-5555",           customerField:true},
+    {key:"email",          label:"Email",             type:"text",    placeholder:"email@example.com",        customerField:true},
+    {key:"company",        label:"Company",           type:"text",    placeholder:"Company name (if any)",    customerField:true},
+    {key:"address",        label:"Address / Job Site",type:"text",    placeholder:"Street address",           customerField:true},
+    {key:"address2",       label:"Suite / Apt",       type:"text",    placeholder:"Suite, Apt, Unit # (optional)", customerField:true},
+    {key:"salesman",       label:"Salesman",          type:"salesman_select",                                 customerField:true},
+    {key:"contractor",     label:"Contractor",        type:"text",    placeholder:"Contractor name (if any)", customerField:true},
+    {key:"contractorPhone",label:"Contractor Phone",  type:"text",    placeholder:"(555) 555-5555",           customerField:true},
+    {key:"lockbox",        label:"Lock Box?",         type:"select",  options:["No","Yes"], controls:true,    customerField:true},
+    {key:"lockboxCode",    label:"Lock Box Code",     type:"text",    placeholder:"Code or location",         customerField:true, showIf:{field:"lockbox",value:"Yes"}}
   ]},
   { title:"Customer Selection", desc:"Initial inquiry, consultation details, and sample selection.", fields:[
     {key:"_h_inquiry",    type:"header", label:"Initial Inquiry"},
@@ -1187,15 +1210,15 @@ const STEPS = [
     {key:"subfloor_notes",label:"Subfloor Notes",type:"textarea",placeholder:"Subfloor details, issues, repairs needed…"},
     {key:"existing_floor",label:"Existing Flooring Removal Needed?",type:"select",options:["Yes","No","Partial"],controls:true},
     {key:"existing_floor_types",label:"Type of Flooring to Remove",type:"multichip",options:["Carpet","Vinyl Click","Vinyl Glue Down","Laminate","Hardwood","Ceramic Tile","Sheet Vinyl"],showIf:{field:"existing_floor",value:"Yes"}},
-    {key:"electric",label:"Electric",type:"select",options:["On","Off"]},
-    {key:"hvac",label:"HVAC",type:"select",options:["On","Off"]},
-    {key:"water",label:"Water",type:"select",options:["On","Off"]},
+    {key:"electric",label:"Electric",type:"select",options:["On","Off"],compact:true},
+    {key:"hvac",label:"HVAC",type:"select",options:["On","Off"],compact:true},
+    {key:"water",label:"Water",type:"select",options:["On","Off"],compact:true},
+    {key:"photos_taken",label:"Photos Taken?",type:"select",options:["Yes","No"],compact:true},
     {key:"has_steps",label:"Steps",type:"select",options:["No","Yes"],controls:true},
     {key:"step_type",label:"Step Type",type:"select",options:["Box","Half Cap","Full Cap","Double Cap","Birdcage","Round Bottom"],showIf:{field:"has_steps",value:"Yes"}},
     {key:"step_notes",label:"Step Notes",type:"textarea",placeholder:"Details about the steps…",showIf:{field:"has_steps",value:"Yes"}},
     {key:"has_transitions",label:"Transitions",type:"select",options:["No","Yes"],controls:true},
     {key:"transition_notes",label:"Transition Notes",type:"textarea",placeholder:"Details about the transitions…",showIf:{field:"has_transitions",value:"Yes"}},
-    {key:"photos_taken",label:"Photos Taken?",type:"select",options:["Yes","No"]},
     {key:"special_conditions",label:"Special Conditions / Obstacles",type:"textarea",placeholder:"Uneven floors, tight areas, doorways…"},
     {key:"measure_notes",label:"Measure Notes",type:"textarea",placeholder:"Additional observations from the site visit…"}
   ]},
@@ -1908,61 +1931,132 @@ function handleFieldChange(key, val, si) {
   });
 }
 
+function renderFieldHtml(f, val, vals, si) {
+  if(f.type==='header') return {html:`<div class="step-section-header">${esc(f.label)}</div>`, compact:false};
+  const fgId=`id="fg_${f.key}"`;
+  const hidden=f.showIf?(vals[f.showIf.field]===f.showIf.value?'':' style="display:none"'):'';
+  let inner='';
+  if(f.type==='customer_type'){
+    const isExist=val==='Existing Customer';
+    inner=`<input type="hidden" id="f_${f.key}" value="${esc(val)}">
+    <div class="ctype-toggle">
+      <button type="button" class="ctype-btn${!isExist?' active':''}" onclick="setCustType('New Customer','f_${f.key}')">New Customer</button>
+      <button type="button" class="ctype-btn${isExist?' active':''}" onclick="setCustType('Existing Customer','f_${f.key}')">Existing Customer</button>
+    </div>
+    <div id="existingCustSearch" style="${isExist?'':'display:none'}">
+      <div class="cust-search-box"><input type="text" id="custSearchInput" placeholder="Type customer name or phone…" oninput="searchCustomers(this.value)" autocomplete="off"></div>
+      <div id="custSearchResults"></div>
+      <div class="jobsite-toggle" id="jobsiteToggle" style="display:none">
+        <div class="jobsite-toggle-label">Job Site</div>
+        <div class="ctype-toggle">
+          <button type="button" class="ctype-btn active" onclick="setJobsiteType('existing')">Same Job Site</button>
+          <button type="button" class="ctype-btn" onclick="setJobsiteType('new')">New Job Site</button>
+        </div>
+      </div>
+    </div>`;
+  } else if(f.type==='multichip'){
+    const selVals=val?val.split(',').map(v=>v.trim()).filter(Boolean):[];
+    const locked=selVals.length>0;
+    const chips=f.options.map(o=>{
+      const isSel=selVals.includes(o);
+      const hide=locked&&!isSel?' style="display:none"':'';
+      return `<button type="button" class="multichip-btn${isSel?' selected':''}" data-value="${esc(o)}" onclick="toggleChip(this,'f_${f.key}')"${hide}>${esc(o)}</button>`;
+    }).join('');
+    const groupClass=locked?' multichip-locked':'';
+    const changeBtn=`<button type="button" class="multichip-change-btn" id="f_${f.key}_changebtn" onclick="editChips('f_${f.key}')" style="${locked?'':'display:none'}">+ Show more options</button>`;
+    inner=`<label>${f.label}</label><input type="hidden" id="f_${f.key}" value="${esc(val)}"><div class="multichip-group${groupClass}" id="f_${f.key}_group">${chips}</div><div style="margin-top:6px">${changeBtn}</div>`;
+  } else if(f.type==='salesman_select'){
+    const smOpts=SALESMEN.filter(s=>s.name!=='Admin').map(s=>`<option value="${esc(s.name)}"${val===s.name?' selected':''}>${esc(s.name)}</option>`).join('');
+    inner=`<label>${f.label}</label><select id="f_${f.key}"><option value="">— Select —</option>${smOpts}</select>`;
+  } else if(f.type==='select'){
+    const opts=f.options.map(o=>`<option value="${o}"${val===o?' selected':''}>${o}</option>`).join('');
+    const onchg=f.controls?`onchange="handleFieldChange('${f.key}',this.value,${si})"` : '';
+    inner=`<label>${f.label}</label><select id="f_${f.key}" ${onchg}><option value="">— Select —</option>${opts}</select>`;
+  } else if(f.type==='textarea'){
+    inner=`<label>${f.label}</label><textarea id="f_${f.key}" placeholder="${f.placeholder||''}">${esc(val)}</textarea>`;
+  } else if(f.type==='date'){
+    inner=`<label>${f.label}</label><input type="date" id="f_${f.key}" value="${val}">`;
+  } else {
+    inner=`<label>${f.label}</label><input type="text" id="f_${f.key}" value="${esc(val)}" placeholder="${f.placeholder||''}">`;
+  }
+  return {html:`<div class="form-group" ${fgId}${hidden}>${inner}</div>`, compact:!!f.compact};
+}
+
 function renderStep(c,si){
   const step=STEPS[si]; const saved=c.stepData?.[si]||{};
-  // Build unified vals: customer fields read from c, others from saved
   const vals={...saved};
   step.fields.forEach(f=>{ if(f.customerField) vals[f.key]=c[f.key]||''; });
 
-  const fields=step.fields.map(f=>{
-    if(f.type==='header') return `<div class="step-section-header">${esc(f.label)}</div>`;
+  // Build field HTML, grouping compact fields into grid rows
+  let fieldsHtml='', compactBuf=[];
+  const flushCompact=()=>{ if(compactBuf.length){ fieldsHtml+=`<div class="compact-form-grid">${compactBuf.join('')}</div>`; compactBuf=[]; } };
+  step.fields.forEach(f=>{
     const val=vals[f.key]||'';
-    const fgId=`id="fg_${f.key}"`;
-    const hidden=f.showIf?(vals[f.showIf.field]===f.showIf.value?'':' style="display:none"'):'';
-    let inner='';
-    if(f.type==='multichip'){
-      const selVals=val?val.split(',').map(v=>v.trim()).filter(Boolean):[];
-      const locked=selVals.length>0;
-      const chips=f.options.map(o=>{
-        const isSel=selVals.includes(o);
-        const hide=locked&&!isSel?' style="display:none"':'';
-        return `<button type="button" class="multichip-btn${isSel?' selected':''}" data-value="${esc(o)}" onclick="toggleChip(this,'f_${f.key}')"${hide}>${esc(o)}</button>`;
-      }).join('');
-      const groupClass=locked?' multichip-locked':'';
-      const changeBtn=`<button type="button" class="multichip-change-btn" id="f_${f.key}_changebtn" onclick="editChips('f_${f.key}')" style="${locked?'':'display:none'}">✏️ Change selections</button>`;
-      inner=`<label>${f.label}</label><input type="hidden" id="f_${f.key}" value="${esc(val)}"><div class="multichip-group${groupClass}" id="f_${f.key}_group">${chips}</div><div style="margin-top:6px">${changeBtn}</div>`;
-    } else if(f.type==='salesman_select'){
-      const smOpts=SALESMEN.filter(s=>s.name!=='Admin').map(s=>`<option value="${esc(s.name)}"${val===s.name?' selected':''}>${esc(s.name)}</option>`).join('');
-      inner=`<label>${f.label}</label><select id="f_${f.key}"><option value="">— Select —</option>${smOpts}</select>`;
-    } else if(f.type==='select'){
-      const opts=f.options.map(o=>`<option value="${o}"${val===o?' selected':''}>${o}</option>`).join('');
-      const onchg=f.controls?`onchange="handleFieldChange('${f.key}',this.value,${si})"` : '';
-      inner=`<label>${f.label}</label><select id="f_${f.key}" ${onchg}><option value="">— Select —</option>${opts}</select>`;
-    } else if(f.type==='textarea'){
-      inner=`<label>${f.label}</label><textarea id="f_${f.key}" placeholder="${f.placeholder||''}">${esc(val)}</textarea>`;
-    } else if(f.type==='date'){
-      inner=`<label>${f.label}</label><input type="date" id="f_${f.key}" value="${val}">`;
-    } else {
-      inner=`<label>${f.label}</label><input type="text" id="f_${f.key}" value="${esc(val)}" placeholder="${f.placeholder||''}">`;
-    }
-    return `<div class="form-group" ${fgId}${hidden}>${inner}</div>`;
-  }).join('');
+    const {html, compact}=renderFieldHtml(f,val,vals,si);
+    if(compact){ compactBuf.push(html); } else { flushCompact(); fieldsHtml+=html; }
+  });
+  flushCompact();
+
   const isCurrent=si===c.step;
   const lastStep=STEPS.length-1;
   const nextBtn=isCurrent&&si<lastStep?`<button class="btn btn-primary" onclick="saveAndAdvance()">Save & Next Step →</button>`:si===lastStep&&isCurrent?`<button class="btn btn-green" onclick="saveStep()">Save & Mark Complete ✓</button>`:'';
-  document.getElementById('stepContent').innerHTML=`<div class="step-form-inner"><h3>Step ${si+1}: ${step.title}</h3><div class="sdesc">${step.desc}</div>${fields}<div class="step-actions"><button class="btn btn-secondary" onclick="saveStep()">Save Notes</button>${nextBtn}<span class="saved-note" id="savedNote">✓ Saved</span></div></div>`;
+  document.getElementById('stepContent').innerHTML=`<div class="step-form-inner"><h3>Step ${si+1}: ${step.title}</h3><div class="sdesc">${step.desc}</div>${fieldsHtml}<div class="step-actions"><button class="btn btn-secondary" onclick="saveStep()">Save Notes</button>${nextBtn}<span class="saved-note" id="savedNote">✓ Saved</span></div></div>`;
 }
 
 function collectStep(si){
   const stepData={}, customerProps={};
   STEPS[si].fields.forEach(f=>{
-    if(f.type==='header') return;
+    if(f.type==='header'||f.type==='customer_type') return;
     const el=document.getElementById('f_'+f.key);
     if(!el) return;
     if(f.customerField) customerProps[f.key]=el.value;
     else stepData[f.key]=el.value;
   });
   return {stepData, customerProps};
+}
+
+let _selectedExistingCust = null;
+
+function setCustType(value, inputId) {
+  document.getElementById(inputId).value = value;
+  const isExist = value === 'Existing Customer';
+  document.querySelectorAll('.ctype-toggle .ctype-btn').forEach((b,i)=>b.classList.toggle('active', isExist ? i===1 : i===0));
+  document.getElementById('existingCustSearch').style.display = isExist ? 'block' : 'none';
+  if(!isExist) { document.getElementById('custSearchResults').innerHTML=''; _selectedExistingCust=null; }
+}
+
+function searchCustomers(q) {
+  const box = document.getElementById('custSearchResults');
+  if(!q.trim()) { box.innerHTML=''; return; }
+  const ql = q.toLowerCase();
+  const hits = _customers.filter(x => x.id !== currentId && ((x.name||'').toLowerCase().includes(ql)||(x.phone||'').includes(q))).slice(0,8);
+  if(!hits.length) { box.innerHTML=`<div class="csr-dropdown"><div class="csr-empty">No matches found</div></div>`; return; }
+  box.innerHTML=`<div class="csr-dropdown">${hits.map(x=>`<div class="csr-item" onclick="selectExistingCust('${x.id}')"><div class="csr-name">${esc(x.name)}</div><div class="csr-meta">${esc(x.phone||'')}${x.address?' · '+esc(x.address):''}</div></div>`).join('')}</div>`;
+}
+
+function selectExistingCust(id) {
+  _selectedExistingCust = _customers.find(x=>x.id===id);
+  if(!_selectedExistingCust) return;
+  ['name','phone','email','company'].forEach(k=>{ const el=document.getElementById('f_'+k); if(el&&_selectedExistingCust[k]) el.value=_selectedExistingCust[k]; });
+  document.getElementById('custSearchResults').innerHTML=`<div class="csr-selected">✓ ${esc(_selectedExistingCust.name)}</div>`;
+  document.getElementById('custSearchInput').value=_selectedExistingCust.name;
+  document.getElementById('jobsiteToggle').style.display='block';
+  setJobsiteType('existing');
+}
+
+function setJobsiteType(type) {
+  const btns = document.querySelectorAll('#jobsiteToggle .ctype-btn');
+  btns[0]?.classList.toggle('active', type==='existing');
+  btns[1]?.classList.toggle('active', type==='new');
+  if(!_selectedExistingCust) return;
+  const addrEl=document.getElementById('f_address'), a2El=document.getElementById('f_address2');
+  if(type==='existing') {
+    if(addrEl) addrEl.value=_selectedExistingCust.address||'';
+    if(a2El) a2El.value=_selectedExistingCust.address2||'';
+  } else {
+    if(addrEl) addrEl.value='';
+    if(a2El) a2El.value='';
+  }
 }
 
 async function saveStep(){
@@ -2453,7 +2547,7 @@ function renderMsgDetail() {
   panel.innerHTML = `
     ${_msgMode==='side' ? backBtn : ''}
     <div class="msg-detail-head" style="position:relative">
-      ${canDelete ? `<button onclick="deleteMessage('${original.id}')" title="Delete thread" style="position:absolute;top:0;right:0;background:none;border:none;color:#ccc;font-size:1rem;cursor:pointer;padding:4px 8px;border-radius:6px;transition:all 0.15s" onmouseover="this.style.color='#e53e3e';this.style.background='#fff5f5'" onmouseout="this.style.color='#ccc';this.style.background='none'">🗑</button>` : ''}
+      ${canDelete ? `<button onclick="deleteMessage('${original.id}')" title="Delete thread" style="position:absolute;top:0;right:0;background:none;border:none;color:#e53e3e;font-size:1.35rem;cursor:pointer;padding:4px 8px;border-radius:6px;transition:all 0.15s" onmouseover="this.style.background='#fff5f5'" onmouseout="this.style.background='none'">🗑</button>` : ''}
       <div class="msg-detail-subject" style="padding-right:${canDelete?'28px':'0'}">${esc(original.subject)}</div>
       <div class="msg-detail-meta">
         <span>${participants}</span>
