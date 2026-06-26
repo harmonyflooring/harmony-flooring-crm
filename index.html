@@ -275,56 +275,74 @@ header::-webkit-scrollbar { display: none; }
 .toast.show { opacity:1; transform:translateY(0); }
 
 /* ── MESSAGING BOARD ── */
+/* ── MESSAGING ── */
 #msgView { display:none; flex:1; overflow:hidden; flex-direction:column; }
+/* Topbar (full screen mode) */
+.msg-topbar { display:flex; align-items:center; padding:10px 16px; background:#ffffff; border-bottom:1.5px solid #e8e5e0; gap:8px; flex-shrink:0; }
+.msg-topbar-title { font-size:1rem; font-weight:800; color:#2c5f2e; flex:1; }
+.msg-mode-btns { display:flex; gap:5px; }
+.msg-mode-btn { padding:5px 12px; border-radius:7px; border:1.5px solid #e0ddd8; background:white; font-size:0.78rem; color:#666; cursor:pointer; font-weight:600; transition:all 0.15s; }
+.msg-mode-btn:hover { border-color:#2c5f2e; color:#2c5f2e; }
+.msg-mode-btn.active { background:#2c5f2e; color:white; border-color:#2c5f2e; }
+/* Drag handle (side panel mode) */
+.msg-drag-handle { display:none; background:linear-gradient(135deg,#2c5f2e,#3a7a3c); color:white; padding:10px 14px; cursor:grab; align-items:center; justify-content:space-between; flex-shrink:0; user-select:none; }
+.msg-drag-handle:active { cursor:grabbing; }
+.msg-drag-title { font-size:0.88rem; font-weight:700; display:flex; align-items:center; gap:6px; }
+.msg-drag-dots { font-size:1rem; opacity:0.6; letter-spacing:1px; }
+/* Compact tabs (side panel mode) */
+.msg-compact-tabs { display:none; align-items:center; gap:3px; padding:8px 10px; background:#f8faf8; border-bottom:1px solid #e8e5e0; flex-shrink:0; }
+.msg-compact-tab { flex:1; padding:6px 4px; border-radius:7px; border:none; background:none; font-size:0.73rem; font-weight:600; color:#888; cursor:pointer; text-align:center; transition:all 0.15s; white-space:nowrap; }
+.msg-compact-tab.active { background:#2c5f2e; color:white; }
+.msg-compact-tab:hover:not(.active) { background:#e8f5e9; color:#2c5f2e; }
+/* Layout */
 .msg-layout { display:flex; flex:1; overflow:hidden; }
-
 /* Left sidebar */
-.msg-sidebar { width:220px; flex-shrink:0; background:#1e2a1e; display:flex; flex-direction:column; overflow:hidden; }
-.msg-sidebar-head { padding:16px 14px 10px; color:white; font-size:0.72rem; font-weight:700; text-transform:uppercase; letter-spacing:0.6px; opacity:0.5; }
-.msg-nav-btn { display:flex; align-items:center; gap:10px; padding:10px 14px; border:none; background:none; color:rgba(255,255,255,0.75); font-size:0.85rem; cursor:pointer; width:100%; text-align:left; transition:all 0.15s; border-radius:0; position:relative; }
-.msg-nav-btn:hover { background:rgba(255,255,255,0.08); color:white; }
-.msg-nav-btn.active { background:rgba(255,255,255,0.15); color:white; font-weight:700; }
-.msg-nav-icon { font-size:1rem; width:20px; text-align:center; }
-.msg-unread-badge { margin-left:auto; background:#e8a020; color:white; font-size:0.62rem; font-weight:800; min-width:18px; height:18px; border-radius:9px; display:flex; align-items:center; justify-content:center; padding:0 4px; }
-.msg-compose-btn { margin:12px 10px 0; padding:10px; border-radius:8px; background:#e8a020; color:white; border:none; font-weight:700; font-size:0.85rem; cursor:pointer; transition:background 0.2s; }
-.msg-compose-btn:hover { background:#c8881a; }
-
+.msg-sidebar { width:200px; flex-shrink:0; background:#ffffff; border-right:1.5px solid #e8e5e0; display:flex; flex-direction:column; overflow:hidden; }
+.msg-sidebar-head { padding:14px 14px 4px; color:#bbb; font-size:0.68rem; font-weight:700; text-transform:uppercase; letter-spacing:0.8px; }
+.msg-nav-btn { display:flex; align-items:center; gap:8px; padding:9px 14px; border:none; background:none; color:#555; font-size:0.83rem; cursor:pointer; width:100%; text-align:left; transition:all 0.15s; position:relative; }
+.msg-nav-btn:hover { background:#f5f5f5; color:#1a1a1a; }
+.msg-nav-btn.active { background:#e8f5e9; color:#2c5f2e; font-weight:700; box-shadow:inset 3px 0 0 #2c5f2e; }
+.msg-nav-icon { font-size:1rem; width:22px; text-align:center; flex-shrink:0; }
+.msg-unread-badge { margin-left:auto; background:#2c5f2e; color:white; font-size:0.6rem; font-weight:800; min-width:18px; height:18px; border-radius:9px; display:flex; align-items:center; justify-content:center; padding:0 4px; }
+.msg-compose-btn { margin:10px 12px 12px; padding:10px 14px; border-radius:10px; background:#2c5f2e; color:white; border:none; font-weight:700; font-size:0.85rem; cursor:pointer; transition:background 0.2s; display:flex; align-items:center; justify-content:center; gap:6px; }
+.msg-compose-btn:hover { background:#1e4220; }
 /* Message list */
-.msg-list-panel { width:300px; flex-shrink:0; border-right:1px solid #e8e5e0; background:#faf9f7; display:flex; flex-direction:column; overflow:hidden; }
-.msg-list-header { padding:12px 14px; border-bottom:1px solid #e8e5e0; font-size:0.85rem; font-weight:700; color:#444; display:flex; justify-content:space-between; align-items:center; }
+.msg-list-panel { width:300px; flex-shrink:0; border-right:1.5px solid #e8e5e0; background:#faf9f7; display:flex; flex-direction:column; overflow:hidden; }
+.msg-list-header { padding:10px 14px; border-bottom:1px solid #e8e5e0; font-size:0.82rem; font-weight:700; color:#333; display:flex; justify-content:space-between; align-items:center; background:white; }
 .msg-list-items { flex:1; overflow-y:auto; }
-.msg-item { padding:12px 14px; border-bottom:1px solid #f0ede8; cursor:pointer; transition:background 0.12s; }
-.msg-item:hover { background:#f0ede8; }
-.msg-item.active { background:#e8f5e9; border-left:3px solid #2c5f2e; }
-.msg-item.unread .mi-subject { font-weight:800; color:#1a1a1a; }
-.msg-item.unread .mi-from { font-weight:700; }
-.mi-row1 { display:flex; justify-content:space-between; align-items:center; gap:8px; margin-bottom:3px; }
-.mi-from { font-size:0.82rem; font-weight:600; color:#444; }
-.mi-time { font-size:0.68rem; color:#bbb; white-space:nowrap; }
-.mi-subject { font-size:0.8rem; color:#666; margin-bottom:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.mi-preview { font-size:0.72rem; color:#aaa; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.mi-tags { display:flex; gap:4px; margin-top:4px; }
-.mi-tag { font-size:0.62rem; font-weight:700; padding:1px 6px; border-radius:8px; }
+.msg-item { padding:11px 14px; border-bottom:1px solid #f0ede8; cursor:pointer; transition:background 0.12s; display:flex; gap:10px; align-items:flex-start; }
+.msg-item:hover { background:#f5f3f0; }
+.msg-item.active { background:#e8f5e9; padding-left:11px; border-left:3px solid #2c5f2e; }
+.msg-item-avatar { width:36px; height:36px; border-radius:50%; color:white; font-size:0.82rem; font-weight:800; display:flex; align-items:center; justify-content:center; flex-shrink:0; margin-top:1px; }
+.msg-item-body { flex:1; min-width:0; }
+.msg-item-row1 { display:flex; justify-content:space-between; align-items:baseline; gap:6px; margin-bottom:2px; }
+.msg-item-from { font-size:0.83rem; font-weight:600; color:#555; }
+.msg-item.unread .msg-item-from { font-weight:800; color:#1a1a1a; }
+.msg-item-time { font-size:0.68rem; color:#bbb; white-space:nowrap; flex-shrink:0; }
+.msg-item-subject { font-size:0.8rem; color:#777; margin-bottom:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.msg-item.unread .msg-item-subject { color:#1a1a1a; font-weight:700; }
+.msg-item-preview { font-size:0.72rem; color:#bbb; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.msg-item-tags { display:flex; gap:4px; margin-top:5px; flex-wrap:wrap; }
+.msg-item-tag { font-size:0.62rem; font-weight:700; padding:2px 7px; border-radius:8px; }
 .msg-empty { text-align:center; padding:40px 20px; color:#ccc; font-size:0.85rem; }
-
 /* Message detail */
-.msg-detail-panel { flex:1; overflow-y:auto; display:flex; flex-direction:column; background:white; }
-.msg-detail-empty { flex:1; display:flex; align-items:center; justify-content:center; color:#ccc; font-size:0.9rem; }
-.msg-detail-head { padding:20px 24px 14px; border-bottom:1px solid #f0ede8; }
-.msg-detail-subject { font-size:1.1rem; font-weight:800; color:#222; margin-bottom:8px; }
-.msg-detail-meta { font-size:0.8rem; color:#888; display:flex; gap:14px; flex-wrap:wrap; }
-.msg-detail-body { padding:20px 24px; font-size:0.88rem; line-height:1.7; color:#333; flex:1; white-space:pre-wrap; }
-.msg-task-box { margin:0 24px 20px; background:#fffbf0; border:1.5px solid #f9a825; border-radius:10px; padding:14px 16px; }
+.msg-detail-panel { flex:1; overflow-y:auto; display:flex; flex-direction:column; background:white; min-width:0; }
+.msg-detail-empty { flex:1; display:flex; align-items:center; justify-content:center; color:#ccc; font-size:0.9rem; flex-direction:column; gap:10px; }
+.msg-detail-empty-icon { font-size:3rem; opacity:0.25; }
+.msg-detail-back { display:none; padding:10px 16px; border-bottom:1px solid #f0ede8; background:#faf9f7; }
+.msg-detail-head { padding:18px 22px 14px; border-bottom:1px solid #f0ede8; }
+.msg-detail-subject { font-size:1.05rem; font-weight:800; color:#222; margin-bottom:8px; }
+.msg-detail-meta { font-size:0.79rem; color:#999; display:flex; gap:12px; flex-wrap:wrap; align-items:center; }
+.msg-detail-body { padding:18px 22px; font-size:0.88rem; line-height:1.75; color:#333; flex:1; white-space:pre-wrap; }
+.msg-task-box { margin:0 22px 16px; background:#fffbf0; border:1.5px solid #f9a825; border-radius:10px; padding:14px 16px; }
 .msg-task-box h4 { font-size:0.78rem; font-weight:700; text-transform:uppercase; letter-spacing:0.5px; color:#c8881a; margin-bottom:10px; }
 .task-row { display:flex; gap:8px; align-items:flex-start; margin-bottom:6px; font-size:0.83rem; }
 .task-row .tl { color:#888; width:80px; flex-shrink:0; font-weight:600; }
 .task-row .tv { color:#333; font-weight:500; }
-.msg-task-done-btn { margin-top:10px; background:#2c5f2e; color:white; border:none; border-radius:7px; padding:8px 18px; font-size:0.82rem; font-weight:700; cursor:pointer; transition:background 0.2s; }
+.msg-task-done-btn { margin-top:10px; background:#2c5f2e; color:white; border:none; border-radius:8px; padding:9px 18px; font-size:0.83rem; font-weight:700; cursor:pointer; transition:background 0.2s; }
 .msg-task-done-btn:hover { background:#1e4220; }
-.msg-task-done-btn.done { background:#aaa; cursor:default; }
-.msg-detail-actions { padding:0 24px 20px; display:flex; gap:8px; }
-.msg-sender-dot { width:28px; height:28px; border-radius:50%; color:white; font-size:0.75rem; font-weight:800; display:inline-flex; align-items:center; justify-content:center; margin-right:6px; vertical-align:middle; }
-
+.msg-detail-actions { padding:0 22px 18px; display:flex; gap:8px; }
+.msg-sender-dot { width:26px; height:26px; border-radius:50%; color:white; font-size:0.72rem; font-weight:800; display:inline-flex; align-items:center; justify-content:center; margin-right:5px; vertical-align:middle; }
 /* Compose modal */
 .compose-modal { max-width:560px; }
 .recipient-grid { display:flex; gap:8px; flex-wrap:wrap; margin-top:6px; }
@@ -339,7 +357,17 @@ header::-webkit-scrollbar { display: none; }
 .task-toggle.on::after { left:19px; }
 .task-extra { display:none; }
 .task-extra.show { display:block; }
-
+/* ── SIDE PANEL MODE ── */
+#msgView.msg-side-panel { position:fixed; right:20px; bottom:20px; width:420px; height:640px; max-height:88vh; z-index:45; border-radius:16px; box-shadow:0 12px 48px rgba(0,0,0,0.22), 0 2px 8px rgba(0,0,0,0.1); border:1px solid #d8d4ce; overflow:hidden; flex:none !important; flex-direction:column; display:flex !important; }
+#msgView.msg-side-panel .msg-drag-handle { display:flex; }
+#msgView.msg-side-panel .msg-topbar { display:none; }
+#msgView.msg-side-panel .msg-sidebar { display:none; }
+#msgView.msg-side-panel .msg-compact-tabs { display:flex; }
+#msgView.msg-side-panel .msg-list-panel { width:100%; border-right:none; }
+#msgView.msg-side-panel .msg-layout { flex:1; overflow:hidden; }
+#msgView.msg-side-panel.msg-showing-detail .msg-list-panel { display:none; }
+#msgView.msg-side-panel:not(.msg-showing-detail) .msg-detail-panel { display:none; }
+#msgView.msg-side-panel .msg-detail-back { display:block; }
 /* Header msg button */
 .hdr-msg-btn { position:relative; background:rgba(255,255,255,0.15); border:none; color:white; width:34px; height:34px; border-radius:7px; cursor:pointer; font-size:1rem; display:flex; align-items:center; justify-content:center; transition:background 0.2s; }
 .hdr-msg-btn:hover { background:rgba(255,255,255,0.25); }
@@ -667,18 +695,41 @@ header::-webkit-scrollbar { display: none; }
 
   <!-- MESSAGING BOARD -->
   <div id="msgView">
+    <!-- Drag handle — visible in side panel mode only -->
+    <div class="msg-drag-handle" id="msgDragHandle" onmousedown="startMsgDrag(event)">
+      <div class="msg-drag-title"><span class="msg-drag-dots">⠿</span> Messages</div>
+      <div style="display:flex;gap:6px">
+        <button onclick="event.stopPropagation();openCompose()" title="New message" style="background:rgba(255,255,255,0.2);border:none;color:white;width:28px;height:28px;border-radius:6px;cursor:pointer;font-size:0.85rem;display:flex;align-items:center;justify-content:center;">✏️</button>
+        <button onclick="event.stopPropagation();exitMsgSidePanel()" title="Close" style="background:rgba(255,255,255,0.2);border:none;color:white;width:28px;height:28px;border-radius:6px;cursor:pointer;font-size:0.85rem;display:flex;align-items:center;justify-content:center;">✕</button>
+      </div>
+    </div>
+    <!-- Compact tabs — visible in side panel mode only -->
+    <div class="msg-compact-tabs">
+      <button class="msg-compact-tab active" id="ctInbox" onclick="switchMsgTab('inbox')">📥 Inbox<span id="ctInboxBadge" style="font-weight:800"></span></button>
+      <button class="msg-compact-tab" id="ctTasks" onclick="switchMsgTab('tasks')">✅ Tasks</button>
+      <button class="msg-compact-tab" id="ctSent" onclick="switchMsgTab('sent')">📤 Sent</button>
+      <button class="msg-compact-tab" id="ctAll" onclick="switchMsgTab('all')">📋 All</button>
+    </div>
+    <!-- Topbar — visible in full screen mode -->
+    <div class="msg-topbar">
+      <button class="back-btn" onclick="showDashboard()">← Back</button>
+      <span class="msg-topbar-title">💬 Messages</span>
+      <button class="btn btn-green btn-sm" onclick="openCompose()">✏️ New Message</button>
+      <div class="msg-mode-btns">
+        <button class="msg-mode-btn active" id="msgBtnFull" onclick="setMsgMode('full')" title="Full screen">⛶ Full</button>
+        <button class="msg-mode-btn" id="msgBtnSide" onclick="setMsgMode('side')" title="Floating side panel">▣ Side Panel</button>
+      </div>
+    </div>
     <div class="msg-layout">
-      <!-- Left nav -->
+      <!-- Left nav (full screen only) -->
       <div class="msg-sidebar">
-        <div class="msg-sidebar-head">Messages</div>
+        <div class="msg-sidebar-head">Folders</div>
         <button class="msg-nav-btn active" id="mnInbox" onclick="switchMsgTab('inbox')"><span class="msg-nav-icon">📥</span>Inbox<span class="msg-unread-badge" id="inboxBadge" style="display:none"></span></button>
         <button class="msg-nav-btn" id="mnTasks" onclick="switchMsgTab('tasks')"><span class="msg-nav-icon">✅</span>My Tasks<span class="msg-unread-badge" id="tasksBadge" style="display:none"></span></button>
         <button class="msg-nav-btn" id="mnSent" onclick="switchMsgTab('sent')"><span class="msg-nav-icon">📤</span>Sent</button>
         <button class="msg-nav-btn" id="mnAll" onclick="switchMsgTab('all')"><span class="msg-nav-icon">📋</span>All Messages</button>
         <div style="flex:1"></div>
-        <button class="msg-nav-btn" onclick="showDashboard()" style="border-top:1px solid rgba(255,255,255,0.1);margin-top:8px"><span class="msg-nav-icon">←</span>Back to Jobs</button>
         <button class="msg-compose-btn" onclick="openCompose()">✏️ New Message</button>
-        <div style="height:12px"></div>
       </div>
       <!-- Message list -->
       <div class="msg-list-panel">
@@ -687,7 +738,8 @@ header::-webkit-scrollbar { display: none; }
       </div>
       <!-- Message detail -->
       <div class="msg-detail-panel" id="msgDetailPanel">
-        <div class="msg-detail-empty">Select a message to read it</div>
+        <div class="msg-detail-back"><button class="back-btn" onclick="msgDetailBack()">← Back to list</button></div>
+        <div class="msg-detail-empty"><div class="msg-detail-empty-icon">💬</div>Select a message to read it</div>
       </div>
     </div>
   </div>
@@ -1881,12 +1933,11 @@ function exportData(){
 // ════════════════════════════════════════════
 // MESSAGING BOARD
 // ════════════════════════════════════════════
-function loadMsgs() { try { return JSON.parse(localStorage.getItem('hf_messages')||'[]'); } catch { return []; } }
-function saveMsgs(d) { localStorage.setItem('hf_messages', JSON.stringify(d)); }
-
 let activeMsgTab = 'inbox';
 let activeMsgId = null;
 let isTaskMode = false;
+let _msgMode = 'full'; // 'full' | 'side'
+let _msgDragging = false, _msgDragOffX = 0, _msgDragOffY = 0;
 
 // Colors per salesman for avatars
 function smColor(name) {
@@ -1897,10 +1948,16 @@ function smInitial(name) { return name ? name[0].toUpperCase() : '?'; }
 
 function toggleMsgView() {
   const mv = document.getElementById('msgView');
+  if(_msgMode === 'side') {
+    exitMsgSidePanel();
+    return;
+  }
   const isOpen = mv.style.display === 'flex';
   if(isOpen) {
     showDashboard();
   } else {
+    _msgMode = 'full';
+    mv.classList.remove('msg-side-panel');
     hideAllViews();
     mv.style.display = 'flex';
     document.getElementById('hdrMsgBtn').classList.add('active');
@@ -1912,8 +1969,75 @@ function toggleMsgView() {
   }
 }
 
+function setMsgMode(mode) {
+  const mv = document.getElementById('msgView');
+  _msgMode = mode;
+  if(mode === 'side') {
+    mv.classList.add('msg-side-panel');
+    mv.classList.remove('msg-showing-detail');
+    mv.style.left = ''; mv.style.top = ''; mv.style.right = '20px'; mv.style.bottom = '20px';
+    hideAllViews();
+    mv.style.display = 'flex';
+    document.getElementById('msgBtnFull')?.classList.remove('active');
+    document.getElementById('msgBtnSide')?.classList.add('active');
+  } else {
+    mv.classList.remove('msg-side-panel');
+    mv.classList.remove('msg-showing-detail');
+    document.getElementById('msgBtnFull')?.classList.add('active');
+    document.getElementById('msgBtnSide')?.classList.remove('active');
+  }
+  activeMsgId = null;
+  renderMsgNav();
+  renderMsgList();
+  renderMsgDetail();
+}
+
+function exitMsgSidePanel() {
+  const mv = document.getElementById('msgView');
+  mv.classList.remove('msg-side-panel');
+  mv.classList.remove('msg-showing-detail');
+  mv.style.display = 'none';
+  _msgMode = 'full';
+  document.getElementById('hdrMsgBtn').classList.remove('active');
+}
+
+function msgDetailBack() {
+  activeMsgId = null;
+  document.getElementById('msgView').classList.remove('msg-showing-detail');
+  renderMsgList();
+  renderMsgDetail();
+}
+
+function startMsgDrag(e) {
+  _msgDragging = true;
+  const panel = document.getElementById('msgView');
+  const rect = panel.getBoundingClientRect();
+  _msgDragOffX = e.clientX - rect.left;
+  _msgDragOffY = e.clientY - rect.top;
+  e.preventDefault();
+  document.addEventListener('mousemove', onMsgDragMove);
+  document.addEventListener('mouseup', stopMsgDrag);
+}
+
+function onMsgDragMove(e) {
+  if(!_msgDragging) return;
+  const panel = document.getElementById('msgView');
+  const x = Math.max(0, Math.min(e.clientX - _msgDragOffX, window.innerWidth - panel.offsetWidth));
+  const y = Math.max(0, Math.min(e.clientY - _msgDragOffY, window.innerHeight - panel.offsetHeight));
+  panel.style.left = x + 'px';
+  panel.style.top  = y + 'px';
+  panel.style.right = 'auto';
+  panel.style.bottom = 'auto';
+}
+
+function stopMsgDrag() {
+  _msgDragging = false;
+  document.removeEventListener('mousemove', onMsgDragMove);
+  document.removeEventListener('mouseup', stopMsgDrag);
+}
+
 function hideAllViews() {
-  document.getElementById('msgView').style.display = 'none';
+  if(_msgMode !== 'side') document.getElementById('msgView').style.display = 'none';
   document.getElementById('settingsView').style.display = 'none';
   document.getElementById('scheduleView').style.display = 'none';
   document.getElementById('detail').style.display = 'none';
@@ -1949,12 +2073,16 @@ function updateMsgBadge() {
 function renderMsgNav() {
   const {inbox, tasks} = countUnread();
   ['inbox','tasks','sent','all'].forEach(tab => {
-    document.getElementById('mn'+tab.charAt(0).toUpperCase()+tab.slice(1))?.classList.toggle('active', activeMsgTab===tab);
+    const cap = tab.charAt(0).toUpperCase()+tab.slice(1);
+    document.getElementById('mn'+cap)?.classList.toggle('active', activeMsgTab===tab);
+    document.getElementById('ct'+cap)?.classList.toggle('active', activeMsgTab===tab);
   });
   const ib = document.getElementById('inboxBadge');
   const tb = document.getElementById('tasksBadge');
   if(ib) { ib.textContent = inbox; ib.style.display = inbox > 0 ? 'flex' : 'none'; }
   if(tb) { tb.textContent = tasks; tb.style.display = tasks > 0 ? 'flex' : 'none'; }
+  const ctib = document.getElementById('ctInboxBadge');
+  if(ctib) ctib.textContent = inbox > 0 ? ` (${inbox})` : '';
 }
 
 function switchMsgTab(tab) {
@@ -1989,19 +2117,24 @@ function renderMsgList() {
     const unread = m.to.includes(me) && !m.readBy.includes(me);
     const isActive = m.id === activeMsgId;
     const time = formatMsgTime(m.timestamp);
-    const priorityTag = m.isTask && m.task.priority !== 'Normal'
-      ? `<span class="mi-tag" style="background:${priorityColor(m.task.priority)}22;color:${priorityColor(m.task.priority)}">${m.task.priority}</span>` : '';
-    const taskTag = m.isTask ? `<span class="mi-tag" style="background:#fff8e1;color:#c8881a">📋 Task</span>` : '';
-    const doneTag = m.isTask && m.task.completed ? `<span class="mi-tag" style="background:#e8f5e9;color:#2c5f2e">✓ Done</span>` : '';
-    const toLine = activeMsgTab==='sent' ? `To: ${m.to.join(', ')}` : `From: ${m.from}`;
+    const avatarName = activeMsgTab === 'sent' ? (m.to[0] || '?') : m.from;
+    const avatarColor = smColor(avatarName);
+    const priorityTag = m.isTask && m.task?.priority && m.task.priority !== 'Normal'
+      ? `<span class="msg-item-tag" style="background:${priorityColor(m.task.priority)}22;color:${priorityColor(m.task.priority)}">${m.task.priority}</span>` : '';
+    const taskTag = m.isTask ? `<span class="msg-item-tag" style="background:#fff8e1;color:#c8881a">📋 Task</span>` : '';
+    const doneTag = m.isTask && m.task?.completed ? `<span class="msg-item-tag" style="background:#e8f5e9;color:#2c5f2e">✓ Done</span>` : '';
+    const toLine = activeMsgTab === 'sent' ? `→ ${m.to.join(', ')}` : m.from;
     return `<div class="msg-item ${unread?'unread':''} ${isActive?'active':''}" onclick="openMessage('${m.id}')">
-      <div class="mi-row1">
-        <span class="mi-from">${toLine}</span>
-        <span class="mi-time">${time}</span>
+      <div class="msg-item-avatar" style="background:${avatarColor}">${smInitial(avatarName)}</div>
+      <div class="msg-item-body">
+        <div class="msg-item-row1">
+          <span class="msg-item-from">${esc(toLine)}</span>
+          <span class="msg-item-time">${time}</span>
+        </div>
+        <div class="msg-item-subject">${esc(m.subject)}</div>
+        <div class="msg-item-preview">${esc(m.body.slice(0,80))}${m.body.length>80?'…':''}</div>
+        ${(taskTag||priorityTag||doneTag)?`<div class="msg-item-tags">${taskTag}${priorityTag}${doneTag}</div>`:''}
       </div>
-      <div class="mi-subject">${esc(m.subject)}</div>
-      <div class="mi-preview">${esc(m.body.slice(0,80))}${m.body.length>80?'…':''}</div>
-      ${(taskTag||priorityTag||doneTag)?`<div class="mi-tags">${taskTag}${priorityTag}${doneTag}</div>`:''}
     </div>`;
   }).join('');
 }
@@ -2015,19 +2148,22 @@ async function openMessage(id) {
     await upsertMessage(m);
     updateMsgBadge();
   }
+  if(_msgMode === 'side') {
+    document.getElementById('msgView').classList.add('msg-showing-detail');
+  }
   renderMsgList();
   renderMsgDetail();
 }
 
 function renderMsgDetail() {
   const panel = document.getElementById('msgDetailPanel');
+  const backBtn = `<div class="msg-detail-back"><button class="back-btn" onclick="msgDetailBack()">← Back to list</button></div>`;
   if(!activeMsgId) {
-    panel.innerHTML = `<div class="msg-detail-empty">Select a message to read it</div>`;
+    panel.innerHTML = `${_msgMode==='side'?backBtn:''}<div class="msg-detail-empty"><div class="msg-detail-empty-icon">💬</div>Select a message to read it</div>`;
     return;
   }
-  const msgs = loadMsgs();
-  const m = msgs.find(x=>x.id===activeMsgId);
-  if(!m) { panel.innerHTML = `<div class="msg-detail-empty">Message not found.</div>`; return; }
+  const m = _messages.find(x=>x.id===activeMsgId);
+  if(!m) { panel.innerHTML = `${_msgMode==='side'?backBtn:''}<div class="msg-detail-empty">Message not found.</div>`; return; }
   const me = activeProfile?.name;
   const isRecipient = m.to.includes(me);
   const fromColor = smColor(m.from);
@@ -2050,6 +2186,7 @@ function renderMsgDetail() {
   }).join(', ');
 
   panel.innerHTML = `
+    ${_msgMode==='side' ? `<div class="msg-detail-back"><button class="back-btn" onclick="msgDetailBack()">← Back to list</button></div>` : ''}
     <div class="msg-detail-head">
       <div class="msg-detail-subject">${esc(m.subject)}</div>
       <div class="msg-detail-meta">
@@ -2159,7 +2296,7 @@ function openCompose(replyTo) {
 }
 
 function openReply(id) {
-  const m = loadMsgs().find(x=>x.id===id);
+  const m = _messages.find(x=>x.id===id);
   if(m) openCompose(m);
 }
 
