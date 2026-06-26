@@ -245,6 +245,7 @@ header::-webkit-scrollbar { display: none; }
 .step-form { flex:1; overflow-y:auto; padding:20px 24px; }
 .step-form h3 { font-size:1rem; margin-bottom:4px; color:#2c5f2e; }
 .step-form .sdesc { font-size:0.8rem; color:#aaa; margin-bottom:16px; border-bottom:1px solid #f0f0f0; padding-bottom:10px; }
+.step-section-header { font-size:0.72rem; font-weight:800; text-transform:uppercase; letter-spacing:0.8px; color:#2c5f2e; background:#e8f5e9; border-radius:6px; padding:6px 10px; margin:18px 0 8px; }
 .form-group { margin-bottom:14px; }
 .form-group label { display:block; font-size:0.77rem; font-weight:600; color:#555; margin-bottom:4px; }
 .form-group input, .form-group textarea, .form-group select { width:100%; padding:8px 11px; border:1.5px solid #ddd; border-radius:6px; font-size:0.85rem; font-family:inherit; transition:border-color 0.2s; }
@@ -1080,29 +1081,40 @@ header::-webkit-scrollbar { display: none; }
 // ════════════════════════════════════════════
 // STEP DEFINITIONS
 // ════════════════════════════════════════════
-const STEP_COLORS = Array(13).fill('#4d7b79');
+const STEP_COLORS = Array(12).fill('#4d7b79');
 
 const STEPS = [
-  { title:"Initial Inquiry", desc:"Customer contacts us. Capture basic info and project overview.", fields:[
-    {key:"inquiry_source",label:"How did they hear about us?",type:"select",options:["Phone","Email","Website","Referral","Walk-in","Social Media","Other"]},
-    {key:"inquiry_date",label:"Date of Inquiry",type:"date"},
-    {key:"project_overview",label:"Project Description",type:"textarea",placeholder:"Room type, rough size, timeline…"},
-    {key:"inquiry_notes",label:"Notes",type:"textarea",placeholder:"Any additional details from first contact"}
+  { title:"Customer Intake", desc:"Customer contact information and job site details.", fields:[
+    {key:"name",         label:"Customer Name",      type:"text",    placeholder:"Full name",                 customerField:true},
+    {key:"phone",        label:"Phone",              type:"text",    placeholder:"(555) 555-5555",            customerField:true},
+    {key:"email",        label:"Email",              type:"text",    placeholder:"email@example.com",         customerField:true},
+    {key:"company",      label:"Company",            type:"text",    placeholder:"Company name (if any)",     customerField:true},
+    {key:"address",      label:"Address / Job Site", type:"text",    placeholder:"Full job site address",     customerField:true},
+    {key:"salesman",     label:"Salesman",           type:"salesman_select",                                  customerField:true},
+    {key:"contractor",   label:"Contractor",         type:"text",    placeholder:"Contractor name (if any)",  customerField:true},
+    {key:"contractorPhone",label:"Contractor Phone", type:"text",    placeholder:"(555) 555-5555",            customerField:true},
+    {key:"lockbox",      label:"Lock Box?",          type:"select",  options:["No","Yes"], controls:true,     customerField:true},
+    {key:"lockboxCode",  label:"Lock Box Code",      type:"text",    placeholder:"Code or location",          customerField:true, showIf:{field:"lockbox",value:"Yes"}}
   ]},
-  { title:"Customer Intake", desc:"Schedule consultation and capture full project details.", fields:[
+  { title:"Customer Selection", desc:"Initial inquiry, consultation, and sample selection.", fields:[
+    {key:"_h_inquiry",    type:"header", label:"Initial Inquiry"},
+    {key:"inquiry_source",label:"How did they hear about us?",type:"select",options:["Phone","Email","Website","Referral","Walk-in","Social Media","Other"]},
+    {key:"inquiry_date",  label:"Date of Inquiry",type:"date"},
+    {key:"project_overview",label:"Project Description",type:"textarea",placeholder:"Room type, rough size, timeline…"},
+    {key:"inquiry_notes", label:"Notes",type:"textarea",placeholder:"Any additional details from first contact"},
+    {key:"_h_consult",    type:"header", label:"Consultation"},
     {key:"consultation_date",label:"Consultation Date",type:"date"},
     {key:"consultation_type",label:"Consultation Type",type:"select",options:["Showroom Visit","Phone Call","Video Call","In-Home"]},
-    {key:"flooring_type",label:"Type of Flooring Needed",type:"select",options:["Hardwood","LVP / Luxury Vinyl","Tile","Carpet","Laminate","Multiple / Mixed","Undecided"]},
-    {key:"budget_range",label:"Budget Range",type:"select",options:["Under $2,000","$2,000 – $5,000","$5,000 – $10,000","$10,000 – $20,000","$20,000+","Flexible"]},
+    {key:"flooring_type", label:"Type of Flooring Needed",type:"select",options:["Hardwood","LVP / Luxury Vinyl","Tile","Carpet","Laminate","Multiple / Mixed","Undecided"]},
+    {key:"budget_range",  label:"Budget Range",type:"select",options:["Under $2,000","$2,000 – $5,000","$5,000 – $10,000","$10,000 – $20,000","$20,000+","Flexible"]},
     {key:"rooms_involved",label:"Rooms / Areas",type:"textarea",placeholder:"e.g. Living room, kitchen, 2 bedrooms"},
-    {key:"special_requirements",label:"Special Requirements",type:"textarea",placeholder:"Pets, allergies, subfloor concerns, transitions, stairs…"}
-  ]},
-  { title:"Sample Selection", desc:"Walk customer through product options and narrow down choices.", fields:[
-    {key:"showroom_date",label:"Showroom Visit Date",type:"date"},
+    {key:"special_requirements",label:"Special Requirements",type:"textarea",placeholder:"Pets, allergies, subfloor concerns, transitions, stairs…"},
+    {key:"_h_samples",    type:"header", label:"Sample Selection"},
+    {key:"showroom_date", label:"Showroom Visit Date",type:"date"},
     {key:"products_shown",label:"Products Shown",type:"textarea",placeholder:"Product names/SKUs"},
-    {key:"top_choices",label:"Top 2–3 Choices",type:"textarea",placeholder:"Customer's preferred products"},
-    {key:"samples_taken",label:"Samples Taken Home?",type:"select",options:["Yes","No"]},
-    {key:"sample_notes",label:"Notes",type:"textarea",placeholder:"Preferences, colors, concerns…"}
+    {key:"top_choices",   label:"Top 2–3 Choices",type:"textarea",placeholder:"Customer's preferred products"},
+    {key:"samples_taken", label:"Samples Taken Home?",type:"select",options:["Yes","No"]},
+    {key:"sample_notes",  label:"Notes",type:"textarea",placeholder:"Preferences, colors, concerns…"}
   ]},
   { title:"Schedule Measure", desc:"Book the in-home measurement appointment and assign a technician.", fields:[
     {key:"schedule_date",label:"Date Appointment Was Booked",type:"date"},
@@ -1752,12 +1764,20 @@ function handleFieldChange(key, val, si) {
 
 function renderStep(c,si){
   const step=STEPS[si]; const saved=c.stepData?.[si]||{};
+  // Build unified vals: customer fields read from c, others from saved
+  const vals={...saved};
+  step.fields.forEach(f=>{ if(f.customerField) vals[f.key]=c[f.key]||''; });
+
   const fields=step.fields.map(f=>{
-    const val=saved[f.key]||'';
-    const fgId = `id="fg_${f.key}"`;
-    const hidden = f.showIf ? (saved[f.showIf.field]===f.showIf.value ? '' : ' style="display:none"') : '';
+    if(f.type==='header') return `<div class="step-section-header">${esc(f.label)}</div>`;
+    const val=vals[f.key]||'';
+    const fgId=`id="fg_${f.key}"`;
+    const hidden=f.showIf?(vals[f.showIf.field]===f.showIf.value?'':' style="display:none"'):'';
     let inner='';
-    if(f.type==='select'){
+    if(f.type==='salesman_select'){
+      const smOpts=SALESMEN.filter(s=>s.name!=='Admin').map(s=>`<option value="${esc(s.name)}"${val===s.name?' selected':''}>${esc(s.name)}</option>`).join('');
+      inner=`<label>${f.label}</label><select id="f_${f.key}"><option value="">— Select —</option>${smOpts}</select>`;
+    } else if(f.type==='select'){
       const opts=f.options.map(o=>`<option value="${o}"${val===o?' selected':''}>${o}</option>`).join('');
       const onchg=f.controls?`onchange="handleFieldChange('${f.key}',this.value,${si})"` : '';
       inner=`<label>${f.label}</label><select id="f_${f.key}" ${onchg}><option value="">— Select —</option>${opts}</select>`;
@@ -1775,18 +1795,36 @@ function renderStep(c,si){
   const nextBtn=isCurrent&&si<lastStep?`<button class="btn btn-primary" onclick="saveAndAdvance()">Save & Next Step →</button>`:si===lastStep&&isCurrent?`<button class="btn btn-green" onclick="saveStep()">Save & Mark Complete ✓</button>`:'';
   document.getElementById('stepContent').innerHTML=`<h3>Step ${si+1}: ${step.title}</h3><div class="sdesc">${step.desc}</div>${fields}<div class="step-actions"><button class="btn btn-secondary" onclick="saveStep()">Save Notes</button>${nextBtn}<span class="saved-note" id="savedNote">✓ Saved</span></div>`;
 }
-function collectStep(si){ const d={}; STEPS[si].fields.forEach(f=>{const el=document.getElementById('f_'+f.key);if(el)d[f.key]=el.value;}); return d; }
+
+function collectStep(si){
+  const stepData={}, customerProps={};
+  STEPS[si].fields.forEach(f=>{
+    if(f.type==='header') return;
+    const el=document.getElementById('f_'+f.key);
+    if(!el) return;
+    if(f.customerField) customerProps[f.key]=el.value;
+    else stepData[f.key]=el.value;
+  });
+  return {stepData, customerProps};
+}
+
 async function saveStep(){
   const i=_customers.findIndex(x=>x.id===currentId); if(i===-1)return;
   const c={..._customers[i], stepData:{..._customers[i].stepData}};
-  c.stepData[currentStep]=collectStep(currentStep);
+  const {stepData, customerProps}=collectStep(currentStep);
+  c.stepData[currentStep]=stepData;
+  Object.assign(c, customerProps);
   await upsertCustomer(c);
   const n=document.getElementById('savedNote'); if(n){n.style.display='flex';setTimeout(()=>n.style.display='none',2000);}
+  // Refresh header if customer name changed
+  if(customerProps.name!==undefined) { const dn=document.getElementById('detailName'); if(dn) dn.textContent=c.name; }
 }
 async function saveAndAdvance(){
   const i=_customers.findIndex(x=>x.id===currentId); if(i===-1)return;
   const c={..._customers[i], stepData:{..._customers[i].stepData}};
-  c.stepData[currentStep]=collectStep(currentStep);
+  const {stepData, customerProps}=collectStep(currentStep);
+  c.stepData[currentStep]=stepData;
+  Object.assign(c, customerProps);
   if(currentStep<STEPS.length-1){c.step=currentStep+1; c.lastStepChange=new Date().toISOString(); currentStep++;}
   await upsertCustomer(c);
   renderStepsNav(c); renderStep(c,currentStep);
