@@ -303,6 +303,8 @@ header::-webkit-scrollbar { display: none; }
 .msg-nav-btn:hover { background:#f5f5f5; color:#1a1a1a; }
 .msg-nav-btn.active { background:#e8f5e9; color:#2c5f2e; font-weight:700; box-shadow:inset 3px 0 0 #2c5f2e; }
 .msg-nav-icon { font-size:1rem; width:22px; text-align:center; flex-shrink:0; }
+.msg-nav-icon-chip { width:30px; height:30px; border-radius:8px; display:flex; align-items:center; justify-content:center; flex-shrink:0; font-size:0.9rem; transition:transform 0.1s; }
+.msg-nav-btn:hover .msg-nav-icon-chip, .msg-nav-btn.active .msg-nav-icon-chip { transform:scale(1.08); }
 .msg-unread-badge { margin-left:auto; background:#2c5f2e; color:white; font-size:0.6rem; font-weight:800; min-width:18px; height:18px; border-radius:9px; display:flex; align-items:center; justify-content:center; padding:0 4px; }
 .msg-compose-btn { margin:10px 12px 12px; padding:10px 14px; border-radius:10px; background:#2c5f2e; color:white; border:none; font-weight:700; font-size:0.85rem; cursor:pointer; transition:background 0.2s; display:flex; align-items:center; justify-content:center; gap:6px; }
 .msg-compose-btn:hover { background:#1e4220; }
@@ -523,12 +525,12 @@ header::-webkit-scrollbar { display: none; }
 .sched-side-toggle.active { background:#2c5f2e; color:white; border-color:#2c5f2e; }
 
 /* ── SCHEDULE: SIDE PANEL ── */
-#scheduleView.side-panel { position:fixed !important; right:0; bottom:0; width:420px; z-index:40; box-shadow:-4px 0 24px rgba(0,0,0,0.15); border-left:2px solid #d0cdc8; flex:none !important; }
-#scheduleView.side-panel .sched-topbar { flex-wrap:wrap; padding:8px 12px; gap:6px; cursor:grab; user-select:none; }
+#scheduleView.side-panel { position:fixed !important; right:0; bottom:0; width:420px; z-index:40; box-shadow:-4px 0 24px rgba(0,0,0,0.15); border-left:2px solid #d0cdc8; flex:none !important; display:flex !important; flex-direction:column; overflow:hidden; }
+#scheduleView.side-panel .sched-topbar { flex-wrap:wrap; padding:8px 12px; gap:6px; cursor:grab; user-select:none; flex-shrink:0; }
 #scheduleView.side-panel .sched-topbar:active { cursor:grabbing; }
 #scheduleView.side-panel .sched-topbar button { cursor:pointer; }
 #scheduleView.side-panel .sched-week-nav { flex:1; min-width:160px; }
-#scheduleView.side-panel .sched-scroll { overflow-x:hidden; }
+#scheduleView.side-panel .sched-scroll { overflow-x:hidden; overflow-y:auto !important; flex:1; min-height:0; }
 #scheduleView.side-panel .sched-week { flex-direction:column; gap:6px; }
 #scheduleView.side-panel .sched-day-col { min-width:unset; flex:none; }
 
@@ -750,10 +752,10 @@ header::-webkit-scrollbar { display: none; }
       <div class="msg-sidebar">
         <div class="msg-sidebar-profile" id="msgSidebarProfile"></div>
         <div class="msg-sidebar-head">Folders</div>
-        <button class="msg-nav-btn active" id="mnInbox" onclick="switchMsgTab('inbox')"><span class="msg-nav-icon">📥</span>Inbox<span class="msg-unread-badge" id="inboxBadge" style="display:none"></span></button>
-        <button class="msg-nav-btn" id="mnTasks" onclick="switchMsgTab('tasks')"><span class="msg-nav-icon">✅</span>My Tasks<span class="msg-unread-badge" id="tasksBadge" style="display:none"></span></button>
-        <button class="msg-nav-btn" id="mnSent" onclick="switchMsgTab('sent')"><span class="msg-nav-icon">📤</span>Sent</button>
-        <button class="msg-nav-btn" id="mnAll" onclick="switchMsgTab('all')"><span class="msg-nav-icon">📋</span>All Messages</button>
+        <button class="msg-nav-btn active" id="mnInbox" onclick="switchMsgTab('inbox')"><span class="msg-nav-icon-chip" style="background:#dbeafe;color:#1d4ed8">📥</span>Inbox<span class="msg-unread-badge" id="inboxBadge" style="display:none"></span></button>
+        <button class="msg-nav-btn" id="mnTasks" onclick="switchMsgTab('tasks')"><span class="msg-nav-icon-chip" style="background:#fef3c7;color:#d97706">✅</span>My Tasks<span class="msg-unread-badge" id="tasksBadge" style="display:none"></span></button>
+        <button class="msg-nav-btn" id="mnSent" onclick="switchMsgTab('sent')"><span class="msg-nav-icon-chip" style="background:#ede9fe;color:#7c3aed">📤</span>Sent</button>
+        <button class="msg-nav-btn" id="mnAll" onclick="switchMsgTab('all')"><span class="msg-nav-icon-chip" style="background:#d1fae5;color:#047857">📋</span>All Messages</button>
         <div style="flex:1"></div>
         <button class="msg-compose-btn" onclick="openCompose()">✏️ New Message</button>
       </div>
@@ -2252,10 +2254,12 @@ function renderMsgDetail() {
     </div>`;
   }).join('');
 
+  const canDelete = me === original.from || me === 'Yisroel';
   panel.innerHTML = `
     ${_msgMode==='side' ? backBtn : ''}
-    <div class="msg-detail-head">
-      <div class="msg-detail-subject">${esc(original.subject)}</div>
+    <div class="msg-detail-head" style="position:relative">
+      ${canDelete ? `<button onclick="deleteMessage('${original.id}')" title="Delete thread" style="position:absolute;top:0;right:0;background:none;border:none;color:#ccc;font-size:1rem;cursor:pointer;padding:4px 8px;border-radius:6px;transition:all 0.15s" onmouseover="this.style.color='#e53e3e';this.style.background='#fff5f5'" onmouseout="this.style.color='#ccc';this.style.background='none'">🗑</button>` : ''}
+      <div class="msg-detail-subject" style="padding-right:${canDelete?'28px':'0'}">${esc(original.subject)}</div>
       <div class="msg-detail-meta">
         <span>${participants}</span>
         ${threadMsgs.length > 1 ? `<span style="color:#aaa">· ${threadMsgs.length} messages</span>` : ''}
@@ -2267,9 +2271,6 @@ function renderMsgDetail() {
       <textarea class="chat-reply-input" id="chatReplyInput" placeholder="Reply to this conversation…" rows="1"
         onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendThreadReply('${activeMsgId}');}"></textarea>
       <button class="chat-reply-btn" onclick="sendThreadReply('${activeMsgId}')">↑</button>
-    </div>
-    <div class="msg-detail-actions">
-      ${me === original.from || me === 'Yisroel' ? `<button class="btn btn-danger btn-sm" onclick="deleteMessage('${original.id}')">🗑 Delete Thread</button>` : ''}
     </div>`;
 
   // Scroll to bottom of chat
@@ -2287,13 +2288,51 @@ async function markTaskDone(id) {
   showToast('Task marked complete! ✓');
 }
 
+let _deletePending = null;
+
 async function deleteMessage(id) {
-  if(!confirm('Delete this message?')) return;
-  await removeMessage(id);
+  const threadId = id;
+  const threadMsgs = _messages.filter(m => (m.threadId||m.id) === threadId);
+  if(!threadMsgs.length) return;
+
+  // If there's already a pending delete from before, commit it to DB now
+  if(_deletePending) {
+    clearTimeout(_deletePending.timer);
+    const old = _deletePending.msgs;
+    _deletePending = null;
+    for(const msg of old) await db.from('messages').delete().eq('id', msg.id);
+  }
+
+  // Remove from memory immediately (optimistic UI)
+  _messages = _messages.filter(m => (m.threadId||m.id) !== threadId);
   activeMsgId = null;
   renderMsgList();
   renderMsgDetail();
   updateMsgBadge();
+
+  _deletePending = { msgs: threadMsgs, threadId };
+  _deletePending.timer = setTimeout(async () => {
+    if(!_deletePending || _deletePending.threadId !== threadId) return;
+    const toDelete = _deletePending.msgs;
+    _deletePending = null;
+    for(const msg of toDelete) await db.from('messages').delete().eq('id', msg.id);
+  }, 6000);
+
+  showToast('Thread deleted', undoDelete, 5800);
+}
+
+function undoDelete() {
+  if(!_deletePending) { showToast('Nothing to undo'); return; }
+  clearTimeout(_deletePending.timer);
+  const { msgs, threadId } = _deletePending;
+  _deletePending = null;
+  msgs.forEach(m => { if(!_messages.find(x => x.id === m.id)) _messages.push(m); });
+  activeMsgId = threadId;
+  renderMsgList();
+  renderMsgDetail();
+  renderMsgNav();
+  updateMsgBadge();
+  showToast('Deletion undone ✓');
 }
 
 function priorityColor(p) {
@@ -2617,7 +2656,18 @@ async function submitChangePassword() {
 // ════════════════════════════════════════════
 function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
 function csv(s){s=String(s||'');return s.includes(',')||s.includes('"')||s.includes('\n')?'"'+s.replace(/"/g,'""')+'"':s;}
-function showToast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2800);}
+function showToast(msg, undoFn, dur) {
+  const t = document.getElementById('toast');
+  const ms = dur || 2800;
+  if(undoFn) {
+    t.innerHTML = `${esc(msg)} <button onclick="undoDelete()" style="color:#a5d6a7;font-weight:800;background:none;border:none;cursor:pointer;margin-left:8px;font-size:0.9rem;text-decoration:underline;padding:0">Undo</button>`;
+  } else {
+    t.textContent = msg;
+  }
+  t.classList.add('show');
+  clearTimeout(window._toastHideTimer);
+  window._toastHideTimer = setTimeout(() => t.classList.remove('show'), ms);
+}
 document.getElementById('newModal').addEventListener('click',function(e){if(e.target===this)closeNewModal();});
 document.getElementById('editModal').addEventListener('click',function(e){if(e.target===this)closeEditModal();});
 
@@ -2725,7 +2775,10 @@ function toggleSchedSidePanel() {
   const sv = document.getElementById('scheduleView');
   if(sv.style.display === 'flex') {
     if(_schedSidePanel) {
-      sv.style.top = getSidePanelTop() + 'px';
+      const t = getSidePanelTop();
+      sv.style.top = t + 'px';
+      sv.style.height = (window.innerHeight - t) + 'px';
+      sv.style.right = '0'; sv.style.bottom = 'auto';
       sv.classList.add('side-panel');
       Object.keys(LAYOUT_IDS).forEach(k => {
         const el = document.getElementById(LAYOUT_IDS[k]);
@@ -2733,7 +2786,7 @@ function toggleSchedSidePanel() {
       });
     } else {
       sv.classList.remove('side-panel');
-      sv.style.top = '';
+      sv.style.top = ''; sv.style.height = ''; sv.style.right = ''; sv.style.bottom = '';
       Object.keys(LAYOUT_IDS).forEach(k => document.getElementById(LAYOUT_IDS[k]).style.display = 'none');
     }
   }
@@ -2749,7 +2802,10 @@ function toggleScheduleView() {
   } else {
     if(_schedSidePanel) {
       sv.classList.add('side-panel');
-      sv.style.top = getSidePanelTop() + 'px';
+      const t2 = getSidePanelTop();
+      sv.style.top = t2 + 'px';
+      sv.style.height = (window.innerHeight - t2) + 'px';
+      sv.style.right = '0'; sv.style.bottom = 'auto';
       sv.style.display = 'flex';
       document.getElementById('hdrSchedBtn').classList.add('active');
       Object.keys(LAYOUT_IDS).forEach(k => {
@@ -2781,8 +2837,10 @@ let _schedDragging = false, _schedDragOffX = 0, _schedDragOffY = 0;
 function startSchedDrag(e) {
   if(!_schedSidePanel) return;
   if(e.target.tagName === 'BUTTON' || e.target.closest('button')) return;
-  _schedDragging = true;
   const panel = document.getElementById('scheduleView');
+  // Lock height before we clear bottom (otherwise height collapses after drag)
+  if(!panel.style.height) panel.style.height = panel.offsetHeight + 'px';
+  _schedDragging = true;
   const rect = panel.getBoundingClientRect();
   _schedDragOffX = e.clientX - rect.left;
   _schedDragOffY = e.clientY - rect.top;
