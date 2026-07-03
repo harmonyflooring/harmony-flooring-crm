@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Harmony Flooring — Customer Tracker</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body { font-family: 'Segoe UI', Arial, sans-serif; background: #f0ede8; color: #2c2c2c; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
@@ -67,6 +68,15 @@ body { font-family: 'Segoe UI', Arial, sans-serif; background: #f0ede8; color: #
 .us-info { flex:1; }
 .us-name { font-weight:700; font-size:0.95rem; }
 .us-status { font-size:0.74rem; margin-top:2px; }
+.us-email-row { font-size:0.78rem; color:#aaa; margin-top:4px; display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
+.us-edit-email-link { color:#2c5f2e; cursor:pointer; text-decoration:underline; font-size:0.75rem; }
+.us-email-edit { margin-top:6px; display:flex; gap:6px; align-items:center; flex-wrap:wrap; }
+.us-email-input { padding:5px 8px; border:1.5px solid #ddd; border-radius:6px; font-size:0.8rem; font-family:inherit; min-width:180px; }
+.us-email-input:focus { outline:none; border-color:#2c5f2e; }
+.user-settings-card { align-items:flex-start !important; }
+.pw-forgot-link { text-align:center; margin-top:8px; font-size:0.82rem; }
+.pw-forgot-link a { color:#2c5f2e; cursor:pointer; }
+.pw-forgot-link a:hover { text-decoration:underline; }
 
 /* ── MAIN APP ── */
 #app { display: none; flex-direction: column; flex: 1; overflow: hidden; }
@@ -1112,19 +1122,48 @@ header::-webkit-scrollbar { display: none; }
   <div class="modal pw-modal">
     <div class="pw-avatar" id="pwAvatar"></div>
     <div class="pw-name-label" id="pwNameLabel"></div>
-    <div class="pw-subtitle" id="pwSubtitle"></div>
-    <div class="form-group">
-      <label id="pwFieldLabel">Password</label>
-      <input type="password" id="pwInput" onkeydown="if(event.key==='Enter')submitPassword()">
+
+    <!-- Main login / first-time setup panel -->
+    <div id="pwMainPanel">
+      <div class="pw-subtitle" id="pwSubtitle"></div>
+      <div class="form-group">
+        <label id="pwFieldLabel">Password</label>
+        <input type="password" id="pwInput" onkeydown="if(event.key==='Enter')submitPassword()">
+      </div>
+      <div class="form-group" id="pwConfirmGroup" style="display:none">
+        <label>Confirm Password</label>
+        <input type="password" id="pwConfirm" onkeydown="if(event.key==='Enter')submitPassword()">
+      </div>
+      <div class="pw-error" id="pwError"></div>
+      <div class="pw-forgot-link" id="pwForgotLink" style="display:none">
+        <a onclick="forgotProfilePw()">Forgot password?</a>
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-secondary" onclick="cancelPasswordModal()">Cancel</button>
+        <button class="btn btn-primary" id="pwSubmitBtn" onclick="submitPassword()">Log In</button>
+      </div>
     </div>
-    <div class="form-group" id="pwConfirmGroup" style="display:none">
-      <label>Confirm Password</label>
-      <input type="password" id="pwConfirm" onkeydown="if(event.key==='Enter')submitPassword()">
-    </div>
-    <div class="pw-error" id="pwError"></div>
-    <div class="modal-actions">
-      <button class="btn btn-secondary" onclick="cancelPasswordModal()">Cancel</button>
-      <button class="btn btn-primary" id="pwSubmitBtn" onclick="submitPassword()">Log In</button>
+
+    <!-- Reset code panel (shown after "Forgot password?" is clicked) -->
+    <div id="pwResetPanel" style="display:none">
+      <div class="pw-subtitle" id="pwResetSubtitle">A 6-digit code was sent to your email.</div>
+      <div class="form-group">
+        <label>Enter Code</label>
+        <input type="text" id="pwResetCode" maxlength="6" placeholder="000000" style="letter-spacing:4px;font-size:1.1rem;text-align:center" onkeydown="if(event.key==='Enter')verifyResetCode()">
+      </div>
+      <div class="form-group" id="pwNewPassGroup" style="display:none">
+        <label>New Password</label>
+        <input type="password" id="pwNewPassReset" placeholder="New password (min 4 chars)" onkeydown="if(event.key==='Enter')verifyResetCode()">
+      </div>
+      <div class="form-group" id="pwNewPass2Group" style="display:none">
+        <label>Confirm New Password</label>
+        <input type="password" id="pwNewPassReset2" onkeydown="if(event.key==='Enter')verifyResetCode()">
+      </div>
+      <div class="pw-error" id="pwResetError"></div>
+      <div class="modal-actions">
+        <button class="btn btn-secondary" onclick="cancelResetCode()">Back</button>
+        <button class="btn btn-primary" id="pwResetBtn" onclick="verifyResetCode()">Verify Code</button>
+      </div>
     </div>
   </div>
 </div>
@@ -1328,6 +1367,16 @@ const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 // ════════════════════════════════════════════
 // TEAM AUTH — one shared Supabase Auth account
+// ── EMAILJS CONFIG ──────────────────────────────────────────
+// Sign up free at https://www.emailjs.com/ then fill in:
+const EMAILJS_SERVICE_ID  = 'YOUR_SERVICE_ID';   // e.g. 'service_abc123'
+const EMAILJS_TEMPLATE_ID = 'YOUR_TEMPLATE_ID';  // e.g. 'template_xyz789'
+const EMAILJS_PUBLIC_KEY  = 'YOUR_PUBLIC_KEY';   // e.g. 'AbCdEfGhIjKlMn'
+// Template variables to use in EmailJS: {{salesman_name}}, {{reset_code}}, {{to_email}}
+
+// Admin email — receives fallback reset requests when a salesman has no email on file
+const ADMIN_EMAIL = 'sales@harmonyflooring.net';
+
 // Set TEAM_EMAIL to match the account you created
 // in Supabase Dashboard → Authentication → Users
 // ════════════════════════════════════════════
@@ -2827,6 +2876,11 @@ async function showPasswordModal(name) {
     document.getElementById('pwConfirmGroup').style.display = 'none';
     document.getElementById('pwSubmitBtn').textContent = 'Log In';
   }
+  // Reset to main panel, hide reset flow
+  _resetVerified = false;
+  document.getElementById('pwMainPanel').style.display = 'block';
+  document.getElementById('pwResetPanel').style.display = 'none';
+  document.getElementById('pwForgotLink').style.display = _pendingIsSetup ? 'none' : 'block';
   document.getElementById('pwModal').classList.add('open');
   setTimeout(()=>document.getElementById('pwInput').focus(), 100);
 }
@@ -2866,6 +2920,116 @@ async function submitPassword() {
 }
 
 // ════════════════════════════════════════════
+// EMAIL / PASSWORD RESET
+// ════════════════════════════════════════════
+async function getProfileEmail(name) {
+  const { data } = await db.from('profiles').select('email').eq('name', name).single();
+  return data?.email || null;
+}
+async function saveProfileEmail(name, email) {
+  await db.from('profiles').upsert({ name, email: email || null });
+}
+
+let _resetVerified = false;
+
+async function forgotProfilePw() {
+  const name = _pendingProfile;
+  if(!name) return;
+  const errEl = document.getElementById('pwError');
+  errEl.style.display = 'none';
+  const email = await getProfileEmail(name);
+  if(!email) {
+    errEl.textContent = 'No email on file. Contact the admin (' + ADMIN_EMAIL + ') to reset your password.';
+    errEl.style.display = 'block';
+    return;
+  }
+  await sendProfileResetCode(name, email);
+}
+
+async function sendProfileResetCode(name, email) {
+  const code = String(Math.floor(100000 + Math.random() * 900000));
+  const expiry = Date.now() + 15 * 60 * 1000;
+  await db.from('profiles').upsert({ name, reset_token: code, reset_token_expiry: expiry });
+  try {
+    await emailjs.send(
+      EMAILJS_SERVICE_ID,
+      EMAILJS_TEMPLATE_ID,
+      { to_email: email, salesman_name: name, reset_code: code },
+      EMAILJS_PUBLIC_KEY
+    );
+    _resetVerified = false;
+    document.getElementById('pwMainPanel').style.display = 'none';
+    document.getElementById('pwResetPanel').style.display = 'block';
+    const masked = email.replace(/(.{2})(.*)(@.*)/, (_, a, b, c) => a + b.replace(/./g, '*') + c);
+    document.getElementById('pwResetSubtitle').textContent = 'A 6-digit code was sent to ' + masked;
+    document.getElementById('pwResetCode').value = '';
+    document.getElementById('pwResetCode').disabled = false;
+    document.getElementById('pwResetError').style.display = 'none';
+    document.getElementById('pwNewPassGroup').style.display = 'none';
+    document.getElementById('pwNewPass2Group').style.display = 'none';
+    document.getElementById('pwResetBtn').textContent = 'Verify Code';
+    setTimeout(() => document.getElementById('pwResetCode').focus(), 100);
+  } catch(e) {
+    const errEl = document.getElementById('pwError');
+    errEl.textContent = 'Could not send email. Contact admin (' + ADMIN_EMAIL + ') to reset your password.';
+    errEl.style.display = 'block';
+  }
+}
+
+function cancelResetCode() {
+  document.getElementById('pwResetPanel').style.display = 'none';
+  document.getElementById('pwMainPanel').style.display = 'block';
+  document.getElementById('pwInput').value = '';
+  document.getElementById('pwError').style.display = 'none';
+  _resetVerified = false;
+  setTimeout(() => document.getElementById('pwInput').focus(), 100);
+}
+
+async function verifyResetCode() {
+  const errEl = document.getElementById('pwResetError');
+  errEl.style.display = 'none';
+
+  if(!_resetVerified) {
+    const code = document.getElementById('pwResetCode').value.trim();
+    if(!code || code.length !== 6) {
+      errEl.textContent = 'Please enter the 6-digit code.'; errEl.style.display = 'block'; return;
+    }
+    const { data } = await db.from('profiles')
+      .select('reset_token,reset_token_expiry').eq('name', _pendingProfile).single();
+    if(!data?.reset_token) {
+      errEl.textContent = 'No reset code found. Go back and try again.'; errEl.style.display = 'block'; return;
+    }
+    if(Date.now() > data.reset_token_expiry) {
+      errEl.textContent = 'Code expired. Go back and request a new one.'; errEl.style.display = 'block'; return;
+    }
+    if(code !== data.reset_token) {
+      errEl.textContent = 'Incorrect code. Please try again.'; errEl.style.display = 'block';
+      document.getElementById('pwResetCode').value = ''; document.getElementById('pwResetCode').focus(); return;
+    }
+    _resetVerified = true;
+    document.getElementById('pwResetCode').disabled = true;
+    document.getElementById('pwNewPassGroup').style.display = 'block';
+    document.getElementById('pwNewPass2Group').style.display = 'block';
+    document.getElementById('pwResetBtn').textContent = 'Save New Password';
+    document.getElementById('pwResetSubtitle').textContent = 'Code verified! Set your new password.';
+    setTimeout(() => document.getElementById('pwNewPassReset').focus(), 100);
+  } else {
+    const newPw  = document.getElementById('pwNewPassReset').value;
+    const newPw2 = document.getElementById('pwNewPassReset2').value;
+    if(!newPw) { errEl.textContent = 'Please enter a new password.'; errEl.style.display='block'; return; }
+    if(newPw.length < 4) { errEl.textContent = 'Password must be at least 4 characters.'; errEl.style.display='block'; return; }
+    if(newPw !== newPw2) { errEl.textContent = 'Passwords do not match.'; errEl.style.display='block'; return; }
+    const hash = await hashPw(newPw);
+    await db.from('profiles').upsert({ name: _pendingProfile, password_hash: hash, reset_token: null, reset_token_expiry: null });
+    _resetVerified = false;
+    document.getElementById('pwModal').classList.remove('open');
+    setSession(_pendingProfile);
+    doLogin(_pendingProfile);
+    showToast('Password updated successfully ✓');
+  }
+}
+
+// ════════════════════════════════════════════
 // SETTINGS
 // ════════════════════════════════════════════
 function openSettings() {
@@ -2877,9 +3041,9 @@ function openSettings() {
 async function renderSettingsUsers() {
   const el = document.getElementById('settingsUserList');
   el.innerHTML = '<div style="color:#aaa;font-size:0.85rem">Loading…</div>';
-  const { data: profiles } = await db.from('profiles').select('name,password_hash');
-  const pwMap = {};
-  (profiles || []).forEach(p => { pwMap[p.name] = !!p.password_hash; });
+  const { data: profiles } = await db.from('profiles').select('name,password_hash,email');
+  const pwMap = {}, emailMap = {};
+  (profiles || []).forEach(p => { pwMap[p.name] = !!p.password_hash; emailMap[p.name] = p.email || ''; });
   const isAdmin = activeProfile?.name === 'Admin' || activeProfile?.name === 'Yisroel';
   const me = activeProfile?.name;
   const users = SALESMEN.filter(s=>s.name!=='Admin').concat([SALESMEN.find(s=>s.name==='Admin')]);
@@ -2890,18 +3054,48 @@ async function renderSettingsUsers() {
     const statusText = hasPw ? '✓ Password set' : '⚠️ No password set';
     const statusColor = hasPw ? '#2c5f2e' : '#e65100';
     const btnLabel = !hasPw ? 'Set Password' : (isAdmin && !isMe ? 'Reset Password' : 'Change Password');
+    const emailVal = emailMap[s.name] || '';
+    const emailDisplay = emailVal
+      ? `<span style="color:#555">${esc(emailVal)}</span>`
+      : `<span style="color:#e65100">No email set</span>`;
+    const emailRow = isAdmin ? `
+      <div class="us-email-row">
+        Email: ${emailDisplay}
+        <a class="us-edit-email-link" onclick="toggleEditEmail('${esc(s.name)}')">edit</a>
+      </div>
+      <div class="us-email-edit" id="emailEdit_${esc(s.name)}" style="display:none">
+        <input type="email" id="emailInput_${esc(s.name)}" value="${esc(emailVal)}" placeholder="salesman@email.com" class="us-email-input">
+        <button class="btn btn-sm btn-green" onclick="submitEditEmail('${esc(s.name)}')">Save</button>
+        <button class="btn btn-sm btn-secondary" onclick="toggleEditEmail('${esc(s.name)}')">Cancel</button>
+      </div>` : '';
     const actions = canEdit
       ? `<button class="btn btn-secondary btn-sm" onclick="openChangePwModal('${s.name}',${isMe},${hasPw})">${btnLabel}</button>`
       : '';
     return `<div class="user-settings-card">
-      <div class="profile-avatar" style="background:${s.color};width:40px;height:40px;font-size:1rem;flex-shrink:0">${s.initial}</div>
+      <div class="profile-avatar" style="background:${s.color};width:40px;height:40px;font-size:1rem;flex-shrink:0;margin-top:2px">${s.initial}</div>
       <div class="us-info">
         <div class="us-name">${s.name}${isMe?' <span style="font-size:0.72rem;color:#aaa;font-weight:400">(you)</span>':''}</div>
         <div class="us-status" style="color:${statusColor}">${statusText}</div>
+        ${emailRow}
       </div>
-      <div>${actions}</div>
+      <div style="flex-shrink:0">${actions}</div>
     </div>`;
   }).join('');
+}
+
+function toggleEditEmail(name) {
+  const div = document.getElementById('emailEdit_' + name);
+  const showing = div.style.display !== 'none';
+  div.style.display = showing ? 'none' : 'block';
+  if(!showing) setTimeout(() => document.getElementById('emailInput_' + name).focus(), 50);
+}
+
+async function submitEditEmail(name) {
+  const email = document.getElementById('emailInput_' + name).value.trim();
+  if(email && !email.includes('@')) { showToast('Please enter a valid email address.'); return; }
+  await saveProfileEmail(name, email);
+  showToast(`Email ${email ? 'saved' : 'removed'} for ${name} ✓`);
+  renderSettingsUsers();
 }
 
 let _cpTarget = null, _cpIsMe = false, _cpHasExisting = false;
