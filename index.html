@@ -753,10 +753,6 @@ header::-webkit-scrollbar { display: none; }
     <input type="text" id="searchInput" placeholder="Search by name, phone, address…" oninput="refreshAll()">
     <select id="filterSalesman" onchange="refreshAll()">
       <option value="">All Salesmen</option>
-      <option value="Yisroel">Yisroel</option>
-      <option value="Shuey">Shuey</option>
-      <option value="Eli">Eli</option>
-      <option value="Mendy">Mendy</option>
     </select>
   </div>
 
@@ -1053,10 +1049,6 @@ header::-webkit-scrollbar { display: none; }
       <label>Salesman <span class="req">*</span></label>
       <select id="newSalesman">
         <option value="">— Select Salesman —</option>
-        <option value="Yisroel">Yisroel</option>
-        <option value="Shuey">Shuey</option>
-        <option value="Eli">Eli</option>
-        <option value="Mendy">Mendy</option>
       </select>
     </div>
     <div class="modal-actions">
@@ -1108,10 +1100,6 @@ header::-webkit-scrollbar { display: none; }
       <label>Salesman <span class="req">*</span></label>
       <select id="editSalesman">
         <option value="">— Select Salesman —</option>
-        <option value="Yisroel">Yisroel</option>
-        <option value="Shuey">Shuey</option>
-        <option value="Eli">Eli</option>
-        <option value="Mendy">Mendy</option>
       </select>
     </div>
     <div class="modal-actions">
@@ -1332,13 +1320,15 @@ const STEPS = [
 // ════════════════════════════════════════════
 // PROFILE & PREFERENCES
 // ════════════════════════════════════════════
-const SALESMEN = [
+let SALESMEN = [
   {name:'Yisroel', color:'#2c5f2e', initial:'Y'},
   {name:'Shuey',   color:'#1565c0', initial:'S'},
   {name:'Eli',     color:'#6a1b9a', initial:'E'},
   {name:'Mendy',   color:'#c62828', initial:'M'},
   {name:'Admin',   color:'#555',    initial:'A'}
 ];
+const SALESMAN_COLORS = ['#2c5f2e','#1565c0','#6a1b9a','#c62828','#e65100','#00695c','#880e4f','#4e342e','#1a237e','#37474f'];
+let _selectedNewColor = SALESMAN_COLORS[0];
 
 let activeProfile = null; // {name, color, initial}
 let activeLayout = 'grid';
@@ -1910,6 +1900,7 @@ function showDashboard(){
   document.getElementById('detail').style.display='none';
   document.getElementById('msgView').style.display='none';
   document.getElementById('scheduleView').style.display='none';
+  document.getElementById('settingsView').style.display='none';
   document.getElementById('hdrMsgBtn').classList.remove('active');
   document.getElementById('hdrSchedBtn').classList.remove('active');
   Object.keys(LAYOUT_IDS).forEach(k=>{
@@ -2600,7 +2591,7 @@ function renderMsgDetail() {
   panel.innerHTML = `
     ${_msgMode==='side' ? backBtn : ''}
     <div class="msg-detail-head" style="position:relative">
-      ${canDelete ? `<button onclick="deleteMessage('${original.id}')" title="Delete thread" style="position:absolute;top:4px;right:6px;background:#fff0f0;border:1.5px solid #ffcdd2;color:#e53e3e;font-size:0.75rem;font-weight:700;cursor:pointer;padding:3px 9px;border-radius:6px;transition:all 0.15s;letter-spacing:0.3px" onmouseover="this.style.background='#fce4e4'" onmouseout="this.style.background='#fff0f0'">DELETE</button>` : ''}
+      ${canDelete ? `<button onclick="deleteMessage('${original.id}')" title="Delete thread" class="btn btn-danger btn-sm" style="position:absolute;top:6px;right:8px;font-size:0.7rem;padding:3px 8px">Delete</button>` : ''}
       <div class="msg-detail-subject" style="padding-right:${canDelete?'28px':'0'}">${esc(original.subject)}</div>
       <div class="msg-detail-meta">
         <span>${participants}</span>
@@ -2931,6 +2922,61 @@ function togglePwVis(inputId, btn) {
 }
 
 // ════════════════════════════════════════════
+// SALESMEN — dynamic load & manage
+// ════════════════════════════════════════════
+async function loadSalesmen() {
+  try {
+    const { data } = await db.from('salesmen').select('name,color').order('sort_order');
+    if(data && data.length > 0) {
+      SALESMEN = data.map(s => ({ name: s.name, color: s.color, initial: s.name[0].toUpperCase() }));
+      SALESMEN.push({name:'Admin', color:'#555', initial:'A'});
+    }
+  } catch(e) {}
+  populateSalesmenDropdowns();
+}
+
+function populateSalesmenDropdowns() {
+  const opts = SALESMEN.filter(s=>s.name!=='Admin')
+    .map(s=>`<option value="${esc(s.name)}">${esc(s.name)}</option>`).join('');
+  ['filterSalesman','newSalesman','editSalesman'].forEach(id => {
+    const el = document.getElementById(id);
+    if(!el) return;
+    const first = id === 'filterSalesman' ? '<option value="">All Salesmen</option>' : '<option value="">— Select Salesman —</option>';
+    el.innerHTML = first + opts;
+  });
+}
+
+function selectNewColor(color) {
+  _selectedNewColor = color;
+  document.querySelectorAll('#colorPicker .color-dot').forEach(d => {
+    d.style.outline = d.dataset.color === color ? '3px solid #333' : 'none';
+  });
+}
+
+async function addSalesman() {
+  const name = document.getElementById('newUserName').value.trim();
+  if(!name) { showToast('Please enter a name.'); return; }
+  if(SALESMEN.find(s => s.name.toLowerCase() === name.toLowerCase())) {
+    showToast('A user with that name already exists.'); return;
+  }
+  const sortOrder = SALESMEN.filter(s=>s.name!=='Admin').length + 1;
+  const { error } = await db.from('salesmen').insert({ name, color: _selectedNewColor, sort_order: sortOrder });
+  if(error) { showToast('Error adding user: ' + error.message); return; }
+  document.getElementById('newUserName').value = '';
+  await loadSalesmen();
+  renderSettingsUsers();
+  showToast(`${name} added to the team ✓`);
+}
+
+async function removeSalesman(name) {
+  if(!confirm(`Remove ${name} from the team?\n\nTheir job history and password will be kept.`)) return;
+  await db.from('salesmen').delete().eq('name', name);
+  await loadSalesmen();
+  renderSettingsUsers();
+  showToast(`${name} removed from the team.`);
+}
+
+// ════════════════════════════════════════════
 // EMAIL / PASSWORD RESET
 // ════════════════════════════════════════════
 async function getProfileEmail(name) {
@@ -3082,6 +3128,7 @@ async function renderSettingsUsers() {
     const actions = canEdit
       ? `<button class="btn btn-secondary btn-sm" onclick="openChangePwModal('${s.name}',${isMe},${hasPw})">${btnLabel}</button>`
       : '';
+    const removeBtn = isAdmin && s.name !== 'Admin' ? `<button class="btn btn-danger btn-sm" style="margin-top:6px" onclick="removeSalesman('${esc(s.name)}')">Remove</button>` : '';
     return `<div class="user-settings-card">
       <div class="profile-avatar" style="background:${s.color};width:40px;height:40px;font-size:1rem;flex-shrink:0;margin-top:2px">${s.initial}</div>
       <div class="us-info">
@@ -3089,9 +3136,30 @@ async function renderSettingsUsers() {
         <div class="us-status" style="color:${statusColor}">${statusText}</div>
         ${emailRow}
       </div>
-      <div style="flex-shrink:0">${actions}</div>
+      <div style="flex-shrink:0;display:flex;flex-direction:column;align-items:flex-end;gap:4px">${actions}${removeBtn}</div>
     </div>`;
   }).join('');
+
+  if(isAdmin) {
+    const dots = SALESMAN_COLORS.map(c =>
+      `<div class="color-dot" data-color="${c}" onclick="selectNewColor('${c}')" style="width:24px;height:24px;border-radius:50%;background:${c};cursor:pointer;outline:${c===_selectedNewColor?'3px solid #333':'none'};outline-offset:2px;flex-shrink:0"></div>`
+    ).join('');
+    el.innerHTML += `
+      <div class="settings-section-title" style="margin-top:24px">Add New User</div>
+      <div style="background:white;border-radius:10px;padding:16px 18px;box-shadow:0 1px 4px rgba(0,0,0,0.07)">
+        <div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap">
+          <div class="form-group" style="margin-bottom:0;flex:1;min-width:140px">
+            <label>Name</label>
+            <input type="text" id="newUserName" placeholder="e.g. David" class="us-email-input" style="width:100%">
+          </div>
+          <button class="btn btn-green btn-sm" onclick="addSalesman()" style="height:34px;white-space:nowrap">+ Add User</button>
+        </div>
+        <div style="margin-top:12px">
+          <div style="font-size:0.77rem;font-weight:600;color:#555;margin-bottom:7px">Pick a color</div>
+          <div id="colorPicker" style="display:flex;gap:8px;flex-wrap:wrap">${dots}</div>
+        </div>
+      </div>`;
+  }
 }
 
 function toggleEditEmail(name) {
@@ -3187,6 +3255,7 @@ db.auth.onAuthStateChange((event) => {
   }
   // if no session, loginView stays visible (default in HTML)
   try {
+    await loadSalesmen();
     await fetchAll();
     subscribeRealtime();
     renderProfileScreen();
