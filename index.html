@@ -55,6 +55,10 @@ body { font-family: 'Segoe UI', Arial, sans-serif; background: #f0ede8; color: #
 .pw-subtitle { text-align:center; font-size:0.82rem; color:#aaa; margin-bottom:20px; }
 .pw-error { color:#c0392b; font-size:0.82rem; margin-top:6px; display:none; text-align:center; }
 .pw-modal .modal-actions { justify-content:center; }
+.pw-field-wrap { position:relative; }
+.pw-field-wrap input { padding-right:42px; width:100%; }
+.pw-toggle { position:absolute; right:10px; top:50%; transform:translateY(-50%); background:none; border:none; cursor:pointer; font-size:1rem; color:#aaa; padding:0; line-height:1; }
+.pw-toggle:hover { color:#555; }
 
 /* ── SETTINGS ── */
 #settingsView { display:none; flex:1; overflow:hidden; flex-direction:column; }
@@ -669,7 +673,7 @@ header::-webkit-scrollbar { display: none; }
   <div class="lp-card" id="lpPanelLogin">
     <div class="lp-logo">🌿 Harmony Flooring</div>
     <div class="lp-sub">Team Portal</div>
-    <input type="password" class="lp-input" id="lpPass" placeholder="Enter team password" onkeydown="if(event.key==='Enter')teamSignIn()">
+    <div class="pw-field-wrap"><input type="password" class="lp-input" id="lpPass" placeholder="Enter team password" onkeydown="if(event.key==='Enter')teamSignIn()"><button class="pw-toggle" onclick="togglePwVis('lpPass',this)" type="button">👁</button></div>
     <div class="lp-err" id="lpErr"></div>
     <button class="btn btn-primary" style="width:100%;padding:11px;font-size:0.95rem" onclick="teamSignIn()" id="lpSignInBtn">Sign In</button>
     <div class="lp-foot"><a onclick="lpShow('forgot')">Forgot password?</a></div>
@@ -687,8 +691,8 @@ header::-webkit-scrollbar { display: none; }
   <div class="lp-card" id="lpPanelReset" style="display:none">
     <div class="lp-logo">🌿 Harmony Flooring</div>
     <div class="lp-sub">Set New Password</div>
-    <input type="password" class="lp-input" id="lpNewPass" placeholder="New password (min 6 characters)">
-    <input type="password" class="lp-input" id="lpNewPass2" placeholder="Confirm new password">
+    <div class="pw-field-wrap"><input type="password" class="lp-input" id="lpNewPass" placeholder="New password (min 6 characters)"><button class="pw-toggle" onclick="togglePwVis('lpNewPass',this)" type="button">👁</button></div>
+    <div class="pw-field-wrap"><input type="password" class="lp-input" id="lpNewPass2" placeholder="Confirm new password"><button class="pw-toggle" onclick="togglePwVis('lpNewPass2',this)" type="button">👁</button></div>
     <div class="lp-err" id="lpResetErr"></div>
     <button class="btn btn-primary" style="width:100%;padding:11px;font-size:0.95rem" onclick="teamUpdatePw()" id="lpResetBtn">Update Password</button>
     <div class="lp-msg" id="lpResetMsg"></div>
@@ -1128,11 +1132,11 @@ header::-webkit-scrollbar { display: none; }
       <div class="pw-subtitle" id="pwSubtitle"></div>
       <div class="form-group">
         <label id="pwFieldLabel">Password</label>
-        <input type="password" id="pwInput" onkeydown="if(event.key==='Enter')submitPassword()">
+        <div class="pw-field-wrap"><input type="password" id="pwInput" onkeydown="if(event.key==='Enter')submitPassword()"><button class="pw-toggle" onclick="togglePwVis('pwInput',this)" type="button">👁</button></div>
       </div>
       <div class="form-group" id="pwConfirmGroup" style="display:none">
         <label>Confirm Password</label>
-        <input type="password" id="pwConfirm" onkeydown="if(event.key==='Enter')submitPassword()">
+        <div class="pw-field-wrap"><input type="password" id="pwConfirm" onkeydown="if(event.key==='Enter')submitPassword()"><button class="pw-toggle" onclick="togglePwVis('pwConfirm',this)" type="button">👁</button></div>
       </div>
       <div class="pw-error" id="pwError"></div>
       <div class="pw-forgot-link" id="pwForgotLink" style="display:none">
@@ -1153,11 +1157,11 @@ header::-webkit-scrollbar { display: none; }
       </div>
       <div class="form-group" id="pwNewPassGroup" style="display:none">
         <label>New Password</label>
-        <input type="password" id="pwNewPassReset" placeholder="New password (min 4 chars)" onkeydown="if(event.key==='Enter')verifyResetCode()">
+        <div class="pw-field-wrap"><input type="password" id="pwNewPassReset" placeholder="New password (min 4 chars)" onkeydown="if(event.key==='Enter')verifyResetCode()"><button class="pw-toggle" onclick="togglePwVis('pwNewPassReset',this)" type="button">👁</button></div>
       </div>
       <div class="form-group" id="pwNewPass2Group" style="display:none">
         <label>Confirm New Password</label>
-        <input type="password" id="pwNewPassReset2" onkeydown="if(event.key==='Enter')verifyResetCode()">
+        <div class="pw-field-wrap"><input type="password" id="pwNewPassReset2" onkeydown="if(event.key==='Enter')verifyResetCode()"><button class="pw-toggle" onclick="togglePwVis('pwNewPassReset2',this)" type="button">👁</button></div>
       </div>
       <div class="pw-error" id="pwResetError"></div>
       <div class="modal-actions">
@@ -1175,15 +1179,15 @@ header::-webkit-scrollbar { display: none; }
     <div class="pw-subtitle" id="changePwFor" style="margin-bottom:16px"></div>
     <div class="form-group" id="cpCurrentGroup">
       <label>Current Password</label>
-      <input type="password" id="cpCurrent" onkeydown="if(event.key==='Enter')submitChangePassword()">
+      <div class="pw-field-wrap"><input type="password" id="cpCurrent" onkeydown="if(event.key==='Enter')submitChangePassword()"><button class="pw-toggle" onclick="togglePwVis('cpCurrent',this)" type="button">👁</button></div>
     </div>
     <div class="form-group">
       <label id="cpNewLabel">New Password</label>
-      <input type="password" id="cpNew" onkeydown="if(event.key==='Enter')submitChangePassword()">
+      <div class="pw-field-wrap"><input type="password" id="cpNew" onkeydown="if(event.key==='Enter')submitChangePassword()"><button class="pw-toggle" onclick="togglePwVis('cpNew',this)" type="button">👁</button></div>
     </div>
     <div class="form-group">
       <label>Confirm New Password</label>
-      <input type="password" id="cpConfirm" onkeydown="if(event.key==='Enter')submitChangePassword()">
+      <div class="pw-field-wrap"><input type="password" id="cpConfirm" onkeydown="if(event.key==='Enter')submitChangePassword()"><button class="pw-toggle" onclick="togglePwVis('cpConfirm',this)" type="button">👁</button></div>
     </div>
     <div class="pw-error" id="cpError"></div>
     <div class="modal-actions">
@@ -2917,6 +2921,13 @@ async function submitPassword() {
     setSession(_pendingProfile);
     doLogin(_pendingProfile);
   }
+}
+
+function togglePwVis(inputId, btn) {
+  const inp = document.getElementById(inputId);
+  const showing = inp.type === 'text';
+  inp.type = showing ? 'password' : 'text';
+  btn.textContent = showing ? '👁' : '🙈';
 }
 
 // ════════════════════════════════════════════
