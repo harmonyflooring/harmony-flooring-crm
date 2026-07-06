@@ -1313,9 +1313,9 @@ const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 // ── EMAILJS CONFIG (used for per-salesman password-reset codes) ──
 const EMAILJS_SERVICE_ID  = 'service_i5zbq2p';
-const EMAILJS_TEMPLATE_ID = 'template_21szzz7i';
+const EMAILJS_TEMPLATE_ID = 'template_21szz7i';
 const EMAILJS_PUBLIC_KEY  = 'QIA4h4-FsuydcdKky';
-// Template variables to use in EmailJS: {{salesman_name}}, {{reset_code}}, {{to_email}}
+// Template variables to use in EmailJS: {{salesman_name}}, {{reset_code}}, {{to_email}}, {{email}}
 
 // Admin email — receives fallback reset requests when a salesman has no email on file
 const ADMIN_EMAIL = 'sales@harmonyflooring.net';
@@ -2880,7 +2880,7 @@ async function sendProfileResetCode(name, email) {
     await emailjs.send(
       EMAILJS_SERVICE_ID,
       EMAILJS_TEMPLATE_ID,
-      { to_email: email, salesman_name: name, reset_code: code },
+      { to_email: email, email: email, salesman_name: name, reset_code: code },
       EMAILJS_PUBLIC_KEY
     );
     _resetVerified = false;
