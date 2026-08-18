@@ -1380,12 +1380,13 @@ const Msg = {
     id: r.id, from: r.from_name, to: r.to_names || [],
     subject: r.subject, body: r.body, timestamp: r.timestamp,
     readBy: r.read_by || [], isTask: r.is_task, task: r.task_data,
-    threadId: r.id
+    threadId: r.thread_id || r.id
   }),
   toRow: m => ({
     id: m.id, from_name: m.from, to_names: m.to,
     subject: m.subject, body: m.body, timestamp: m.timestamp,
-    read_by: m.readBy, is_task: m.isTask, task_data: m.task
+    read_by: m.readBy, is_task: m.isTask, task_data: m.task,
+    thread_id: m.threadId || m.id
   })
 };
 
