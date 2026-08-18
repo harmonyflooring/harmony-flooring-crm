@@ -1411,9 +1411,15 @@ async function removeCustomer(id) {
 }
 async function upsertMessage(m) {
   const i = _messages.findIndex(x => x.id === m.id);
+  const prev = i !== -1 ? _messages[i] : null;
   if(i !== -1) _messages[i] = m; else _messages.push(m);
   const { error } = await db.from('messages').upsert(Msg.toRow(m));
-  if(error) console.error('Supabase upsert message error:', error);
+  if(error) {
+    console.error('Supabase upsert message error:', error);
+    if(prev) _messages[i] = prev; else _messages = _messages.filter(x => x.id !== m.id);
+    return false;
+  }
+  return true;
 }
 async function removeMessage(id) {
   _messages = _messages.filter(x => x.id !== id);
@@ -2758,7 +2764,8 @@ async function sendThreadReply(threadId) {
     threadId,
     parentId: threadMsgs[threadMsgs.length-1].id
   };
-  await upsertMessage(reply);
+  const ok = await upsertMessage(reply);
+  if(!ok) { alert('Message failed to send — check your internet connection and try again.'); return; }
   if(input) input.value = '';
   renderMsgDetail();
   renderMsgList();
@@ -2807,7 +2814,8 @@ async function sendMessage() {
     threadId: msgId,  // each new message starts its own thread
     parentId: null
   };
-  await upsertMessage(msg);
+  const ok = await upsertMessage(msg);
+  if(!ok) { alert('Message failed to send — check your internet connection and try again.'); return; }
   closeCompose();
   showToast(`Message sent to ${finalTo.join(', ')}!`);
   activeMsgTab = 'sent';
