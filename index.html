@@ -297,6 +297,18 @@ header::-webkit-scrollbar { display: none; }
 .form-group input:focus, .form-group textarea:focus, .form-group select:focus { outline:none; border-color:#2c5f2e; }
 .form-group textarea { resize:vertical; min-height:70px; }
 .form-row { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+.ac-wrap { position:relative; }
+.ac-list { display:none; position:absolute; top:calc(100% + 3px); left:0; right:0; background:white; border:1.5px solid #ddd; border-radius:8px; box-shadow:0 6px 18px rgba(0,0,0,0.15); z-index:50; max-height:220px; overflow-y:auto; }
+.ac-list.open { display:block; }
+.ac-item { padding:8px 11px; cursor:pointer; border-bottom:1px solid #f2f2f2; }
+.ac-item:last-child { border-bottom:none; }
+.ac-item:hover, .ac-item.active { background:#f0f7f0; }
+.ac-item .ac-name { font-size:0.85rem; font-weight:600; color:#2c2c2c; }
+.ac-item .ac-sub { font-size:0.72rem; color:#999; margin-top:1px; }
+.seg-toggle { display:flex; border:1.5px solid #ddd; border-radius:8px; overflow:hidden; margin-bottom:14px; }
+.seg-toggle button { flex:1; border:none; background:white; color:#555; font-size:0.83rem; font-weight:600; padding:9px 10px; cursor:pointer; transition:all 0.15s; font-family:inherit; }
+.seg-toggle button + button { border-left:1.5px solid #ddd; }
+.seg-toggle button.active { background:#2c5f2e; color:white; }
 .step-actions { display:flex; gap:8px; margin-top:18px; padding-top:14px; border-top:1px solid #f0f0f0; flex-wrap:wrap; }
 .saved-note { color:#2c5f2e; font-size:0.8rem; font-weight:700; display:none; align-items:center; gap:4px; }
 
@@ -966,7 +978,15 @@ header::-webkit-scrollbar { display: none; }
     <p style="font-size:0.77rem;color:#aaa;margin-bottom:12px">Same customer, different address? Each address is its own job.</p>
 
     <div class="slabel">Customer Info</div>
-    <div class="form-group"><label>Full Name <span class="req">*</span></label><input type="text" id="newName" placeholder="e.g. John Smith"></div>
+    <div class="seg-toggle" id="custTypeToggle">
+      <button type="button" class="active" id="custTypeNewBtn" onclick="setNewJobCustType('new')">+ New Customer</button>
+      <button type="button" id="custTypeExistingBtn" onclick="setNewJobCustType('existing')">🔍 Existing Customer</button>
+    </div>
+    <div class="form-group ac-wrap">
+      <label>Full Name <span class="req">*</span></label>
+      <input type="text" id="newName" placeholder="e.g. John Smith" autocomplete="off" oninput="onNewNameInput()" onfocus="onNewNameInput()" onblur="hideNewNameSuggestions()">
+      <div class="ac-list" id="newNameSuggest"></div>
+    </div>
     <div class="form-row">
       <div class="form-group"><label>Phone <span class="req">*</span></label><input type="tel" id="newPhone" placeholder="(555) 000-0000"></div>
       <div class="form-group"><label>Email</label><input type="email" id="newEmail" placeholder="john@email.com"></div>
@@ -974,7 +994,11 @@ header::-webkit-scrollbar { display: none; }
     <div class="form-group"><label>Company</label><input type="text" id="newCompany" placeholder="Company name (optional)"></div>
 
     <div class="slabel">Job Info</div>
-    <div class="form-group"><label>Job Address <span class="req">*</span></label><input type="text" id="newAddress" placeholder="123 Main St, City, State"></div>
+    <div class="form-group ac-wrap">
+      <label>Job Address <span class="req">*</span></label>
+      <input type="text" id="newAddress" placeholder="123 Main St, City, State" autocomplete="off" oninput="onNewAddressInput()" onfocus="onNewAddressInput()" onblur="hideNewAddressSuggestions()">
+      <div class="ac-list" id="newAddressSuggest"></div>
+    </div>
     <div class="form-row">
       <div class="form-group">
         <label>Lock Box <span class="req">*</span></label>
@@ -1737,11 +1761,106 @@ function renderTableView() {
 function toggleLockboxCode(){
   document.getElementById('lockboxCodeGroup').style.display=document.getElementById('newLockbox').value==='Yes'?'block':'none';
 }
+let _custType='new';
+let _selectedExistingCustKey=null;
+let _addressSuggestCache=[];
+function custKey(c){ return (c.phone||'').replace(/\D/g,'')||c.name.toLowerCase(); }
+function existingCustomersUnique(){
+  const seen=new Map();
+  customers().forEach(c=>{
+    const key=custKey(c);
+    if(!seen.has(key)||new Date(c.created)>new Date(seen.get(key).created)) seen.set(key,c);
+  });
+  return [...seen.values()];
+}
+function setActiveToggle(type){
+  _custType=type;
+  document.getElementById('custTypeNewBtn').classList.toggle('active',type==='new');
+  document.getElementById('custTypeExistingBtn').classList.toggle('active',type==='existing');
+}
+function setNewJobCustType(type){
+  setActiveToggle(type);
+  if(type==='new'){
+    _selectedExistingCustKey=null;
+    const abox=document.getElementById('newAddressSuggest');
+    abox.classList.remove('open');abox.innerHTML='';
+  } else {
+    document.getElementById('newName').focus();
+    onNewNameInput();
+  }
+}
+function onNewNameInput(){
+  const q=document.getElementById('newName').value.trim().toLowerCase();
+  const box=document.getElementById('newNameSuggest');
+  if(!q && _custType!=='existing'){box.classList.remove('open');box.innerHTML='';return;}
+  let matches=existingCustomersUnique();
+  if(q) matches=matches.filter(c=>c.name.toLowerCase().includes(q));
+  matches=matches.slice(0,8);
+  if(!matches.length){box.classList.remove('open');box.innerHTML='';return;}
+  box.innerHTML=matches.map(c=>{
+    const sub=[c.phone,c.email].filter(Boolean).join('  ·  ');
+    return `<div class="ac-item" onmousedown="selectExistingCustomer('${c.id}')"><div class="ac-name">${esc(c.name)}${c.company?` <span style="font-weight:400;color:#999">— ${esc(c.company)}</span>`:''}</div><div class="ac-sub">${esc(sub)}</div></div>`;
+  }).join('');
+  box.classList.add('open');
+}
+function hideNewNameSuggestions(){
+  setTimeout(()=>{const box=document.getElementById('newNameSuggest');box.classList.remove('open');box.innerHTML='';},150);
+}
+function selectExistingCustomer(id){
+  const c=customers().find(x=>x.id===id);
+  if(!c)return;
+  document.getElementById('newName').value=c.name;
+  document.getElementById('newPhone').value=c.phone||'';
+  document.getElementById('newEmail').value=c.email||'';
+  document.getElementById('newCompany').value=c.company||'';
+  _selectedExistingCustKey=custKey(c);
+  setActiveToggle('existing');
+  const box=document.getElementById('newNameSuggest');
+  box.classList.remove('open');box.innerHTML='';
+  document.getElementById('newAddress').focus();
+  onNewAddressInput();
+}
+function getCustomerJobs(key){
+  return customers().filter(c=>custKey(c)===key);
+}
+function onNewAddressInput(){
+  const box=document.getElementById('newAddressSuggest');
+  if(!_selectedExistingCustKey){box.classList.remove('open');box.innerHTML='';_addressSuggestCache=[];return;}
+  const q=document.getElementById('newAddress').value.trim().toLowerCase();
+  const seen=new Set();
+  _addressSuggestCache=getCustomerJobs(_selectedExistingCustKey).filter(j=>{
+    if(!j.address) return false;
+    const key=j.address.toLowerCase();
+    if(seen.has(key)) return false;
+    if(q && !key.includes(q)) return false;
+    seen.add(key);
+    return true;
+  });
+  if(!_addressSuggestCache.length){box.classList.remove('open');box.innerHTML='';return;}
+  box.innerHTML=_addressSuggestCache.map((j,i)=>`<div class="ac-item" onmousedown="selectExistingAddress(${i})"><div class="ac-name">${esc(j.address)}</div><div class="ac-sub">${j.lockbox==='Yes'?'🔒 Lock box'+(j.lockboxCode?': '+esc(j.lockboxCode):''):'No lock box on file'}</div></div>`).join('');
+  box.classList.add('open');
+}
+function hideNewAddressSuggestions(){
+  setTimeout(()=>{const box=document.getElementById('newAddressSuggest');box.classList.remove('open');box.innerHTML='';},150);
+}
+function selectExistingAddress(i){
+  const job=_addressSuggestCache[i];
+  if(!job)return;
+  document.getElementById('newAddress').value=job.address;
+  document.getElementById('newLockbox').value=job.lockbox||'';
+  toggleLockboxCode();
+  if(job.lockbox==='Yes') document.getElementById('newLockboxCode').value=job.lockboxCode||'';
+  const box=document.getElementById('newAddressSuggest');
+  box.classList.remove('open');box.innerHTML='';
+}
 function openNewModal(){
   ['newName','newPhone','newEmail','newAddress','newCompany','newContractor','newContractorPhone','newLockboxCode'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
   document.getElementById('newSalesman').value = activeProfile&&activeProfile.name!=='Admin'?activeProfile.name:'';
   document.getElementById('newLockbox').value='';
   document.getElementById('lockboxCodeGroup').style.display='none';
+  _selectedExistingCustKey=null;
+  setActiveToggle('new');
+  ['newNameSuggest','newAddressSuggest'].forEach(id=>{const box=document.getElementById(id);box.classList.remove('open');box.innerHTML='';});
   document.getElementById('newModal').classList.add('open');
   setTimeout(()=>document.getElementById('newName').focus(),100);
 }
