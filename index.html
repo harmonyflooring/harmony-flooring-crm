@@ -1380,15 +1380,12 @@ const Msg = {
     id: r.id, from: r.from_name, to: r.to_names || [],
     subject: r.subject, body: r.body, timestamp: r.timestamp,
     readBy: r.read_by || [], isTask: r.is_task, task: r.task_data,
-    threadId: r.thread_id || r.id,
-    parentId: r.parent_id || null
+    threadId: r.id
   }),
   toRow: m => ({
     id: m.id, from_name: m.from, to_names: m.to,
     subject: m.subject, body: m.body, timestamp: m.timestamp,
-    read_by: m.readBy, is_task: m.isTask, task_data: m.task,
-    thread_id: m.threadId || m.id,
-    parent_id: m.parentId || null
+    read_by: m.readBy, is_task: m.isTask, task_data: m.task
   })
 };
 
@@ -2761,8 +2758,7 @@ async function sendThreadReply(threadId) {
     readBy: [me],
     isTask: false,
     task: null,
-    threadId,
-    parentId: threadMsgs[threadMsgs.length-1].id
+    threadId
   };
   const ok = await upsertMessage(reply);
   if(!ok) { alert('Message failed to send — check your internet connection and try again.'); return; }
@@ -2811,8 +2807,7 @@ async function sendMessage() {
       priority: document.getElementById('taskPriority').value,
       completed: false, completedBy: '', completedAt: ''
     } : null,
-    threadId: msgId,  // each new message starts its own thread
-    parentId: null
+    threadId: msgId  // each new message starts its own thread
   };
   const ok = await upsertMessage(msg);
   if(!ok) { alert('Message failed to send — check your internet connection and try again.'); return; }
