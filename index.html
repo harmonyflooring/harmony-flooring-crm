@@ -540,14 +540,17 @@ header::-webkit-scrollbar { display: none; }
   /* ── MESSAGING ── */
   .msg-layout { flex-direction:column; }
   .msg-sidebar {
-    width:100%; flex-direction:row;
+    width:100%; flex-direction:row; align-items:center; gap:2px;
     overflow-x:auto; overflow-y:hidden;
     min-height:auto; flex-shrink:0;
   }
   .msg-sidebar::-webkit-scrollbar { display:none; }
   .msg-sidebar-head { display:none; }
-  .msg-nav-btn { padding:10px 12px; font-size:0.8rem; flex-shrink:0; white-space:nowrap; }
-  .msg-compose-btn { margin:8px 6px; flex-shrink:0; padding:8px 12px; font-size:0.78rem; white-space:nowrap; align-self:center; }
+  .msg-sidebar-profile { display:none; }
+  .msg-sidebar > div[style="flex:1"] { display:none; }
+  .msg-nav-btn { width:auto; padding:9px 11px; font-size:0.8rem; flex-shrink:0; white-space:nowrap; box-shadow:none !important; }
+  .msg-nav-btn.active { border-radius:7px; }
+  .msg-compose-btn { margin:6px 8px; flex-shrink:0; padding:8px 12px; font-size:0.78rem; white-space:nowrap; align-self:center; }
   .msg-list-panel { width:100%; flex-shrink:0; max-height:40vh; border-right:none; border-bottom:1px solid #e8e5e0; }
   .msg-detail-panel { min-height:50vh; }
   .msg-detail-head { padding:14px 16px 10px; }
@@ -786,10 +789,10 @@ header::-webkit-scrollbar { display: none; }
     </div>
     <!-- Compact tabs — visible in side panel mode only -->
     <div class="msg-compact-tabs">
-      <button class="msg-compact-tab active" id="ctInbox" onclick="switchMsgTab('inbox')">📥 Inbox<span id="ctInboxBadge" style="font-weight:800"></span></button>
-      <button class="msg-compact-tab" id="ctTasks" onclick="switchMsgTab('tasks')">✅ Tasks</button>
-      <button class="msg-compact-tab" id="ctSent" onclick="switchMsgTab('sent')">📤 Sent</button>
-      <button class="msg-compact-tab" id="ctAll" onclick="switchMsgTab('all')">📋 All</button>
+      <button class="msg-compact-tab active" id="ctInbox" onclick="switchMsgTab('inbox')"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:3px"><path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></svg>Inbox<span id="ctInboxBadge" style="font-weight:800"></span></button>
+      <button class="msg-compact-tab" id="ctTasks" onclick="switchMsgTab('tasks')"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:3px"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>Tasks</button>
+      <button class="msg-compact-tab" id="ctSent" onclick="switchMsgTab('sent')"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:3px"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>Sent</button>
+      <button class="msg-compact-tab" id="ctAll" onclick="switchMsgTab('all')"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:3px"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>All</button>
     </div>
     <!-- Topbar — visible in full screen mode -->
     <div class="msg-topbar">
@@ -806,10 +809,10 @@ header::-webkit-scrollbar { display: none; }
       <div class="msg-sidebar">
         <div class="msg-sidebar-profile" id="msgSidebarProfile"></div>
         <div class="msg-sidebar-head">Folders</div>
-        <button class="msg-nav-btn active" id="mnInbox" onclick="switchMsgTab('inbox')"><span class="msg-nav-icon-chip" style="background:#dbeafe;color:#1d4ed8">📥</span>Inbox<span class="msg-unread-badge" id="inboxBadge" style="display:none"></span></button>
-        <button class="msg-nav-btn" id="mnTasks" onclick="switchMsgTab('tasks')"><span class="msg-nav-icon-chip" style="background:#fef3c7;color:#d97706">✅</span>My Tasks<span class="msg-unread-badge" id="tasksBadge" style="display:none"></span></button>
-        <button class="msg-nav-btn" id="mnSent" onclick="switchMsgTab('sent')"><span class="msg-nav-icon-chip" style="background:#ede9fe;color:#7c3aed">📤</span>Sent</button>
-        <button class="msg-nav-btn" id="mnAll" onclick="switchMsgTab('all')"><span class="msg-nav-icon-chip" style="background:#d1fae5;color:#047857">📋</span>All Messages</button>
+        <button class="msg-nav-btn active" id="mnInbox" onclick="switchMsgTab('inbox')"><span class="msg-nav-icon-chip" style="background:#dbeafe;color:#1d4ed8"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></svg></span>Inbox<span class="msg-unread-badge" id="inboxBadge" style="display:none"></span></button>
+        <button class="msg-nav-btn" id="mnTasks" onclick="switchMsgTab('tasks')"><span class="msg-nav-icon-chip" style="background:#fef3c7;color:#d97706"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></span>My Tasks<span class="msg-unread-badge" id="tasksBadge" style="display:none"></span></button>
+        <button class="msg-nav-btn" id="mnSent" onclick="switchMsgTab('sent')"><span class="msg-nav-icon-chip" style="background:#ede9fe;color:#7c3aed"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg></span>Sent</button>
+        <button class="msg-nav-btn" id="mnAll" onclick="switchMsgTab('all')"><span class="msg-nav-icon-chip" style="background:#d1fae5;color:#047857"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg></span>All Messages</button>
         <div style="flex:1"></div>
         <button class="msg-compose-btn" onclick="openCompose()">✏️ New Message</button>
       </div>
@@ -999,6 +1002,7 @@ header::-webkit-scrollbar { display: none; }
       <input type="text" id="newAddress" placeholder="123 Main St, City, State" autocomplete="off" oninput="onNewAddressInput()" onfocus="onNewAddressInput()" onblur="hideNewAddressSuggestions()">
       <div class="ac-list" id="newAddressSuggest"></div>
     </div>
+    <div class="form-group"><label>Suite / Apt / Unit</label><input type="text" id="newAddress2" placeholder="Suite, Apt, Unit # (optional)"></div>
     <div class="form-row">
       <div class="form-group">
         <label>Lock Box <span class="req">*</span></label>
@@ -1854,7 +1858,7 @@ function selectExistingAddress(i){
   box.classList.remove('open');box.innerHTML='';
 }
 function openNewModal(){
-  ['newName','newPhone','newEmail','newAddress','newCompany','newContractor','newContractorPhone','newLockboxCode'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  ['newName','newPhone','newEmail','newAddress','newAddress2','newCompany','newContractor','newContractorPhone','newLockboxCode'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
   document.getElementById('newSalesman').value = activeProfile&&activeProfile.name!=='Admin'?activeProfile.name:'';
   document.getElementById('newLockbox').value='';
   document.getElementById('lockboxCodeGroup').style.display='none';
@@ -1869,13 +1873,15 @@ async function createCustomer(){
   const name=document.getElementById('newName').value.trim();
   const phone=document.getElementById('newPhone').value.trim();
   const address=document.getElementById('newAddress').value.trim();
+  const address2=document.getElementById('newAddress2').value.trim();
   const lockbox=document.getElementById('newLockbox').value;
   const salesman=document.getElementById('newSalesman').value;
   const err=[];
   if(!name)err.push('Customer name');if(!phone)err.push('Phone');if(!address)err.push('Job address');if(!lockbox)err.push('Lock box');if(!salesman)err.push('Salesman');
   if(err.length){alert('Please fill in:\n• '+err.join('\n• '));return;}
   const now=new Date().toISOString();
-  const c={id:Date.now().toString(),name,phone,email:document.getElementById('newEmail').value.trim(),company:document.getElementById('newCompany').value.trim(),address,lockbox,lockboxCode:lockbox==='Yes'?document.getElementById('newLockboxCode').value.trim():'',contractor:document.getElementById('newContractor').value.trim(),contractorPhone:document.getElementById('newContractorPhone').value.trim(),salesman,step:0,stepData:{},created:now,lastStepChange:now};
+  const fullAddress=address2?`${address}, ${address2}`:address;
+  const c={id:Date.now().toString(),name,phone,email:document.getElementById('newEmail').value.trim(),company:document.getElementById('newCompany').value.trim(),address:fullAddress,lockbox,lockboxCode:lockbox==='Yes'?document.getElementById('newLockboxCode').value.trim():'',contractor:document.getElementById('newContractor').value.trim(),contractorPhone:document.getElementById('newContractorPhone').value.trim(),salesman,step:0,stepData:{},created:now,lastStepChange:now};
   await upsertCustomer(c);
   closeNewModal(); showToast(`"${name}" added!`);
   refreshAll(); openCustomer(c.id);
