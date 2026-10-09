@@ -648,6 +648,8 @@ header::-webkit-scrollbar { display: none; }
 .sched-job.repair-job { border-left-color:#c0392b; }
 .sched-job-addr { font-weight:700; color:#2c2c2c; margin-bottom:2px; padding-right:40px; }
 .sched-job-notes { color:#888; font-size:0.72rem; line-height:1.4; white-space:pre-wrap; }
+.sched-job-details { color:#4d7b79; font-size:0.72rem; line-height:1.4; white-space:pre-wrap; margin-top:2px; }
+.sched-job-details b { font-weight:700; }
 .sched-job-btns { position:absolute; top:6px; right:6px; display:flex; gap:3px; opacity:0; transition:opacity 0.15s; }
 .sched-job:hover .sched-job-btns { opacity:1; }
 .sched-job-btn { background:none; border:none; cursor:pointer; font-size:0.75rem; padding:2px 4px; border-radius:4px; color:#aaa; }
@@ -2025,7 +2027,7 @@ function renderFieldHtml(f, val, vals, si) {
 }
 
 function renderStep(c,si){
-  const step=STEPS[si]; const saved=c.stepData?.[si]||{};
+  const step=STEPS[si]; const saved=si===SCHED_STEP?schedStepData(c):(c.stepData?.[si]||{});
   const vals={...saved};
   step.fields.forEach(f=>{ if(f.customerField) vals[f.key]=c[f.key]||''; });
 
@@ -2105,7 +2107,7 @@ async function saveStep(){
   const i=_customers.findIndex(x=>x.id===currentId); if(i===-1)return;
   const c={..._customers[i], stepData:{..._customers[i].stepData}};
   const {stepData, customerProps}=collectStep(currentStep);
-  c.stepData[currentStep]=stepData;
+  if(currentStep===SCHED_STEP) setSchedStepData(c, stepData); else c.stepData[currentStep]=stepData;
   Object.assign(c, customerProps);
   await upsertCustomer(c);
   renderStep(c, currentStep); // re-render so multichip fields lock
@@ -2116,7 +2118,7 @@ async function saveAndAdvance(){
   const i=_customers.findIndex(x=>x.id===currentId); if(i===-1)return;
   const c={..._customers[i], stepData:{..._customers[i].stepData}};
   const {stepData, customerProps}=collectStep(currentStep);
-  c.stepData[currentStep]=stepData;
+  if(currentStep===SCHED_STEP) setSchedStepData(c, stepData); else c.stepData[currentStep]=stepData;
   Object.assign(c, customerProps);
   if(currentStep<STEPS.length-1){c.step=currentStep+1; c.lastStepChange=new Date().toISOString(); currentStep++;}
   await upsertCustomer(c);
@@ -3269,18 +3271,50 @@ function dateStr(d) {
   return d.toISOString().slice(0,10);
 }
 
+// Index of the "Schedule Installation" step (shown to users as step 10)
+const SCHED_STEP = STEPS.findIndex(s => s.title === 'Schedule Installation');
+// The calendar used to read/write the step after it (Installation) by mistake.
+// Fall back to that old location so dates saved that way still show up.
+const LEGACY_SCHED_STEP = SCHED_STEP + 1;
+function schedStepData(c) {
+  const sd = c.stepData?.[SCHED_STEP] || {};
+  const legacy = c.stepData?.[LEGACY_SCHED_STEP] || {};
+  return {
+    ...sd,
+    confirmed_install_date: sd.confirmed_install_date || legacy.confirmed_install_date || '',
+    crew_assigned: sd.crew_assigned || legacy.crew_assigned || ''
+  };
+}
+// Write calendar edits to the Schedule Installation step and clear the old location
+function setSchedStepData(c, fields) {
+  c.stepData[SCHED_STEP] = { ...schedStepData(c), ...fields };
+  const legacy = c.stepData[LEGACY_SCHED_STEP];
+  if(legacy && ('confirmed_install_date' in legacy || 'crew_assigned' in legacy)) {
+    const { confirmed_install_date, crew_assigned, ...rest } = legacy;
+    c.stepData[LEGACY_SCHED_STEP] = rest;
+  }
+}
+
+// Index of the "Customer Selection" step (flooring type & project description)
+const SELECTION_STEP = STEPS.findIndex(s => s.title === 'Customer Selection');
+
 // ── CRM jobs that have a confirmed install date ──
 function getCrmCalendarJobs() {
   const jobs = [];
   (_customers || []).forEach(c => {
-    const sd10 = c.stepData?.[10]; // Schedule Installation step
-    if(sd10?.confirmed_install_date) {
+    const sd10 = schedStepData(c); // Schedule Installation step
+    if(sd10.confirmed_install_date) {
+      const sel = c.stepData?.[SELECTION_STEP] || {};
+      const flooring = (sel.flooring_type || '').split(',').map(v => v.trim()).filter(Boolean).join(', ');
       jobs.push({
         id: 'crm_' + c.id,
         address: c.address || c.name,
         notes: c.name + (sd10.crew_assigned ? ' · ' + sd10.crew_assigned : ''),
         installer: sd10.crew_assigned || '',
         scheduled_date: sd10.confirmed_install_date,
+        customer: c.name,
+        flooring,
+        description: (sel.project_overview || '').trim(),
         type: 'crm'
       });
     }
@@ -3538,7 +3572,7 @@ function renderMonthView() {
     const shown = allJobs.slice(0, 3);
     const more  = allJobs.length - 3;
     const jobsHtml = shown.map(e =>
-      `<div class="sched-month-job type-${e.type}" onclick="event.stopPropagation();openSchedModal('${e.type}','${ds}','${e.id}')" title="${esc(e.address)}${e.installer?' · '+esc(e.installer):''}">${esc(e.address)}</div>`
+      `<div class="sched-month-job type-${e.type}" onclick="event.stopPropagation();openSchedModal('${e.type}','${ds}','${e.id}')" title="${esc(e.address)}${e.installer?' · '+esc(e.installer):''}${e.flooring?' · '+esc(e.flooring):''}${e.description?'\n'+esc(e.description):''}">${esc(e.address)}</div>`
     ).join('');
 
     html += `<div class="sched-month-cell${isToday?' today-cell':''}${!isThisMonth?' other-month':''}" onclick="switchToWeekOfDate('${ds}')">
@@ -3564,6 +3598,14 @@ function switchToWeekOfDate(ds) {
   renderScheduleView();
 }
 
+// Flooring type + project description (from Customer Selection) for CRM jobs
+function schedJobDetailsHtml(e) {
+  const parts = [];
+  if(e.flooring) parts.push(`<b>${esc(e.flooring)}</b>`);
+  if(e.description) parts.push(esc(e.description));
+  return parts.length ? `<div class="sched-job-details">${parts.join(' — ')}</div>` : '';
+}
+
 // ── JOB CARD ──
 function schedJobCard(e) {
   const isRepair = e.type === 'repair';
@@ -3580,7 +3622,7 @@ function schedJobCard(e) {
       onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();}">
   </div>`;
 
-  const notesHtml = e.notes ? `<div class="sched-job-notes">${esc(e.notes)}</div>` : '';
+  const notesHtml = (e.notes ? `<div class="sched-job-notes">${esc(e.notes)}</div>` : '') + schedJobDetailsHtml(e);
   const btns = `<div class="sched-job-btns">
     <button class="sched-job-btn" title="Edit" onclick="openSchedModal('${e.type}','${e.scheduled_date||''}','${e.id}')">✏️</button>
     <button class="sched-job-btn" title="Delete" onclick="deleteSchedEntry('${e.id}')">🗑</button>
@@ -3602,7 +3644,7 @@ async function saveInstallerInline(id, val) {
     const ci = _customers.findIndex(c => c.id === custId);
     if(ci !== -1) {
       const c = { ..._customers[ci], stepData: { ..._customers[ci].stepData } };
-      c.stepData[10] = { ...(c.stepData[10] || {}), crew_assigned: val };
+      setSchedStepData(c, { crew_assigned: val });
       await upsertCustomer(c);
     }
     return;
@@ -3618,7 +3660,7 @@ function openSchedModal(type, date, id) {
     const custId = id.slice(4);
     const c = _customers.find(x => x.id === custId);
     if(!c) return;
-    const sd10 = c.stepData?.[10] || {};
+    const sd10 = schedStepData(c);
     document.getElementById('schedEntryId').value    = id;
     document.getElementById('schedEntryType').value  = 'job';
     document.getElementById('schedEntryDate').value  = date || sd10.confirmed_install_date || '';
@@ -3661,7 +3703,7 @@ async function saveSchedEntry() {
     const ci = _customers.findIndex(c => c.id === custId);
     if(ci !== -1) {
       const c = { ..._customers[ci], stepData: { ..._customers[ci].stepData } };
-      c.stepData[10] = { ...(c.stepData[10] || {}), crew_assigned: installer, confirmed_install_date: date };
+      setSchedStepData(c, { crew_assigned: installer, confirmed_install_date: date });
       await upsertCustomer(c);
     }
     closeSchedModal();
@@ -3700,7 +3742,7 @@ async function deleteSchedEntry(id) {
     const ci = _customers.findIndex(c => c.id === custId);
     if(ci !== -1) {
       const c = { ..._customers[ci], stepData: { ..._customers[ci].stepData } };
-      c.stepData[10] = { ...(c.stepData[10] || {}), confirmed_install_date: '' };
+      setSchedStepData(c, { confirmed_install_date: '' });
       await upsertCustomer(c);
     }
     renderScheduleView();
@@ -3737,6 +3779,7 @@ function openDayDetail(ds) {
           <div style="flex:1;padding:12px 14px;padding-right:88px">
             <div style="font-size:0.95rem;font-weight:700;color:#2c2c2c;margin-bottom:4px">${esc(e.address)}</div>
             ${e.notes?`<div style="font-size:0.82rem;color:#888;line-height:1.5">${esc(e.notes)}</div>`:''}
+            ${schedJobDetailsHtml(e).replace('class="sched-job-details"', 'class="sched-job-details" style="font-size:0.82rem;line-height:1.5"')}
           </div>
           <div style="position:absolute;top:10px;right:10px;display:flex;gap:5px">
             <button class="btn btn-secondary btn-sm" onclick="closeDayDetail();openSchedModal('${e.type}','${ds}','${e.id}')">✏️</button>
@@ -3762,16 +3805,23 @@ async function deleteSchedEntryFromDetail(id, ds) {
 function copyDaySchedule(ds, dayName) {
   const d = new Date(ds + 'T12:00:00');
   const dateLabel = d.toLocaleDateString('en-US', { weekday:'long', month:'long', day:'numeric' });
-  const jobs = _scheduleEntries
-    .filter(e => e.type === 'job' && e.scheduled_date === ds)
-    .sort((a,b) => (a.sort_order||0) - (b.sort_order||0));
+  const jobs = [
+    ..._scheduleEntries
+      .filter(e => e.type === 'job' && e.scheduled_date === ds)
+      .sort((a,b) => (a.sort_order||0) - (b.sort_order||0)),
+    ...getCrmCalendarJobs().filter(e => e.scheduled_date === ds)
+  ];
 
   if(!jobs.length) { showToast('No jobs on ' + dayName); return; }
 
   const lines = [dateLabel, ''];
   jobs.forEach((e, i) => {
     lines.push(`${i+1}. ${e.address}${e.installer ? ' — ' + e.installer : ''}`);
-    if(e.notes) lines.push(`   ${e.notes}`);
+    // CRM jobs: show just the customer name (installer is already on the line above)
+    const notes = e.type === 'crm' ? e.customer : e.notes;
+    if(notes) lines.push(`   ${notes}`);
+    const details = [e.flooring, e.description].filter(Boolean).join(' — ');
+    if(details) lines.push(`   ${details}`);
   });
 
   navigator.clipboard.writeText(lines.join('\n')).then(() => {
