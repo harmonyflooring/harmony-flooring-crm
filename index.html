@@ -89,7 +89,7 @@ header::-webkit-scrollbar { display: none; }
 
 /* STEP STRIP */
 .step-strip-bar { background: linear-gradient(to bottom, #faf9f7, white); border-bottom: 1px solid #e0ddd8; padding: 10px 18px 10px; flex-shrink: 0; display: flex; align-items: center; gap: 12px; }
-.steps-strip { display: flex; flex: 1; overflow-x: auto; gap: 0; padding-bottom: 4px; }
+.steps-strip { display: flex; flex: 1; overflow-x: auto; gap: 0; padding-top: 6px; padding-bottom: 4px; }
 .step-btn { display: flex; flex-direction: column; align-items: center; min-width: 84px; flex: 1; cursor: pointer; border: none; background: none; padding: 4px 2px; position: relative; transition: transform 0.15s; }
 .step-btn:hover { transform: translateY(-2px); }
 .step-btn:not(:last-child)::after { content:''; position:absolute; top:20px; left:calc(50% + 22px); right:calc(-50% + 22px); height:2px; background:#e0ddd8; z-index:0; transition: background 0.3s; }
@@ -118,6 +118,10 @@ header::-webkit-scrollbar { display: none; }
 .step-btn-label { font-size:0.61rem; color:#aaa; text-align:center; line-height:1.25; max-width:78px; transition: color 0.2s; }
 .step-btn:hover .step-btn-label { color: var(--sc, #2c5f2e); }
 .step-btn.sf-active .step-btn-label { color: var(--sc, #2c5f2e); font-weight:700; }
+/* Step 1 = New Job button: bigger circle with a plus */
+.step-btn.step-new .step-circle { width:50px; height:50px; margin-top:-5px; font-size:1.7rem; font-weight:600; }
+.step-btn.step-new::after { left:calc(50% + 27px); }
+.step-btn.step-new .step-count-badge { right:calc(50% - 31px); top:-6px; }
 .step-count-badge { position:absolute; top:-1px; right:calc(50% - 26px); color:white; font-size:0.58rem; font-weight:800; width:16px; height:16px; border-radius:50%; display:flex; align-items:center; justify-content:center; z-index:3; border:1.5px solid white; background: #e8a020; }
 .strip-clear { white-space:nowrap; font-size:0.78rem; color:#2c5f2e; cursor:pointer; font-weight:600; display:none; padding:4px 10px; border-radius:6px; background:#e8f5e9; }
 .strip-clear:hover { background:#c8e6c9; }
@@ -297,6 +301,10 @@ header::-webkit-scrollbar { display: none; }
 .form-group input:focus, .form-group textarea:focus, .form-group select:focus { outline:none; border-color:#2c5f2e; }
 .form-group textarea { resize:vertical; min-height:70px; }
 .form-row { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+.info-box { padding:8px 11px; background:#f6f5f2; border:1.5px solid #e8e5e0; border-radius:6px; font-size:0.85rem; color:#444; white-space:pre-line; }
+.floor-rooms { margin-top:10px; padding:10px 12px; background:#f3f8f3; border-left:3px solid #2c5f2e; border-radius:6px; }
+.fr-locked .multichip-btn:not(.selected) { display:none; }
+.floor-rooms-q { font-size:0.8rem; color:#2c5f2e; margin-bottom:6px; }
 .ac-wrap { position:relative; }
 .ac-list { display:none; position:absolute; top:calc(100% + 3px); left:0; right:0; background:white; border:1.5px solid #ddd; border-radius:8px; box-shadow:0 6px 18px rgba(0,0,0,0.15); z-index:50; max-height:220px; overflow-y:auto; }
 .ac-list.open { display:block; }
@@ -478,6 +486,9 @@ header::-webkit-scrollbar { display: none; }
   .step-btn:not(:last-child)::after { top:17px; }
   .step-btn-label { font-size:0.53rem; max-width:54px; }
   .step-count-badge { right:calc(50% - 22px); }
+  .step-btn.step-new .step-circle { width:42px; height:42px; margin-top:-4px; font-size:1.4rem; }
+  .step-btn.step-new::after { left:calc(50% + 23px); }
+  .step-btn.step-new .step-count-badge { right:calc(50% - 26px); top:-5px; }
 
   /* ── SEARCH BAR ── */
   .search-bar { flex-wrap:wrap; padding:8px 12px; }
@@ -708,7 +719,6 @@ header::-webkit-scrollbar { display: none; }
     </button>
     <button class="hdr-msg-btn" onclick="openSettings()" title="Settings">⚙️</button>
     <button class="btn btn-ghost btn-sm" onclick="exportData()">⬇ Export</button>
-    <button class="btn btn-primary btn-sm" onclick="openNewModal()">+ New Job</button>
   </header>
 
   <!-- STEP STRIP -->
@@ -999,6 +1009,7 @@ header::-webkit-scrollbar { display: none; }
     <div class="form-group"><label>Company</label><input type="text" id="newCompany" placeholder="Company name (optional)"></div>
 
     <div class="slabel">Job Info</div>
+    <div class="form-group"><label>Date</label><input type="date" id="newJobDate"></div>
     <div class="form-group ac-wrap">
       <label>Job Address <span class="req">*</span></label>
       <input type="text" id="newAddress" placeholder="123 Main St, City, State" autocomplete="off" oninput="onNewAddressInput()" onfocus="onNewAddressInput()" onblur="hideNewAddressSuggestions()">
@@ -1176,64 +1187,64 @@ header::-webkit-scrollbar { display: none; }
 const STEP_COLORS = Array(13).fill('#4d7b79');
 
 const STEPS = [
-  { title:"Customer Intake", desc:"Customer contact information and job site details.", fields:[
+  { title:"New Jobs", desc:"Customer contact information and job site details.", fields:[
+    {key:"_s_customer",    type:"slabel", label:"Customer Info"},
     {key:"customer_type",  label:"Customer Type",     type:"customer_type"},
-    {key:"name",           label:"Customer Name",     type:"text",    placeholder:"Full name",                customerField:true},
-    {key:"phone",          label:"Phone",             type:"text",    placeholder:"(555) 555-5555",           customerField:true},
-    {key:"email",          label:"Email",             type:"text",    placeholder:"email@example.com",        customerField:true},
-    {key:"company",        label:"Company",           type:"text",    placeholder:"Company name (if any)",    customerField:true},
-    {key:"address",        label:"Address / Job Site",type:"text",    placeholder:"Street address",           customerField:true},
-    {key:"address2",       label:"Suite / Apt",       type:"text",    placeholder:"Suite, Apt, Unit # (optional)", customerField:true},
-    {key:"salesman",       label:"Salesman",          type:"salesman_select",                                 customerField:true},
-    {key:"contractor",     label:"Contractor",        type:"text",    placeholder:"Contractor name (if any)", customerField:true},
-    {key:"contractorPhone",label:"Contractor Phone",  type:"text",    placeholder:"(555) 555-5555",           customerField:true},
-    {key:"lockbox",        label:"Lock Box?",         type:"select",  options:["No","Yes"], controls:true,    customerField:true},
-    {key:"lockboxCode",    label:"Lock Box Code",     type:"text",    placeholder:"Code or location",         customerField:true, showIf:{field:"lockbox",value:"Yes"}}
+    {key:"name",           label:"Full Name",         type:"text",    placeholder:"e.g. John Smith",          customerField:true},
+    {key:"phone",          label:"Phone",             type:"text",    placeholder:"(555) 000-0000",           customerField:true, half:true},
+    {key:"email",          label:"Email",             type:"text",    placeholder:"john@email.com",           customerField:true, half:true},
+    {key:"company",        label:"Company",           type:"text",    placeholder:"Company name (optional)",  customerField:true},
+    {key:"_s_job",         type:"slabel", label:"Job Info"},
+    {key:"job_date",       label:"Date",              type:"date"},
+    {key:"address",        label:"Job Address",       type:"text",    placeholder:"123 Main St, City, State", customerField:true},
+    {key:"address2",       label:"Suite / Apt / Unit",type:"text",    placeholder:"Suite, Apt, Unit # (optional)", customerField:true},
+    {key:"lockbox",        label:"Lock Box",          type:"select",  options:["No","Yes"], controls:true,    customerField:true, half:true},
+    {key:"lockboxCode",    label:"Lock Box Code",     type:"text",    placeholder:"e.g. 1234",                customerField:true, half:true, showIf:{field:"lockbox",value:"Yes"}},
+    {key:"_s_contractor",  type:"slabel", label:"Contractor (if applicable)"},
+    {key:"contractor",     label:"Contractor Name",   type:"text",    placeholder:"Name",                     customerField:true, half:true},
+    {key:"contractorPhone",label:"Contractor Phone",  type:"text",    placeholder:"(555) 000-0000",           customerField:true, half:true},
+    {key:"_s_assign",      type:"slabel", label:"Assignment"},
+    {key:"salesman",       label:"Salesman",          type:"salesman_select",                                 customerField:true}
   ]},
-  { title:"Customer Selection", desc:"Initial inquiry, consultation details, and sample selection.", fields:[
+  { title:"Customer Selection", desc:"Initial inquiry, consultation details, and selection.", fields:[
     {key:"_h_inquiry",    type:"header", label:"Initial Inquiry"},
     {key:"inquiry_source",label:"How did they hear about us?",type:"select",options:["Phone","Email","Website","Referral","Walk-in","Social Media","Other"]},
-    {key:"inquiry_date",  label:"Date of Inquiry",type:"date"},
     {key:"_h_consult",    type:"header", label:"Consultation"},
-    {key:"flooring_type", label:"Type of Flooring",type:"multichip",options:["Hardwood","LVP / Luxury Vinyl","Tile","Carpet","Laminate","Other"]},
+    {key:"flooring_type", label:"Type of Flooring",type:"flooring_rooms",options:["LVP / Luxury Vinyl","Tile","Carpet","Laminate","Other"],
+      roomOptions:["Living Room","Kitchen","Master Bedroom","Bedroom","Dining Room","Hallway","Stairs","Basement","Office","Bathroom","Laundry","Other"]},
     {key:"project_overview",label:"Project Description",type:"textarea",placeholder:"Timeline, scope, any special details…"},
-    {key:"rooms_involved",label:"Rooms / Areas",type:"multichip",options:["Living Room","Kitchen","Master Bedroom","Bedroom","Dining Room","Hallway","Stairs","Basement","Office","Bathroom","Laundry","Other"]},
     {key:"special_requirements",label:"Special Requirements",type:"textarea",placeholder:"Pets, allergies, subfloor concerns, transitions…"},
-    {key:"_h_samples",    type:"header", label:"Sample Selection"},
-    {key:"products_shown",label:"Products Shown",type:"textarea",placeholder:"Product names / SKUs"},
-    {key:"top_choices",   label:"Top 2–3 Choices",type:"textarea",placeholder:"Customer's preferred products"},
+    {key:"_h_samples",    type:"header", label:"Selection"},
     {key:"samples_taken", label:"Samples Taken Home?",type:"select",options:["Yes","No"],controls:true},
-    {key:"sample_taken_details",label:"Sample Details",type:"textarea",placeholder:"Which samples, quantities, product codes…",showIf:{field:"samples_taken",value:"Yes"}},
-    {key:"sample_notes",  label:"Notes",type:"textarea",placeholder:"Preferences, colors, concerns…"}
+    {key:"sample_taken_details",label:"Sample Details",type:"textarea",placeholder:"Which samples, quantities, product codes…",showIf:{field:"samples_taken",value:"Yes"}}
   ]},
   { title:"Schedule Measure", desc:"Book the in-home measurement appointment and assign a technician.", fields:[
-    {key:"schedule_date",label:"Date Appointment Was Booked",type:"date"},
+    {key:"schedule_date",label:"Date Measure Was Scheduled",type:"date",autoDate:true},
     {key:"measure_appt_date",label:"Measure Appointment Date",type:"date"},
     {key:"measure_appt_time",label:"Appointment Time",type:"text",placeholder:"e.g. 10:00 AM"},
-    {key:"technician",label:"Technician Assigned",type:"text",placeholder:"Who is doing the measure?"},
-    {key:"access_notes",label:"Access / Entry Notes",type:"textarea",placeholder:"Lock box code, gate code, contact on site…"},
-    {key:"confirmation_sent",label:"Confirmation Sent to Customer?",type:"select",options:["Yes – Text","Yes – Email","Yes – Phone","Not Yet"]},
-    {key:"schedule_notes",label:"Notes",type:"textarea",placeholder:"Any scheduling details or special instructions…"}
+    {key:"technician",label:"Technician Assigned",type:"tech_select",options:["Paul","Shlomy","Eli","Yisroel"]},
+    {key:"_lockbox_info",label:"Lock Box (from New Jobs)",type:"info",compute:c=>c.lockbox==='Yes'?`🔒 Yes${c.lockboxCode?' — Code: '+c.lockboxCode:''}`:c.lockbox==='No'?'No lock box':'Not entered'},
+    {key:"access_notes",label:"Other Access / Entry Notes",type:"textarea",placeholder:"Gate code, contact on site…"}
   ]},
   { title:"Measure Checklist", desc:"On-site measurement and full condition assessment of the job site.", fields:[
-    {key:"measure_date",label:"Actual Measure Date",type:"date"},
-    {key:"rooms_measured",label:"Rooms / Areas Measured",type:"textarea",placeholder:"e.g. Living room 320 sqft, Kitchen 180 sqft…"},
-    {key:"subfloor_condition",label:"Subfloor Condition",type:"select",options:["Good – No Work Needed","Minor Repairs Needed","Major Repairs Needed","Needs Assessment"]},
+    {key:"measure_date",label:"Actual Measure Date",type:"date",autoDate:true},
+    {key:"_rooms_info",label:"Rooms to Measure (from Customer Selection)",type:"info",compute:c=>roomsSummary(c.stepData?.[1])||'No rooms entered in Customer Selection'},
+    {key:"rooms_measured",label:"Technician Notes / Additional Rooms Measured",type:"textarea",placeholder:"e.g. Also measured the hallway closet…"},
+    {key:"subfloor_condition",label:"Subfloor Condition",type:"buttons",options:["Good – No Work Needed","Minor Repairs Needed","Major Repairs Needed","Needs Assessment"]},
     {key:"subfloor_type",label:"Subfloor Type",type:"multichip",options:["Wood","Concrete"]},
     {key:"subfloor_notes",label:"Subfloor Notes",type:"textarea",placeholder:"Subfloor details, issues, repairs needed…"},
-    {key:"existing_floor",label:"Existing Flooring Removal Needed?",type:"select",options:["Yes","No","Partial"],controls:true},
+    {key:"existing_floor",label:"Existing Flooring Removal Needed?",type:"buttons",options:["Yes","No","Partial"],controls:true},
     {key:"existing_floor_types",label:"Type of Flooring to Remove",type:"multichip",options:["Carpet","Vinyl Click","Vinyl Glue Down","Laminate","Hardwood","Ceramic Tile","Sheet Vinyl"],showIf:{field:"existing_floor",value:"Yes"}},
-    {key:"electric",label:"Electric",type:"select",options:["On","Off"],compact:true},
-    {key:"hvac",label:"HVAC",type:"select",options:["On","Off"],compact:true},
-    {key:"water",label:"Water",type:"select",options:["On","Off"],compact:true},
-    {key:"photos_taken",label:"Photos Taken?",type:"select",options:["Yes","No"],compact:true},
+    {key:"electric",label:"Electric",type:"buttons",options:["On","Off"],compact:true},
+    {key:"hvac",label:"HVAC",type:"buttons",options:["On","Off"],compact:true},
+    {key:"water",label:"Water",type:"buttons",options:["On","Off"],compact:true},
+    {key:"photos_taken",label:"Photos Taken?",type:"buttons",options:["Yes","No"],compact:true},
     {key:"has_steps",label:"Steps",type:"select",options:["No","Yes"],controls:true},
-    {key:"step_type",label:"Step Type",type:"select",options:["Box","Half Cap","Full Cap","Double Cap","Birdcage","Round Bottom"],showIf:{field:"has_steps",value:"Yes"}},
+    {key:"step_type",label:"Step Type",type:"select",options:["Box","Half Cap","Full Cap","Double Cap","Birdcage","Round Bottom","Pie","Stringers"],showIf:{field:"has_steps",value:"Yes"}},
     {key:"step_notes",label:"Step Notes",type:"textarea",placeholder:"Details about the steps…",showIf:{field:"has_steps",value:"Yes"}},
-    {key:"has_transitions",label:"Transitions",type:"select",options:["No","Yes"],controls:true},
+    {key:"has_transitions",label:"Transitions",type:"buttons",options:["No","Yes"],controls:true},
     {key:"transition_notes",label:"Transition Notes",type:"textarea",placeholder:"Details about the transitions…",showIf:{field:"has_transitions",value:"Yes"}},
-    {key:"special_conditions",label:"Special Conditions / Obstacles",type:"textarea",placeholder:"Uneven floors, tight areas, doorways…"},
-    {key:"measure_notes",label:"Measure Notes",type:"textarea",placeholder:"Additional observations from the site visit…"}
+    {key:"special_conditions",label:"Special Conditions / Obstacles",type:"textarea",placeholder:"Uneven floors, tight areas, doorways…"}
   ]},
   { title:"Estimate Sent", desc:"Confirm the estimate has been sent to the customer.", fields:[
     {key:"estimate_sent",label:"Estimate Sent to Customer?",type:"select",options:["Yes","No"]}
@@ -1583,6 +1594,7 @@ function staleColor(d){
   if(d<=7) return '#e65100';
   return '#c62828';
 }
+function localDateStr(d){ return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
 function daysText(d){ return d===0?'today':d===1?'1 day':`${d} days`; }
 function isDone(c){ return c.step===12&&c.stepData?.[12]?.closeout_date; }
 
@@ -1598,9 +1610,12 @@ function renderStepsStrip() {
     const count = counts[i]||0;
     const isActive = activeStepFilter===i;
     const color = STEP_COLORS[i];
-    return `<button class="step-btn ${isActive?'sf-active':''}" onclick="filterByStep(${i})" title="${s.title}" style="--sc:${color}">
+    // Step 1 doubles as the New Job button: it shows step-1 jobs and opens the New Job form
+    const click = i===0 ? 'newJobFromStrip()' : `filterByStep(${i})`;
+    const tip = i===0 ? 'Add a new job (also shows New Jobs)' : s.title;
+    return `<button class="step-btn ${i===0?'step-new':''} ${isActive?'sf-active':''}" onclick="${click}" title="${tip}" style="--sc:${color}">
       ${count>0?`<span class="step-count-badge" style="background:${color}">${count}</span>`:''}
-      <div class="step-circle">${i+1}</div>
+      <div class="step-circle">${i===0?'+':i+1}</div>
       <div class="step-btn-label">${s.title}</div>
     </button>`;
   }).join('');
@@ -1608,6 +1623,7 @@ function renderStepsStrip() {
 }
 function filterByStep(i){ activeStepFilter=(activeStepFilter===i)?null:i; refreshAll(); }
 function clearStepFilter(){ activeStepFilter=null; refreshAll(); }
+function newJobFromStrip(){ activeStepFilter=0; refreshAll(); openNewModal(); }
 
 // ════════════════════════════════════════════
 // LAYOUT: CARD GRID
@@ -1867,6 +1883,7 @@ function openNewModal(){
   ['newName','newPhone','newEmail','newAddress','newAddress2','newCompany','newContractor','newContractorPhone','newLockboxCode'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
   document.getElementById('newSalesman').value = activeProfile&&activeProfile.name!=='Admin'?activeProfile.name:'';
   document.getElementById('newLockbox').value='';
+  document.getElementById('newJobDate').value=localDateStr(new Date());
   document.getElementById('lockboxCodeGroup').style.display='none';
   _selectedExistingCustKey=null;
   setActiveToggle('new');
@@ -1887,7 +1904,7 @@ async function createCustomer(){
   if(err.length){alert('Please fill in:\n• '+err.join('\n• '));return;}
   const now=new Date().toISOString();
   const fullAddress=address2?`${address}, ${address2}`:address;
-  const c={id:Date.now().toString(),name,phone,email:document.getElementById('newEmail').value.trim(),company:document.getElementById('newCompany').value.trim(),address:fullAddress,lockbox,lockboxCode:lockbox==='Yes'?document.getElementById('newLockboxCode').value.trim():'',contractor:document.getElementById('newContractor').value.trim(),contractorPhone:document.getElementById('newContractorPhone').value.trim(),salesman,step:0,stepData:{},created:now,lastStepChange:now};
+  const c={id:Date.now().toString(),name,phone,email:document.getElementById('newEmail').value.trim(),company:document.getElementById('newCompany').value.trim(),address:fullAddress,lockbox,lockboxCode:lockbox==='Yes'?document.getElementById('newLockboxCode').value.trim():'',contractor:document.getElementById('newContractor').value.trim(),contractorPhone:document.getElementById('newContractorPhone').value.trim(),salesman,step:0,stepData:{0:{job_date:document.getElementById('newJobDate').value||localDateStr(new Date())}},created:now,lastStepChange:now};
   await upsertCustomer(c);
   closeNewModal(); showToast(`"${name}" added!`);
   refreshAll(); openCustomer(c.id);
@@ -1977,6 +1994,7 @@ function handleFieldChange(key, val, si) {
 
 function renderFieldHtml(f, val, vals, si) {
   if(f.type==='header') return {html:`<div class="step-section-header">${esc(f.label)}</div>`, compact:false};
+  if(f.type==='slabel') return {html:`<div class="slabel">${esc(f.label)}</div>`, compact:false};
   const fgId=`id="fg_${f.key}"`;
   const hidden=f.showIf?(vals[f.showIf.field]===f.showIf.value?'':' style="display:none"'):'';
   let inner='';
@@ -2000,7 +2018,7 @@ function renderFieldHtml(f, val, vals, si) {
     </div>`;
   } else if(f.type==='multichip'){
     const selVals=val?val.split(',').map(v=>v.trim()).filter(Boolean):[];
-    const locked=selVals.length>0;
+    const locked=selVals.length>0&&f.options.some(o=>!selVals.includes(o));
     const chips=f.options.map(o=>{
       const isSel=selVals.includes(o);
       const hide=locked&&!isSel?' style="display:none"':'';
@@ -2009,6 +2027,38 @@ function renderFieldHtml(f, val, vals, si) {
     const groupClass=locked?' multichip-locked':'';
     const changeBtn=`<button type="button" class="multichip-change-btn" id="f_${f.key}_changebtn" onclick="editChips('f_${f.key}')" style="${locked?'':'display:none'}">+ Show more options</button>`;
     inner=`<label>${f.label}</label><input type="hidden" id="f_${f.key}" value="${esc(val)}"><div class="multichip-group${groupClass}" id="f_${f.key}_group">${chips}</div><div style="margin-top:6px">${changeBtn}</div>`;
+  } else if(f.type==='flooring_rooms'){
+    // Material chips; picking a material asks which rooms get it
+    const selVals=val?val.split(',').map(v=>v.trim()).filter(Boolean):[];
+    let rooms={}; try{ rooms=JSON.parse(vals.flooring_rooms||'{}')||{}; }catch(e){}
+    // Older jobs kept one rooms list for the whole job; give it to the material if there's only one
+    if(!vals.flooring_rooms && vals.rooms_involved && selVals.length===1) rooms[selVals[0]]=vals.rooms_involved;
+    const chips=f.options.map(o=>`<button type="button" class="multichip-btn${selVals.includes(o)?' selected':''}" data-value="${esc(o)}" onclick="toggleFloorType(this)">${esc(o)}</button>`).join('');
+    // Once saved, show only what was picked, with a button to add more (same as other chip fields)
+    const somethingHidden=f.options.some(o=>!selVals.includes(o))||selVals.some(t=>(rooms[t]||'').split(',').filter(Boolean).length<f.roomOptions.length);
+    const locked=selVals.length>0&&somethingHidden;
+    inner=`<label>${f.label}</label><input type="hidden" id="f_${f.key}" value="${esc(val)}"><input type="hidden" id="f_flooring_rooms" value="${esc(JSON.stringify(rooms))}">
+      <div id="floorRoomsWrap" class="${locked?'fr-locked':''}"><div class="multichip-group" id="floorTypeGroup">${chips}</div><div id="floorRoomsBox"></div></div>
+      <div style="margin-top:6px"><button type="button" class="multichip-change-btn" onclick="unlockFloorRooms(this)" style="${locked?'':'display:none'}">+ Show more options</button></div>`;
+    setTimeout(renderFloorRoomsBox,0);
+  } else if(f.type==='tech_select'){
+    // Names typed in on other jobs are offered too, except old placeholder/duplicate entries
+    const hiddenTech=/^(no ?one|shloimy|shloimy axelrod)$/i;
+    const added=_customers.map(x=>(x.stepData?.[si]?.technician||'').trim()).filter(n=>n&&!hiddenTech.test(n));
+    const known=[...new Set([...f.options, ...added, ...(val?[val]:[])])];
+    const opts=known.map(o=>`<option value="${esc(o)}"${val===o?' selected':''}>${esc(o)}</option>`).join('');
+    inner=`<label>${f.label}</label><select id="f_${f.key}" data-prev="${esc(val)}" onchange="onTechChange(this)"><option value="">— Select —</option>${opts}<option value="__add__">+ Add…</option></select>`;
+  } else if(f.type==='buttons'){
+    // Single-choice buttons instead of a dropdown
+    const btns=f.options.map(o=>`<button type="button" class="multichip-btn${val===o?' selected':''}" data-value="${esc(o)}" onclick="pickButton(this,'${f.key}',${si})">${esc(o)}</button>`).join('');
+    // Once saved, show only the chosen button, with a way to change it
+    const locked=!!val&&f.options.length>1;
+    inner=`<label>${f.label}</label><input type="hidden" id="f_${f.key}" value="${esc(val)}"><div class="multichip-group${locked?' fr-locked':''}">${btns}</div>${locked?`<div style="margin-top:6px"><button type="button" class="multichip-change-btn" onclick="unlockChips(this)">+ Show more options</button></div>`:''}`;
+  } else if(f.type==='info'){
+    inner=`<label>${f.label}</label><div class="info-box">${esc(val)}</div>`;
+  } else if(f.autoDate && (f.alwaysHidden || !val)){
+    // Filled in automatically on save; not shown until it has a date (or never, if alwaysHidden)
+    return {html:`<input type="hidden" id="f_${f.key}" value="${esc(val)}">`, compact:false};
   } else if(f.type==='salesman_select'){
     const smOpts=SALESMEN.filter(s=>s.name!=='Admin').map(s=>`<option value="${esc(s.name)}"${val===s.name?' selected':''}>${esc(s.name)}</option>`).join('');
     inner=`<label>${f.label}</label><select id="f_${f.key}"><option value="">— Select —</option>${smOpts}</select>`;
@@ -2030,16 +2080,22 @@ function renderStep(c,si){
   const step=STEPS[si]; const saved=si===SCHED_STEP?schedStepData(c):(c.stepData?.[si]||{});
   const vals={...saved};
   step.fields.forEach(f=>{ if(f.customerField) vals[f.key]=c[f.key]||''; });
+  // Older jobs have no job_date: fall back to the old step-2 inquiry date, then the created date
+  if(si===0 && !vals.job_date) vals.job_date=c.stepData?.[1]?.inquiry_date||localDateStr(new Date(c.created));
+  step.fields.forEach(f=>{ if(f.compute) vals[f.key]=f.compute(c); });
 
-  // Build field HTML, grouping compact fields into grid rows
-  let fieldsHtml='', compactBuf=[];
+  // Build field HTML, grouping compact fields into grid rows and half fields into two-column rows
+  let fieldsHtml='', compactBuf=[], halfBuf=[];
   const flushCompact=()=>{ if(compactBuf.length){ fieldsHtml+=`<div class="compact-form-grid">${compactBuf.join('')}</div>`; compactBuf=[]; } };
+  const flushHalf=()=>{ if(halfBuf.length){ fieldsHtml+=`<div class="form-row">${halfBuf.join('')}</div>`; halfBuf=[]; } };
   step.fields.forEach(f=>{
     const val=vals[f.key]||'';
     const {html, compact}=renderFieldHtml(f,val,vals,si);
-    if(compact){ compactBuf.push(html); } else { flushCompact(); fieldsHtml+=html; }
+    if(f.half){ flushCompact(); halfBuf.push(html); if(halfBuf.length===2) flushHalf(); }
+    else if(compact){ flushHalf(); compactBuf.push(html); }
+    else { flushCompact(); flushHalf(); fieldsHtml+=html; }
   });
-  flushCompact();
+  flushCompact(); flushHalf();
 
   const isCurrent=si===c.step;
   const lastStep=STEPS.length-1;
@@ -2050,13 +2106,75 @@ function renderStep(c,si){
 function collectStep(si){
   const stepData={}, customerProps={};
   STEPS[si].fields.forEach(f=>{
-    if(f.type==='header'||f.type==='customer_type') return;
+    if(f.type==='header'||f.type==='slabel'||f.type==='info'||f.type==='customer_type') return;
     const el=document.getElementById('f_'+f.key);
     if(!el) return;
     if(f.customerField) customerProps[f.key]=el.value;
-    else stepData[f.key]=el.value;
+    else stepData[f.key]=(f.autoDate&&!el.value)?localDateStr(new Date()):el.value;
+    if(f.type==='flooring_rooms') stepData.flooring_rooms=document.getElementById('f_flooring_rooms').value;
   });
   return {stepData, customerProps};
+}
+
+// ── Flooring type → rooms (Customer Selection step) ──
+function floorRoomsState(){
+  let rooms={}; try{ rooms=JSON.parse(document.getElementById('f_flooring_rooms').value||'{}')||{}; }catch(e){}
+  const types=document.getElementById('f_flooring_type').value.split(',').map(v=>v.trim()).filter(Boolean);
+  return {types, rooms};
+}
+function unlockFloorRooms(btn){ document.getElementById('floorRoomsWrap').classList.remove('fr-locked'); btn.style.display='none'; }
+function unlockChips(btn){ btn.closest('.form-group').querySelector('.fr-locked')?.classList.remove('fr-locked'); btn.style.display='none'; }
+function pickButton(btn, key, si){
+  if(btn.closest('.fr-locked')) return;
+  const on=!btn.classList.contains('selected');
+  btn.parentElement.querySelectorAll('.multichip-btn').forEach(b=>b.classList.remove('selected'));
+  if(on) btn.classList.add('selected');
+  const v=on?btn.dataset.value:'';
+  document.getElementById('f_'+key).value=v;
+  handleFieldChange(key, v, si);
+}
+function toggleFloorType(btn){
+  if(btn.closest('.fr-locked')) return;
+  btn.classList.toggle('selected');
+  const sel=[...document.querySelectorAll('#floorTypeGroup .multichip-btn.selected')].map(b=>b.dataset.value);
+  document.getElementById('f_flooring_type').value=sel.join(',');
+  renderFloorRoomsBox();
+}
+function toggleFloorRoom(btn){
+  if(btn.closest('.fr-locked')) return;
+  const type=btn.closest('[data-type]').dataset.type;
+  btn.classList.toggle('selected');
+  const {rooms}=floorRoomsState();
+  rooms[type]=[...btn.closest('.multichip-group').querySelectorAll('.multichip-btn.selected')].map(b=>b.dataset.value).join(',');
+  document.getElementById('f_flooring_rooms').value=JSON.stringify(rooms);
+}
+function renderFloorRoomsBox(){
+  const box=document.getElementById('floorRoomsBox'); if(!box) return;
+  const f=STEPS[SELECTION_STEP].fields.find(x=>x.type==='flooring_rooms');
+  const {types, rooms}=floorRoomsState();
+  box.innerHTML=types.map(t=>{
+    const sel=(rooms[t]||'').split(',').filter(Boolean);
+    const chips=f.roomOptions.map(r=>`<button type="button" class="multichip-btn${sel.includes(r)?' selected':''}" data-value="${esc(r)}" onclick="toggleFloorRoom(this)">${esc(r)}</button>`).join('');
+    return `<div class="floor-rooms" data-type="${esc(t)}"><div class="floor-rooms-q">Which rooms get <b>${esc(t)}</b>?</div><div class="multichip-group">${chips}</div></div>`;
+  }).join('');
+}
+// "Rooms per material" text for the Measure step
+function roomsSummary(sd){
+  if(!sd) return '';
+  const types=(sd.flooring_type||'').split(',').map(v=>v.trim()).filter(Boolean);
+  let rooms={}; try{ rooms=JSON.parse(sd.flooring_rooms||'{}')||{}; }catch(e){}
+  if(!sd.flooring_rooms && sd.rooms_involved) return sd.rooms_involved.split(',').join(', ');
+  return types.map(t=>`${t}: ${rooms[t]?rooms[t].split(',').join(', '):'no rooms chosen'}`).join('\n');
+}
+function onTechChange(sel){
+  if(sel.value!=='__add__'){ sel.dataset.prev=sel.value; return; }
+  const name=(prompt('Technician name:')||'').trim();
+  if(!name){ sel.value=sel.dataset.prev||''; return; }
+  if(![...sel.options].some(o=>o.value===name)){
+    const opt=document.createElement('option'); opt.value=name; opt.textContent=name;
+    sel.insertBefore(opt, sel.querySelector('option[value="__add__"]'));
+  }
+  sel.value=name; sel.dataset.prev=name;
 }
 
 let _selectedExistingCust = null;
@@ -2107,7 +2225,7 @@ async function saveStep(){
   const i=_customers.findIndex(x=>x.id===currentId); if(i===-1)return;
   const c={..._customers[i], stepData:{..._customers[i].stepData}};
   const {stepData, customerProps}=collectStep(currentStep);
-  if(currentStep===SCHED_STEP) setSchedStepData(c, stepData); else c.stepData[currentStep]=stepData;
+  if(currentStep===SCHED_STEP) setSchedStepData(c, stepData); else c.stepData[currentStep]={...c.stepData[currentStep], ...stepData};
   Object.assign(c, customerProps);
   await upsertCustomer(c);
   renderStep(c, currentStep); // re-render so multichip fields lock
@@ -2118,7 +2236,7 @@ async function saveAndAdvance(){
   const i=_customers.findIndex(x=>x.id===currentId); if(i===-1)return;
   const c={..._customers[i], stepData:{..._customers[i].stepData}};
   const {stepData, customerProps}=collectStep(currentStep);
-  if(currentStep===SCHED_STEP) setSchedStepData(c, stepData); else c.stepData[currentStep]=stepData;
+  if(currentStep===SCHED_STEP) setSchedStepData(c, stepData); else c.stepData[currentStep]={...c.stepData[currentStep], ...stepData};
   Object.assign(c, customerProps);
   if(currentStep<STEPS.length-1){c.step=currentStep+1; c.lastStepChange=new Date().toISOString(); currentStep++;}
   await upsertCustomer(c);
