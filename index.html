@@ -218,19 +218,19 @@ header::-webkit-scrollbar { display: none; }
 .chart-row:last-child { border-bottom:none; }
 .chart-row:hover { background:#faf9f7; }
 .chart-row:hover .chart-name-cell { background:#f5f3f0; }
-.chart-name-cell { width:180px; flex-shrink:0; padding:10px 14px; border-right:2px solid #e8e5e0; display:flex; flex-direction:column; justify-content:center; background:white; position:sticky; left:0; z-index:5; }
-.chart-name-cell .cn { font-size:0.85rem; font-weight:700; margin-bottom:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.chart-name-cell .cs { font-size:0.68rem; color:#aaa; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.chart-name-cell { width:180px; flex-shrink:0; padding:3px 12px; border-right:2px solid #e8e5e0; display:flex; flex-direction:column; justify-content:center; background:white; position:sticky; left:0; z-index:5; }
+.chart-name-cell .cn { font-size:0.78rem; font-weight:700; margin-bottom:0; line-height:1.2; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.chart-name-cell .cs { font-size:0.62rem; line-height:1.2; color:#aaa; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .chart-cells { display:flex; flex:1; }
-.chart-cell { flex:1; border-right:1px solid #f0ede8; padding:6px 3px; display:flex; align-items:center; justify-content:center; position:relative; min-height:50px; }
+.chart-cell { flex:1; border-right:1px solid #f0ede8; padding:2px 3px; display:flex; align-items:center; justify-content:center; position:relative; min-height:30px; }
 .chart-cell:last-child { border-right:none; }
-.chart-cell-fill { position:absolute; inset:4px 0; border-radius:0; display:flex; align-items:center; justify-content:center; }
+.chart-cell-fill { position:absolute; inset:5px 0; border-radius:0; display:flex; align-items:center; justify-content:center; }
 .chart-cell-fill.first { border-radius:8px 0 0 8px; left:4px; }
 .chart-cell-fill.last { border-radius:0 8px 8px 0; right:4px; }
 .chart-cell-fill.only { border-radius:8px; left:4px; right:4px; }
 .chart-cell-text { font-size:0.58rem; font-weight:700; color:white; opacity:0.9; white-space:nowrap; }
 .chart-cell-dot { width:10px; height:10px; border-radius:50%; }
-.chart-days-badge { position:absolute; bottom:3px; right:5px; font-size:0.58rem; font-weight:700; }
+.chart-days-badge { position:absolute; bottom:1px; right:5px; font-size:0.55rem; font-weight:700; }
 .chart-empty { text-align:center; padding:50px 20px; color:#ccc; }
 .chart-legend { display:flex; gap:16px; flex-wrap:wrap; padding:10px 14px; border-top:1px solid #f0ede8; font-size:0.7rem; color:#888; align-items:center; }
 .chart-legend-item { display:flex; align-items:center; gap:5px; }
@@ -301,9 +301,54 @@ header::-webkit-scrollbar { display: none; }
 .form-group input:focus, .form-group textarea:focus, .form-group select:focus { outline:none; border-color:#2c5f2e; }
 .form-group textarea { resize:vertical; min-height:70px; }
 .form-row { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+.archive-modal { max-width:640px; }
+.print-wrap { position:relative; }
+.print-menu { display:none; position:absolute; right:0; top:calc(100% + 6px); background:white; border:1.5px solid #e0ddd8; border-radius:10px; box-shadow:0 8px 24px rgba(0,0,0,0.14); z-index:50; width:250px; overflow:hidden; }
+.print-menu.open { display:block; }
+.print-menu button { display:block; width:100%; text-align:left; border:none; background:white; padding:10px 14px; cursor:pointer; font-family:inherit; }
+.print-menu button + button { border-top:1px solid #f0ede8; }
+.print-menu button:hover { background:#f3f8f3; }
+.print-menu b { display:block; font-size:0.85rem; color:#2c5f2e; }
+.print-menu span { display:block; font-size:0.72rem; color:#888; margin-top:2px; }
+.hdr-archive-btn { display:flex; align-items:center; gap:6px; height:34px; padding:0 13px; border-radius:17px; border:1.5px solid rgba(255,255,255,0.45); background:rgba(255,255,255,0.1); color:white; font-family:inherit; font-size:0.8rem; font-weight:600; letter-spacing:0.2px; cursor:pointer; white-space:nowrap; flex-shrink:0; transition:background 0.18s, border-color 0.18s, transform 0.18s; }
+.hdr-archive-btn:hover { background:rgba(255,255,255,0.22); border-color:white; transform:translateY(-1px); }
+.hdr-archive-btn:active { transform:translateY(0); }
+.hdr-archive-btn svg { flex-shrink:0; }
+@media(max-width:680px){ .hdr-archive-btn { padding:0 9px; } .hdr-archive-btn span { display:none; } }
+.arch-row { display:flex; gap:10px; align-items:center; padding:10px 12px; border:1.5px solid #e8e5e0; border-radius:8px; margin-bottom:8px; cursor:pointer; transition:border-color 0.15s; }
+.arch-row:hover { border-color:#2c5f2e; }
+.arch-main { flex:1; min-width:0; }
+.arch-name { font-weight:700; font-size:0.88rem; color:#333; }
+.arch-meta { font-size:0.75rem; color:#888; margin-top:2px; }
+.arch-tag { font-size:0.7rem; font-weight:700; padding:3px 8px; border-radius:10px; white-space:nowrap; }
+.arch-empty { text-align:center; color:#aaa; font-size:0.85rem; padding:24px 0; }
+.archive-banner { padding:10px 18px; font-size:0.85rem; display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
 .info-box { padding:8px 11px; background:#f6f5f2; border:1.5px solid #e8e5e0; border-radius:6px; font-size:0.85rem; color:#444; white-space:pre-line; }
 .floor-rooms { margin-top:10px; padding:10px 12px; background:#f3f8f3; border-left:3px solid #2c5f2e; border-radius:6px; }
 .fr-locked .multichip-btn:not(.selected) { display:none; }
+.prod-row { display:grid; grid-template-columns:1fr 1fr 1fr 28px; gap:6px; margin-bottom:6px; align-items:center; }
+.prod-row input, .sup-line input { width:100%; padding:7px 10px; border:1.5px solid #ddd; border-radius:6px; font-size:0.83rem; font-family:inherit; background:white; }
+.prod-row input:focus, .sup-line input:focus { outline:none; border-color:#2c5f2e; }
+.prod-remove { border:none; background:none; color:#c62828; font-size:0.9rem; cursor:pointer; padding:0; }
+.sup-line { display:grid; grid-template-columns:1.4fr 1fr 1fr; gap:8px; align-items:center; margin-bottom:6px; }
+.recv-line { display:grid; grid-template-columns:1.4fr 1fr; gap:8px; align-items:center; margin-bottom:6px; }
+.sup-head { font-size:0.7rem; font-weight:700; color:#999; text-transform:uppercase; letter-spacing:0.4px; margin-bottom:2px; }
+.photo-grid { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:8px; }
+.photo-thumb { position:relative; width:96px; height:96px; border-radius:8px; overflow:hidden; border:1.5px solid #e8e5e0; }
+.photo-thumb img { width:100%; height:100%; object-fit:cover; display:block; }
+.photo-thumb button { position:absolute; top:3px; right:3px; width:22px; height:22px; border-radius:50%; border:none; background:rgba(0,0,0,0.6); color:white; font-size:0.7rem; cursor:pointer; }
+.form-group .photo-add { display:inline-flex; align-items:center; gap:6px; padding:7px 14px; border:1.5px solid #2c5f2e; border-radius:7px; color:#2c5f2e; font-size:0.82rem; font-weight:600; cursor:pointer; margin:0; }
+.form-group .photo-add:hover { background:#e8f5e9; }
+.photo-status { font-size:0.78rem; color:#888; margin-left:8px; }
+.sup-product { font-size:0.8rem; color:#444; background:#f6f5f2; border:1.5px solid #e8e5e0; border-radius:6px; padding:7px 10px; }
+@media(max-width:680px){ .prod-row { grid-template-columns:1fr; } .prod-remove { justify-self:end; } .sup-line, .recv-line { grid-template-columns:1fr; } .sup-head { display:none; } }
+.sel-wrap { display:flex; flex-direction:column; gap:8px; }
+.sel-block { padding:9px 12px; background:#f6f5f2; border:1.5px solid #e8e5e0; border-radius:6px; }
+.sel-missing { background:#fff8e1; border-color:#f9a825; }
+.sel-type { font-size:0.78rem; font-weight:700; color:#2c5f2e; margin-bottom:4px; }
+.sel-need { font-weight:600; color:#e65100; }
+.sel-line { font-size:0.85rem; color:#444; }
+.change-warn { background:#fdecea; color:#c62828; border:1.5px solid #f5c6c2; border-radius:6px; padding:9px 12px; font-size:0.83rem; margin-bottom:12px; line-height:1.5; }
 .floor-rooms-q { font-size:0.8rem; color:#2c5f2e; margin-bottom:6px; }
 .ac-wrap { position:relative; }
 .ac-list { display:none; position:absolute; top:calc(100% + 3px); left:0; right:0; background:white; border:1.5px solid #ddd; border-radius:8px; box-shadow:0 6px 18px rgba(0,0,0,0.15); z-index:50; max-height:220px; overflow-y:auto; }
@@ -702,7 +747,7 @@ header::-webkit-scrollbar { display: none; }
     </div>
     <div class="header-spacer"></div>
     <label class="filter-toggle" title="Show only your jobs">
-      <input type="checkbox" id="myJobsToggle" onchange="refreshAll()">
+      <input type="checkbox" id="myJobsToggle" onchange="onMyJobsChange(this)">
       My Jobs Only
     </label>
     <div class="layout-switcher">
@@ -716,6 +761,10 @@ header::-webkit-scrollbar { display: none; }
     <button class="hdr-msg-btn" id="hdrMsgBtn" onclick="toggleMsgView()" title="Messages & Tasks">
       💬
       <span class="hdr-msg-count" id="hdrMsgCount"></span>
+    </button>
+    <button class="hdr-archive-btn" onclick="openArchive()" title="Archive (completed & lost jobs)">
+      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2.5" y="3.5" width="19" height="5" rx="1.2"/><path d="M4.5 8.5v10a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2v-10"/><path d="M10 12.5h4"/></svg>
+      <span>Archive</span>
     </button>
     <button class="hdr-msg-btn" onclick="openSettings()" title="Settings">⚙️</button>
     <button class="btn btn-ghost btn-sm" onclick="exportData()">⬇ Export</button>
@@ -887,10 +936,18 @@ header::-webkit-scrollbar { display: none; }
       </div>
       <div style="display:flex;gap:8px;align-items:center;flex-shrink:0">
         <span id="detailBadge" class="badge"></span>
+        <div class="print-wrap">
+          <button class="btn btn-secondary btn-sm" onclick="togglePrintMenu(event)">🖨 Print ▾</button>
+          <div class="print-menu" id="printMenu">
+            <button type="button" onclick="printInstallerSheet()"><b>Installer Sheet</b><span>Address, products, site details — no prices</span></button>
+            <button type="button" onclick="printJobDetails()"><b>Full Job Details</b><span>Everything entered on every step</span></button>
+          </div>
+        </div>
         <button class="btn btn-secondary btn-sm" onclick="openEditModal()">✏️ Edit Info</button>
         <button class="btn btn-danger btn-sm" onclick="deleteCurrentCustomer()">Delete</button>
       </div>
     </div>
+    <div class="archive-banner" id="archiveBanner" style="display:none"></div>
     <div class="detail-body">
       <div class="steps-nav" id="stepsNav"></div>
       <div class="step-form" id="stepContent"></div>
@@ -1051,6 +1108,21 @@ header::-webkit-scrollbar { display: none; }
   </div>
 </div>
 
+<!-- ═══════════════════════════════════ ARCHIVE MODAL -->
+<div class="modal-overlay" id="archiveModal">
+  <div class="modal archive-modal">
+    <h2>🗄 Archive</h2>
+    <p style="font-size:0.77rem;color:#aaa;margin-bottom:12px">Completed and lost jobs. Open one to see every step, or restore it to the board.</p>
+    <div class="seg-toggle">
+      <button type="button" class="active" id="archTabDone" onclick="setArchiveTab('done')">✓ Completed</button>
+      <button type="button" id="archTabLost" onclick="setArchiveTab('lost')">✕ Lost</button>
+    </div>
+    <div class="form-group"><input type="text" id="archiveSearch" placeholder="Search by name, address, phone…" oninput="renderArchive()" autocomplete="off"></div>
+    <div id="archiveList"></div>
+    <div class="modal-actions"><button class="btn btn-secondary" onclick="closeArchive()">Close</button></div>
+  </div>
+</div>
+
 <!-- ═══════════════════════════════════ EDIT JOB MODAL -->
 <div class="modal-overlay" id="editModal">
   <div class="modal">
@@ -1184,7 +1256,7 @@ header::-webkit-scrollbar { display: none; }
 // ════════════════════════════════════════════
 // STEP DEFINITIONS
 // ════════════════════════════════════════════
-const STEP_COLORS = Array(13).fill('#4d7b79');
+const STEP_COLORS = Array(12).fill('#4d7b79');
 
 const STEPS = [
   { title:"New Jobs", desc:"Customer contact information and job site details.", fields:[
@@ -1226,15 +1298,15 @@ const STEPS = [
     {key:"_lockbox_info",label:"Lock Box (from New Jobs)",type:"info",compute:c=>c.lockbox==='Yes'?`🔒 Yes${c.lockboxCode?' — Code: '+c.lockboxCode:''}`:c.lockbox==='No'?'No lock box':'Not entered'},
     {key:"access_notes",label:"Other Access / Entry Notes",type:"textarea",placeholder:"Gate code, contact on site…"}
   ]},
-  { title:"Measure Checklist", desc:"On-site measurement and full condition assessment of the job site.", fields:[
+  { title:"Measure Checklist", desc:"On-site measurement and full condition assessment of the job site.", unlockAfter:"photos_taken", fields:[
     {key:"measure_date",label:"Actual Measure Date",type:"date",autoDate:true},
     {key:"_rooms_info",label:"Rooms to Measure (from Customer Selection)",type:"info",compute:c=>roomsSummary(c.stepData?.[1])||'No rooms entered in Customer Selection'},
     {key:"rooms_measured",label:"Technician Notes / Additional Rooms Measured",type:"textarea",placeholder:"e.g. Also measured the hallway closet…"},
-    {key:"subfloor_condition",label:"Subfloor Condition",type:"buttons",options:["Good – No Work Needed","Minor Repairs Needed","Major Repairs Needed","Needs Assessment"]},
-    {key:"subfloor_type",label:"Subfloor Type",type:"multichip",options:["Wood","Concrete"]},
+    {key:"subfloor_condition",label:"Subfloor Condition",type:"buttons",options:["Good – No Work Needed","Minor Repairs Needed","Major Repairs Needed","Needs Assessment"],half:true},
+    {key:"subfloor_type",label:"Subfloor Type",type:"multichip",options:["Wood","Concrete"],half:true},
     {key:"subfloor_notes",label:"Subfloor Notes",type:"textarea",placeholder:"Subfloor details, issues, repairs needed…"},
-    {key:"existing_floor",label:"Existing Flooring Removal Needed?",type:"buttons",options:["Yes","No","Partial"],controls:true},
-    {key:"existing_floor_types",label:"Type of Flooring to Remove",type:"multichip",options:["Carpet","Vinyl Click","Vinyl Glue Down","Laminate","Hardwood","Ceramic Tile","Sheet Vinyl"],showIf:{field:"existing_floor",value:"Yes"}},
+    {key:"existing_floor",label:"Existing Flooring Removal Needed?",type:"buttons",options:["Yes","No","Partial"],controls:true,half:true},
+    {key:"existing_floor_types",label:"Type of Flooring to Remove",type:"multichip",options:["Carpet","Vinyl Click","Vinyl Glue Down","Laminate","Hardwood","Ceramic Tile","Sheet Vinyl"],showIf:{field:"existing_floor",value:"Yes"},half:true},
     {key:"electric",label:"Electric",type:"buttons",options:["On","Off"],compact:true},
     {key:"hvac",label:"HVAC",type:"buttons",options:["On","Off"],compact:true},
     {key:"water",label:"Water",type:"buttons",options:["On","Off"],compact:true},
@@ -1249,60 +1321,54 @@ const STEPS = [
   { title:"Estimate Sent", desc:"Confirm the estimate has been sent to the customer.", fields:[
     {key:"estimate_sent",label:"Estimate Sent to Customer?",type:"select",options:["Yes","No"]}
   ]},
-  { title:"Estimate Approved", desc:"Has the customer approved the estimate?", fields:[
+  { title:"Estimate Approved", desc:"Has the customer approved the estimate? If yes, fill in the order and deposit.", fields:[
     {key:"estimate_approved",label:"Estimate Approved?",type:"select",options:["Yes","No"],controls:true},
+    {key:"contract_date",label:"Order Signed Date",type:"date",showIf:{field:"estimate_approved",value:"Yes"}},
+    {key:"contract_number",label:"Order #",type:"text",placeholder:"Order number",showIf:{field:"estimate_approved",value:"Yes"}},
     {key:"deposit_amount",label:"Deposit Amount ($)",type:"text",placeholder:"0.00",showIf:{field:"estimate_approved",value:"Yes"}},
+    {key:"deposit_method",label:"Deposit Payment Method",type:"select",options:["Cash","Check","Credit Card","ACH / Bank Transfer","Financing"],showIf:{field:"estimate_approved",value:"Yes"}},
     {key:"install_date_target",label:"Target Installation Date",type:"date",showIf:{field:"estimate_approved",value:"Yes"}},
-    {key:"approval_notes",label:"Notes",type:"textarea",placeholder:"Any additional notes…",showIf:{field:"estimate_approved",value:"Yes"}}
-  ]},
-  { title:"Contract & Approval", desc:"Customer signs contract and pays deposit. Lock in install date.", fields:[
-    {key:"contract_date",label:"Contract Signed Date",type:"date"},
-    {key:"contract_number",label:"Contract #",type:"text",placeholder:"CNT-2024-0042"},
-    {key:"deposit_amount",label:"Deposit Amount ($)",type:"text",placeholder:"0.00"},
-    {key:"deposit_method",label:"Deposit Payment Method",type:"select",options:["Cash","Check","Credit Card","ACH / Bank Transfer","Financing"]},
-    {key:"install_date_target",label:"Target Install Date",type:"date"},
-    {key:"final_product_selected",label:"Final Product / Color Confirmed",type:"textarea",placeholder:"Product name, SKU, color code"},
-    {key:"contract_notes",label:"Notes",type:"textarea",placeholder:"Special contract terms…"}
+    {key:"selection_products",label:"Selection (from Customer Selection)",type:"orig_products",showIf:{field:"estimate_approved",value:"Yes"}},
+    {key:"_project_info",label:"Project Details (from Customer Selection)",type:"info",compute:c=>(c.stepData?.[1]?.project_overview||'').trim()||'No project description entered',showIf:{field:"estimate_approved",value:"Yes"}},
+    {key:"selection_confirmed",label:"Final product / color confirmed?",type:"buttons",options:["Yes","No"],controls:true,showIf:{field:"estimate_approved",value:"Yes"}},
+    {key:"final_products",label:"Final Selection",type:"final_products",showIf:{field:"selection_confirmed",value:"No"}},
+    {key:"final_product_selected",label:"Notes About the Change",type:"textarea",placeholder:"Why it changed, anything to know…",showIf:{field:"selection_confirmed",value:"No"}},
+    {key:"approval_notes",label:"Notes",type:"textarea",placeholder:"Special contract terms, any additional notes…",showIf:{field:"estimate_approved",value:"Yes"}},
+    {key:"lost_reason",label:"Why didn't they approve?",type:"buttons",options:["Price","Went with someone else","No response","Other"],showIf:{field:"estimate_approved",value:"No"}},
+    {key:"lost_notes",label:"Notes",type:"textarea",placeholder:"Anything else about why…",showIf:{field:"estimate_approved",value:"No"}}
   ]},
   { title:"Order Placed", desc:"Place the product order with the supplier and confirm expected delivery.", fields:[
     {key:"order_date",label:"Order Placed Date",type:"date"},
-    {key:"order_number",label:"Order / PO #",type:"text",placeholder:"PO-2024-0088"},
-    {key:"supplier",label:"Supplier / Vendor",type:"text",placeholder:"Supplier name"},
+    {key:"order_number",label:"Order / PO #",type:"text",placeholder:"PO-2024-0088",onlyWithoutProducts:true},
+    {key:"supplier",label:"Supplier / Vendor",type:"supplier_lines",placeholder:"Supplier name"},
     {key:"expected_delivery",label:"Expected Delivery Date",type:"date"},
     {key:"order_notes",label:"Notes",type:"textarea",placeholder:"Any order details, special requests…"}
   ]},
   { title:"Order Received", desc:"Confirm materials have arrived and inspect for damage or missing items.", fields:[
-    {key:"received_date",label:"Date Materials Received",type:"date"},
-    {key:"delivery_complete",label:"All Items Received?",type:"select",options:["Yes – Complete","Partial – Some Missing","No – Not Yet Arrived"]},
+    {key:"received_date",label:"Date Materials Received",type:"date",autoDate:true},
+    {key:"received_lines",label:"Products Received",type:"received_lines"},
+    {key:"delivery_complete",label:"All Items Received?",type:"select",options:["Yes – Complete","Partial – Some Missing","No – Not Yet Arrived"],onlyWithoutProducts:true},
     {key:"damaged_items",label:"Any Damaged Items?",type:"select",options:["No","Yes"],controls:true},
     {key:"damage_notes",label:"Damage Notes",type:"textarea",placeholder:"Describe damaged items and next steps…",showIf:{field:"damaged_items",value:"Yes"}},
-    {key:"storage_location",label:"Where Are Materials Stored?",type:"text",placeholder:"e.g. Customer garage, our warehouse…"},
-    {key:"received_notes",label:"Notes",type:"textarea",placeholder:"Any receiving notes or follow-ups…"}
+    {key:"storage_location",label:"Where Are Materials Stored?",type:"textarea",placeholder:"What bay and shelf?"}
+    // Photos: add {key:"storage_photos",label:"Warehouse Photos (where it's located)",type:"photos"} once the "warehouse-photos" storage bucket exists
   ]},
-  { title:"Schedule Installation", desc:"Assign the install crew, confirm the date, and notify the customer.", fields:[
+  { title:"Schedule Installation", desc:"Assign the install crew and confirm the install date.", fields:[
     {key:"crew_assigned",label:"Install Crew Assigned",type:"text",placeholder:"Crew lead name"},
-    {key:"confirmed_install_date",label:"Confirmed Install Date",type:"date"},
+    {key:"confirmed_install_date",label:"Install Date",type:"date"},
     {key:"install_time",label:"Install Start Time",type:"text",placeholder:"e.g. 8:00 AM"},
-    {key:"customer_notified",label:"Customer Confirmation Sent?",type:"select",options:["Yes – Email","Yes – Phone","Yes – Text","Not Yet"]},
     {key:"prep_instructions",label:"Prep Instructions Given to Customer",type:"textarea",placeholder:"Move furniture, clear the area, pets secured…"},
     {key:"schedule_notes",label:"Notes",type:"textarea",placeholder:"Access details, special instructions for crew…"}
   ]},
   { title:"Installation", desc:"Crew completes installation and does quality walk-through.", fields:[
-    {key:"install_start",label:"Install Start Date",type:"date"},
-    {key:"install_end",label:"Install Completion Date",type:"date"},
-    {key:"crew_members",label:"Crew Members",type:"textarea",placeholder:"Names of all crew on site"},
     {key:"punch_list",label:"Punch List Items",type:"textarea",placeholder:"Issues noted during walk-through"},
-    {key:"punch_resolved",label:"Punch List Resolved?",type:"select",options:["Yes – All Items Complete","Partial – Follow-up Needed","N/A – No Issues"]},
-    {key:"customer_satisfaction",label:"Customer Satisfaction (Install)",type:"select",options:["Very Satisfied","Satisfied","Neutral","Unsatisfied"]},
-    {key:"install_notes",label:"Notes",type:"textarea",placeholder:"Additional notes, photos taken…"}
+    {key:"punch_resolved",label:"Punch List Resolved?",type:"select",options:["Yes – All Items Complete","Partial – Follow-up Needed","N/A – No Issues"]}
   ]},
   { title:"Customer Invoiced", desc:"Confirm the invoice has been sent to the customer.", fields:[
     {key:"invoiced",label:"Invoice Sent?",type:"select",options:["Yes","No"]}
   ]},
-  { title:"Close-Out", desc:"Review completed job, collect final payment, request review or referral.", fields:[
-    {key:"closeout_date",label:"Close-Out Date",type:"date"},
-    {key:"final_payment",label:"Final Payment Amount ($)",type:"text",placeholder:"0.00"},
-    {key:"payment_method_final",label:"Final Payment Method",type:"select",options:["Cash","Check","Credit Card","ACH / Bank Transfer","Financing"]},
+  { title:"Close-Out", desc:"Review the completed job and request a review or referral.", fields:[
+    {key:"closeout_date",label:"Close-Out Date",type:"date",hiddenField:true},
     {key:"care_instructions_provided",label:"Care & Maintenance Instructions Provided?",type:"select",options:["Yes","No"]},
     {key:"review_requested",label:"Review / Referral Requested?",type:"select",options:["Yes – Google","Yes – Yelp","Yes – Facebook","Yes – Multiple","Not Yet","No"]},
     {key:"warranty_info",label:"Warranty Info Provided",type:"textarea",placeholder:"Warranty details given to customer"},
@@ -1367,6 +1433,53 @@ let _messages  = [];
 let _scheduleEntries = [];
 let _schedWeekStart  = mondayOf(new Date());
 
+// ── STEP LAYOUT ──
+// The database still stores jobs in the old 13-step layout, where step 7 was a
+// separate "Contract & Approval" step. In the app that step is part of step 6
+// (Estimate Approved), so convert step numbers and step data on load and save.
+// This keeps old saved data and any copy of the old app working.
+const DB_CONTRACT_STEP = 6;
+const CONTRACT_KEYS = ['contract_date','contract_number','deposit_amount','deposit_method','install_date_target','final_product_selected','contract_notes'];
+function stepFromDb(n){ return n>=DB_CONTRACT_STEP ? n-1 : n; }
+function stepToDb(n){ return n>=DB_CONTRACT_STEP ? n+1 : n; }
+function stepDataFromDb(sd){
+  const out={};
+  Object.entries(sd||{}).forEach(([k,v])=>{
+    const n=Number(k);
+    if(isNaN(n)) out[k]=v;
+    else if(n<DB_CONTRACT_STEP-1) out[n]=v;
+    else if(n>DB_CONTRACT_STEP) out[n-1]=v;
+  });
+  // Merge Estimate Approved + Contract; a filled-in value wins over an empty one
+  const approved=sd?.[DB_CONTRACT_STEP-1], contract=sd?.[DB_CONTRACT_STEP];
+  if(approved||contract){
+    const merged={...(contract||{})};
+    Object.entries(approved||{}).forEach(([k,v])=>{ if(v||!(k in merged)) merged[k]=v; });
+    if(!merged.approval_notes&&merged.contract_notes) merged.approval_notes=merged.contract_notes;
+    out[DB_CONTRACT_STEP-1]=merged;
+  }
+  return out;
+}
+function stepDataToDb(sd){
+  const out={};
+  Object.entries(sd||{}).forEach(([k,v])=>{
+    const n=Number(k);
+    if(isNaN(n)) out[k]=v;
+    else if(n<DB_CONTRACT_STEP-1) out[n]=v;
+    else if(n===DB_CONTRACT_STEP-1){
+      const approved={}, contract={};
+      Object.entries(v||{}).forEach(([fk,fv])=>{
+        if(CONTRACT_KEYS.includes(fk)) contract[fk]=fv;
+        if(!CONTRACT_KEYS.includes(fk)||fk==='deposit_amount'||fk==='install_date_target') approved[fk]=fv;
+      });
+      out[n]=approved;
+      if(Object.keys(contract).length) out[DB_CONTRACT_STEP]=contract;
+    }
+    else out[n+1]=v;
+  });
+  return out;
+}
+
 // ── ROW MAPPERS (JS camelCase ↔ DB snake_case) ──
 const C = {
   fromRow: r => ({
@@ -1374,8 +1487,8 @@ const C = {
     company: r.company, address: r.address,
     lockbox: r.lockbox, lockboxCode: r.lockbox_code,
     contractor: r.contractor, contractorPhone: r.contractor_phone,
-    salesman: r.salesman, step: r.step,
-    stepData: r.step_data || {}, created: r.created_at,
+    salesman: r.salesman, step: stepFromDb(r.step),
+    stepData: stepDataFromDb(r.step_data), created: r.created_at,
     lastStepChange: r.last_step_change
   }),
   toRow: c => ({
@@ -1383,8 +1496,8 @@ const C = {
     company: c.company, address: c.address,
     lockbox: c.lockbox, lockbox_code: c.lockboxCode,
     contractor: c.contractor, contractor_phone: c.contractorPhone,
-    salesman: c.salesman, step: c.step,
-    step_data: c.stepData, created_at: c.created,
+    salesman: c.salesman, step: stepToDb(c.step),
+    step_data: stepDataToDb(c.stepData), created_at: c.created,
     last_step_change: c.lastStepChange
   })
 };
@@ -1544,6 +1657,12 @@ function setLayout(name, skipSave) {
   refreshLayout();
 }
 
+function onMyJobsChange(box){
+  const sel=document.getElementById('filterSalesman');
+  if(!box.checked && activeProfile && sel.value===activeProfile.name) sel.value='';
+  refreshAll();
+}
+
 function refreshAll() {
   if(activeProfile) {
     const myJobs = document.getElementById('myJobsToggle').checked;
@@ -1570,7 +1689,7 @@ function refreshLayout() {
 function getFiltered() {
   const q = (document.getElementById('searchInput').value||'').toLowerCase();
   const sal = document.getElementById('filterSalesman').value;
-  let data = customers();
+  let data = customers().filter(c=>!isArchived(c));
   if(q) data = data.filter(c=>(c.name+c.phone+c.email+c.address+c.company+c.salesman).toLowerCase().includes(q));
   if(sal) data = data.filter(c=>c.salesman===sal);
   if(activeStepFilter!==null) data = data.filter(c=>c.step===activeStepFilter);
@@ -1596,7 +1715,12 @@ function staleColor(d){
 }
 function localDateStr(d){ return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
 function daysText(d){ return d===0?'today':d===1?'1 day':`${d} days`; }
-function isDone(c){ return c.step===12&&c.stepData?.[12]?.closeout_date; }
+const CLOSEOUT_STEP = STEPS.length-1;
+function isDone(c){ return c.step===CLOSEOUT_STEP&&c.stepData?.[CLOSEOUT_STEP]?.closeout_date; }
+// Archived jobs leave the main screens but stay in the database (see the Archive window)
+const APPROVAL_STEP = 5;
+function isLost(c){ return c.stepData?.[APPROVAL_STEP]?.estimate_approved==='No'; }
+function isArchived(c){ return !!(isDone(c)||isLost(c)); }
 
 // ════════════════════════════════════════════
 // STEP STRIP
@@ -1952,7 +2076,8 @@ function openCustomer(id){
   const days=bizDays(c.lastStepChange||c.created);
   const color=isDone(c)?'#1565c0':staleColor(days);
   const badge=document.getElementById('detailBadge');
-  badge.textContent=isDone(c)?'Complete':days>=6?`⚠️ ${days} days`:`Step ${c.step+1}/${STEPS.length}`;
+  renderArchiveBanner(c);
+  badge.textContent=isLost(c)?'Lost':isDone(c)?'Complete':days>=6?`⚠️ ${days} days`:`Step ${c.step+1}/${STEPS.length}`;
   badge.style.cssText=`background:${color}22;color:${color};font-weight:700;`;
   renderStepsNav(c); renderStep(c,currentStep);
 }
@@ -1968,8 +2093,7 @@ function renderStepsNav(c){
 function switchStep(i){ currentStep=i; const c=customers().find(x=>x.id===currentId); renderStepsNav(c); renderStep(c,i); }
 
 function toggleChip(btn, inputId) {
-  const cb = document.getElementById(inputId + '_changebtn');
-  if(cb && cb.style.display !== 'none') return; // locked — ignore clicks
+  if(btn.closest('.multichip-locked')) return; // locked — ignore clicks
   btn.classList.toggle('selected');
   const selected = [...btn.closest('.multichip-group').querySelectorAll('.multichip-btn.selected')].map(b => b.dataset.value);
   document.getElementById(inputId).value = selected.join(',');
@@ -1982,18 +2106,31 @@ function editChips(inputId) {
   if(cb) cb.style.display = 'none';
 }
 
+// Show/hide every "showIf" field; a field also hides when the field it depends on is hidden
 function handleFieldChange(key, val, si) {
-  const step = STEPS[si];
-  step.fields.forEach(f => {
-    if(f.showIf && f.showIf.field === key) {
-      const el = document.getElementById('fg_'+f.key);
-      if(el) el.style.display = val === f.showIf.value ? 'block' : 'none';
-    }
+  const shown = {};
+  STEPS[si].fields.forEach(f => {
+    const el = document.getElementById('fg_'+f.key);
+    if(!f.showIf){ shown[f.key] = !el || el.style.display !== 'none'; return; }
+    const parent = document.getElementById('f_'+f.showIf.field);
+    const vis = shown[f.showIf.field] !== false && !!parent && parent.value === f.showIf.value;
+    shown[f.key] = vis;
+    if(el) el.style.display = vis ? '' : 'none';
   });
+}
+function unlockStep(btn){
+  const box = document.getElementById('stepContent');
+  box.querySelectorAll('.multichip-locked').forEach(g => { g.querySelectorAll('.multichip-btn').forEach(b => b.style.display=''); g.classList.remove('multichip-locked'); });
+  box.querySelectorAll('.fr-locked').forEach(g => g.classList.remove('fr-locked'));
+  btn.style.display = 'none';
 }
 
 function renderFieldHtml(f, val, vals, si) {
   if(f.type==='header') return {html:`<div class="step-section-header">${esc(f.label)}</div>`, compact:false};
+  if(f.hiddenField) return {html:`<input type="hidden" id="f_${f.key}" value="${esc(val)}">`, compact:false};
+  // Replaced by per-product lines when the job has products
+  if(f.onlyWithoutProducts && vals._customer && flattenProducts(finalProducts(vals._customer)).length)
+    return {html:`<input type="hidden" id="f_${f.key}" value="${esc(val)}">`, compact:false};
   if(f.type==='slabel') return {html:`<div class="slabel">${esc(f.label)}</div>`, compact:false};
   const fgId=`id="fg_${f.key}"`;
   const hidden=f.showIf?(vals[f.showIf.field]===f.showIf.value?'':' style="display:none"'):'';
@@ -2025,7 +2162,7 @@ function renderFieldHtml(f, val, vals, si) {
       return `<button type="button" class="multichip-btn${isSel?' selected':''}" data-value="${esc(o)}" onclick="toggleChip(this,'f_${f.key}')"${hide}>${esc(o)}</button>`;
     }).join('');
     const groupClass=locked?' multichip-locked':'';
-    const changeBtn=`<button type="button" class="multichip-change-btn" id="f_${f.key}_changebtn" onclick="editChips('f_${f.key}')" style="${locked?'':'display:none'}">+ Show more options</button>`;
+    const changeBtn=STEPS[si].unlockAfter?'':`<button type="button" class="multichip-change-btn" id="f_${f.key}_changebtn" onclick="editChips('f_${f.key}')" style="${locked?'':'display:none'}">+ Show more options</button>`;
     inner=`<label>${f.label}</label><input type="hidden" id="f_${f.key}" value="${esc(val)}"><div class="multichip-group${groupClass}" id="f_${f.key}_group">${chips}</div><div style="margin-top:6px">${changeBtn}</div>`;
   } else if(f.type==='flooring_rooms'){
     // Material chips; picking a material asks which rooms get it
@@ -2037,8 +2174,8 @@ function renderFieldHtml(f, val, vals, si) {
     // Once saved, show only what was picked, with a button to add more (same as other chip fields)
     const somethingHidden=f.options.some(o=>!selVals.includes(o))||selVals.some(t=>(rooms[t]||'').split(',').filter(Boolean).length<f.roomOptions.length);
     const locked=selVals.length>0&&somethingHidden;
-    inner=`<label>${f.label}</label><input type="hidden" id="f_${f.key}" value="${esc(val)}"><input type="hidden" id="f_flooring_rooms" value="${esc(JSON.stringify(rooms))}">
-      <div id="floorRoomsWrap" class="${locked?'fr-locked':''}"><div class="multichip-group" id="floorTypeGroup">${chips}</div><div id="floorRoomsBox"></div></div>
+    inner=`<label>${f.label}</label><input type="hidden" id="f_${f.key}" value="${esc(val)}"><input type="hidden" id="f_flooring_rooms" value="${esc(JSON.stringify(rooms))}"><input type="hidden" id="f_flooring_products" value="${esc(vals.flooring_products||'{}')}">
+      <div id="floorRoomsWrap" class="${locked?'fr-locked':''}"><div class="multichip-group" id="floorTypeGroup">${chips}</div><div id="floorRoomsBox" data-store="f_flooring_products"></div></div>
       <div style="margin-top:6px"><button type="button" class="multichip-change-btn" onclick="unlockFloorRooms(this)" style="${locked?'':'display:none'}">+ Show more options</button></div>`;
     setTimeout(renderFloorRoomsBox,0);
   } else if(f.type==='tech_select'){
@@ -2053,7 +2190,51 @@ function renderFieldHtml(f, val, vals, si) {
     const btns=f.options.map(o=>`<button type="button" class="multichip-btn${val===o?' selected':''}" data-value="${esc(o)}" onclick="pickButton(this,'${f.key}',${si})">${esc(o)}</button>`).join('');
     // Once saved, show only the chosen button, with a way to change it
     const locked=!!val&&f.options.length>1;
-    inner=`<label>${f.label}</label><input type="hidden" id="f_${f.key}" value="${esc(val)}"><div class="multichip-group${locked?' fr-locked':''}">${btns}</div>${locked?`<div style="margin-top:6px"><button type="button" class="multichip-change-btn" onclick="unlockChips(this)">+ Show more options</button></div>`:''}`;
+    inner=`<label>${f.label}</label><input type="hidden" id="f_${f.key}" value="${esc(val)}"><div class="multichip-group${locked?' fr-locked':''}">${btns}</div>${locked&&!STEPS[si].unlockAfter?`<div style="margin-top:6px"><button type="button" class="multichip-change-btn" onclick="unlockChips(this)">+ Show more options</button></div>`:''}`;
+  } else if(f.type==='orig_products'){
+    // Original selection; types missing manufacturer/style/color get boxes to fill in
+    const c=vals._customer, sd=c.stepData?.[SELECTION_STEP]||{};
+    const p2=parseJSON(sd.flooring_products,{}), ov=parseJSON(val,{});
+    const blocks=typesOf(sd).map(t=>{
+      const rows=((ov[t]&&ov[t].some(hasAny))?ov[t]:(p2[t]||[])).filter(hasAny);
+      if(rows.length&&rows.every(isCompleteRow)) return `<div class="sel-block"><div class="sel-type">${esc(t)}</div>${rows.map(r=>`<div class="sel-line">${esc(productText(r))}</div>`).join('')}</div>`;
+      return `<div class="sel-block sel-missing" data-type="${esc(t)}"><div class="sel-type">${esc(t)} <span class="sel-need">— needs manufacturer, style and color</span></div>${productRowsHtml(rows)}</div>`;
+    }).join('');
+    inner=`<label>${f.label}</label><input type="hidden" id="f_${f.key}" value="${esc(val)}"><div class="sel-wrap" data-store="f_${f.key}">${blocks||'<div class="sel-line">No flooring type picked in Customer Selection (Step 2).</div>'}</div>`;
+  } else if(f.type==='final_products'){
+    // Changed selection: same choices as Customer Selection, starting from the original
+    const map=parseJSON(val,null)||originalProducts(vals._customer);
+    const allTypes=STEPS[SELECTION_STEP].fields.find(x=>x.type==='flooring_rooms').options;
+    const chips=allTypes.map(o=>`<button type="button" class="multichip-btn${o in map?' selected':''}" data-value="${esc(o)}" onclick="toggleFinalType(this)">${esc(o)}</button>`).join('');
+    inner=`<div class="change-warn">⚠ You are changing from the original selection. The products below will be used for ordering instead.</div>
+      <label>${f.label}</label><input type="hidden" id="f_${f.key}" value="${esc(JSON.stringify(map))}">
+      <div class="multichip-group" style="margin-bottom:8px">${chips}</div><div id="finalBox" data-store="f_${f.key}">${finalTypeBlocks(map)}</div>`;
+  } else if(f.type==='supplier_lines'){
+    // One line per product from Customer Selection, starting with its manufacturer
+    const prods=flattenProducts(finalProducts(vals._customer));
+    if(!prods.length){
+      inner=`<label>${f.label}</label><input type="text" id="f_${f.key}" value="${esc(val)}" placeholder="${f.placeholder||''}">`;
+    } else {
+      let saved=[]; try{ saved=JSON.parse(vals.supplier_lines||'[]')||[]; }catch(e){}
+      const lines=prods.map(r=>{ const product=`${r.type}: ${productText(r)}`; const old=saved.find(x=>x.product===product)||{}; return {product, supplier:old.supplier??r.manufacturer??'', po:old.po||''}; });
+      inner=`<label>Products to Order</label><input type="hidden" id="f_supplier_lines" value="${esc(JSON.stringify(lines))}">
+        <input type="hidden" id="f_${f.key}" value="${esc([...new Set(lines.map(l=>l.supplier).filter(Boolean))].join(', '))}">
+        <div class="sup-line sup-head"><div>Product</div><div>Supplier / Vendor</div><div>Order / PO #</div></div>
+        ${lines.map((l,i)=>`<div class="sup-line"><div class="sup-product">${esc(l.product)}</div><input type="text" data-i="${i}" data-k="supplier" value="${esc(l.supplier)}" placeholder="Supplier" oninput="onSupplierInput(this)"><input type="text" data-i="${i}" data-k="po" value="${esc(l.po)}" placeholder="PO #" oninput="onSupplierInput(this)"></div>`).join('')}`;
+    }
+  } else if(f.type==='photos'){
+    inner=`<label>${f.label}</label><input type="hidden" id="f_${f.key}" value="${esc(val||'[]')}">
+      <div class="photo-grid" id="photoGrid_${f.key}">${photoThumbs(parseJSON(val,[]), f.key)}</div>
+      <label class="photo-add"><input type="file" accept="image/*" multiple onchange="uploadPhotos(this,'${f.key}',${si})" style="display:none">📷 Add photos</label>
+      <span class="photo-status" id="photoStatus_${f.key}"></span>`;
+  } else if(f.type==='received_lines'){
+    // Each product from Order Placed with an "arrived?" Yes / No
+    const prods=flattenProducts(finalProducts(vals._customer));
+    if(!prods.length) return {html:'', compact:false};
+    const saved=parseJSON(val,[]);
+    const lines=prods.map(r=>{ const product=`${r.type}: ${productText(r)}`; return {product, arrived:(saved.find(x=>x.product===product)||{}).arrived||''}; });
+    inner=`<label>${f.label}</label><input type="hidden" id="f_${f.key}" value="${esc(JSON.stringify(lines))}">
+      ${lines.map((l,i)=>`<div class="recv-line"><div class="sup-product">${esc(l.product)}</div><div class="multichip-group">${['Yes','No'].map(o=>`<button type="button" class="multichip-btn${l.arrived===o?' selected':''}" onclick="pickArrived(this,${i},'${o}')">${o==='Yes'?'✓ Arrived':'✕ Not yet'}</button>`).join('')}</div></div>`).join('')}`;
   } else if(f.type==='info'){
     inner=`<label>${f.label}</label><div class="info-box">${esc(val)}</div>`;
   } else if(f.autoDate && (f.alwaysHidden || !val)){
@@ -2083,6 +2264,9 @@ function renderStep(c,si){
   // Older jobs have no job_date: fall back to the old step-2 inquiry date, then the created date
   if(si===0 && !vals.job_date) vals.job_date=c.stepData?.[1]?.inquiry_date||localDateStr(new Date(c.created));
   step.fields.forEach(f=>{ if(f.compute) vals[f.key]=f.compute(c); });
+  // Install date starts as the Target Installation Date from Estimate Approved
+  if(si===SCHED_STEP && !vals.confirmed_install_date) vals.confirmed_install_date=c.stepData?.[APPROVAL_STEP]?.install_date_target||'';
+  vals._customer=c;
 
   // Build field HTML, grouping compact fields into grid rows and half fields into two-column rows
   let fieldsHtml='', compactBuf=[], halfBuf=[];
@@ -2094,13 +2278,22 @@ function renderStep(c,si){
     if(f.half){ flushCompact(); halfBuf.push(html); if(halfBuf.length===2) flushHalf(); }
     else if(compact){ flushHalf(); compactBuf.push(html); }
     else { flushCompact(); flushHalf(); fieldsHtml+=html; }
+    if(f.key===step.unlockAfter){ flushCompact(); flushHalf(); fieldsHtml+='<!--UNLOCK-->'; }
   });
   flushCompact(); flushHalf();
+  // One shared "Show more options" button, only when something is collapsed
+  if(si===SELECTION_STEP && c.stepData?.[APPROVAL_STEP]?.selection_confirmed==='No'){
+    const lines=flattenProducts(finalProducts(c)).map(r=>`${esc(r.type)}: ${esc(productText(r))}`);
+    fieldsHtml=`<div class="change-warn">⚠ <b>The final selection was changed in Step 6 (Estimate Approved).</b> What's below is the original selection. Final products:${lines.length?'<br>'+lines.join('<br>'):' none entered yet'}</div>`+fieldsHtml;
+  }
+  const anyLocked=/multichip-locked|fr-locked/.test(fieldsHtml);
+  fieldsHtml=fieldsHtml.replace('<!--UNLOCK-->', anyLocked?'<div style="margin:-4px 0 14px"><button type="button" class="multichip-change-btn" onclick="unlockStep(this)">+ Show more options</button></div>':'');
 
   const isCurrent=si===c.step;
   const lastStep=STEPS.length-1;
-  const nextBtn=isCurrent&&si<lastStep?`<button class="btn btn-primary" onclick="saveAndAdvance()">Save & Next Step →</button>`:si===lastStep&&isCurrent?`<button class="btn btn-green" onclick="saveStep()">Save & Mark Complete ✓</button>`:'';
+  const nextBtn=isCurrent&&si<lastStep?`<button class="btn btn-primary" onclick="saveAndAdvance()">Save & Next Step →</button>`:si===lastStep&&isCurrent?`<button class="btn btn-green" onclick="markComplete()">Save & Mark Complete ✓</button>`:'';
   document.getElementById('stepContent').innerHTML=`<div class="step-form-inner"><h3>Step ${si+1}: ${step.title}</h3><div class="sdesc">${step.desc}</div>${fieldsHtml}<div class="step-actions"><button class="btn btn-secondary" onclick="saveStep()">Save Notes</button>${nextBtn}<span class="saved-note" id="savedNote">✓ Saved</span></div></div>`;
+  handleFieldChange(null, null, si);
 }
 
 function collectStep(si){
@@ -2111,7 +2304,8 @@ function collectStep(si){
     if(!el) return;
     if(f.customerField) customerProps[f.key]=el.value;
     else stepData[f.key]=(f.autoDate&&!el.value)?localDateStr(new Date()):el.value;
-    if(f.type==='flooring_rooms') stepData.flooring_rooms=document.getElementById('f_flooring_rooms').value;
+    if(f.type==='flooring_rooms'){ stepData.flooring_rooms=document.getElementById('f_flooring_rooms').value; stepData.flooring_products=document.getElementById('f_flooring_products').value; }
+    if(f.type==='supplier_lines'&&document.getElementById('f_supplier_lines')) stepData.supplier_lines=document.getElementById('f_supplier_lines').value;
   });
   return {stepData, customerProps};
 }
@@ -2152,11 +2346,88 @@ function renderFloorRoomsBox(){
   const box=document.getElementById('floorRoomsBox'); if(!box) return;
   const f=STEPS[SELECTION_STEP].fields.find(x=>x.type==='flooring_rooms');
   const {types, rooms}=floorRoomsState();
+  const products=parseJSON(document.getElementById('f_flooring_products').value,{});
   box.innerHTML=types.map(t=>{
     const sel=(rooms[t]||'').split(',').filter(Boolean);
     const chips=f.roomOptions.map(r=>`<button type="button" class="multichip-btn${sel.includes(r)?' selected':''}" data-value="${esc(r)}" onclick="toggleFloorRoom(this)">${esc(r)}</button>`).join('');
-    return `<div class="floor-rooms" data-type="${esc(t)}"><div class="floor-rooms-q">Which rooms get <b>${esc(t)}</b>?</div><div class="multichip-group">${chips}</div></div>`;
+    let prodHtml='';
+    if(PRODUCT_TYPES.includes(t)){
+      prodHtml=`<div class="floor-rooms-q" style="margin-top:12px">Products</div>`+productRowsHtml(products[t]);
+    }
+    return `<div class="floor-rooms" data-type="${esc(t)}"><div class="floor-rooms-q">Which rooms get <b>${esc(t)}</b>?</div><div class="multichip-group">${chips}</div>${prodHtml}</div>`;
   }).join('');
+}
+// Manufacturer / style / color, entered in Customer Selection for these flooring types
+const PRODUCT_TYPES=['LVP / Luxury Vinyl','Carpet'];
+const PRODUCT_KEYS=['manufacturer','style','color'];
+function parseJSON(str, fallback){ try{ const v=JSON.parse(str||''); return v==null?fallback:v; }catch(e){ return fallback; } }
+function typesOf(sd){ return (sd?.flooring_type||'').split(',').map(v=>v.trim()).filter(Boolean); }
+function hasAny(r){ return !!(r&&(r.manufacturer||r.style||r.color)); }
+function isCompleteRow(r){ return !!(r&&r.manufacturer&&r.style&&r.color); }
+function productText(r){ return [r.manufacturer,r.style,r.color].filter(Boolean).join(' · '); }
+
+// Product rows editor. The nearest [data-store] names the hidden input holding {type:[rows]};
+// each [data-type] block inside it holds that type's rows.
+function productRowHtml(r, removable){
+  return `<div class="prod-row">${PRODUCT_KEYS.map(k=>`<input type="text" placeholder="${k[0].toUpperCase()+k.slice(1)}" data-k="${k}" value="${esc(r[k]||'')}" oninput="syncProducts(this)">`).join('')}${removable?`<button type="button" class="prod-remove" title="Remove this product" onclick="removeProductRow(this)">✕</button>`:'<span></span>'}</div>`;
+}
+function productRowsHtml(rows){
+  rows=rows&&rows.length?rows:[{}];
+  return rows.map((r,i)=>productRowHtml(r,i>0)).join('')+`<button type="button" class="multichip-change-btn" style="margin-top:4px" onclick="addProductRow(this)">+ Add another product</button>`;
+}
+function syncProducts(el){
+  const store=el.closest('[data-store]'); const hid=document.getElementById(store.dataset.store);
+  const map=parseJSON(hid.value,{});
+  store.querySelectorAll('[data-type]').forEach(b=>{
+    const rows=[...b.querySelectorAll('.prod-row')];
+    if(!rows.length) return;
+    map[b.dataset.type]=rows.map(row=>{ const r={}; row.querySelectorAll('input[data-k]').forEach(i=>{ if(i.value.trim()) r[i.dataset.k]=i.value.trim(); }); return r; });
+  });
+  hid.value=JSON.stringify(map);
+}
+function addProductRow(btn){ btn.insertAdjacentHTML('beforebegin', productRowHtml({}, true)); syncProducts(btn); }
+function removeProductRow(btn){ const block=btn.closest('[data-type]'); btn.closest('.prod-row').remove(); syncProducts(block); }
+
+// Original selection: Customer Selection products, with anything completed in step 6 taking over for that type
+function originalProducts(c){
+  const sd=c.stepData?.[SELECTION_STEP]||{}, s6=c.stepData?.[APPROVAL_STEP]||{};
+  const p2=parseJSON(sd.flooring_products,{}), ov=parseJSON(s6.selection_products,{});
+  const out={};
+  typesOf(sd).forEach(t=>{ out[t]=((ov[t]&&ov[t].some(hasAny))?ov[t]:(p2[t]||[])).filter(hasAny); });
+  return out;
+}
+// What actually gets ordered: the changed selection if step 6 says it wasn't confirmed
+function finalProducts(c){
+  const s6=c.stepData?.[APPROVAL_STEP]||{};
+  if(s6.selection_confirmed==='No'){ const f=parseJSON(s6.final_products,null); if(f) return f; }
+  return originalProducts(c);
+}
+function flattenProducts(map){
+  const out=[];
+  Object.entries(map||{}).forEach(([t,rows])=>(rows||[]).forEach(r=>{ if(hasAny(r)) out.push({type:t,...r}); }));
+  return out;
+}
+function finalTypeBlocks(map){
+  return Object.keys(map).map(t=>`<div class="floor-rooms" data-type="${esc(t)}"><div class="floor-rooms-q"><b>${esc(t)}</b> — manufacturer, style and color</div>${productRowsHtml(map[t])}</div>`).join('');
+}
+function toggleFinalType(btn){
+  const hid=document.getElementById('f_final_products'); const map=parseJSON(hid.value,{}); const t=btn.dataset.value;
+  if(t in map) delete map[t]; else map[t]=[{}];
+  hid.value=JSON.stringify(map); btn.classList.toggle('selected');
+  document.getElementById('finalBox').innerHTML=finalTypeBlocks(map);
+}
+// Step 6 can't be saved as approved until every flooring type has manufacturer, style and color
+function stepProblems(si){
+  if(si!==APPROVAL_STEP) return '';
+  if(document.getElementById('f_estimate_approved')?.value!=='Yes') return '';
+  const c=customers().find(x=>x.id===currentId); if(!c) return '';
+  const s6={...(c.stepData?.[APPROVAL_STEP]||{})};
+  ['selection_products','selection_confirmed','final_products'].forEach(k=>{ const el=document.getElementById('f_'+k); if(el) s6[k]=el.value; });
+  const map=finalProducts({...c, stepData:{...c.stepData, [APPROVAL_STEP]:s6}});
+  if(!Object.keys(map).length) return s6.selection_confirmed==='No' ? 'Pick at least one flooring type for the final selection.' : 'No flooring type was picked in Customer Selection (Step 2). Add it there first.';
+  const missing=Object.entries(map).filter(([t,rows])=>!rows.length||!rows.every(isCompleteRow)).map(([t])=>t);
+  if(missing.length) return 'Please enter manufacturer, style and color for:\n• '+missing.join('\n• ')+'\n\n(Remove any extra empty product lines.)';
+  return '';
 }
 // "Rooms per material" text for the Measure step
 function roomsSummary(sd){
@@ -2165,6 +2436,69 @@ function roomsSummary(sd){
   let rooms={}; try{ rooms=JSON.parse(sd.flooring_rooms||'{}')||{}; }catch(e){}
   if(!sd.flooring_rooms && sd.rooms_involved) return sd.rooms_involved.split(',').join(', ');
   return types.map(t=>`${t}: ${rooms[t]?rooms[t].split(',').join(', '):'no rooms chosen'}`).join('\n');
+}
+function onSupplierInput(input){
+  const h=document.getElementById('f_supplier_lines');
+  const lines=JSON.parse(h.value); lines[+input.dataset.i][input.dataset.k]=input.value; h.value=JSON.stringify(lines);
+  document.getElementById('f_supplier').value=[...new Set(lines.map(l=>l.supplier).filter(Boolean))].join(', ');
+}
+// ── Photos (Supabase Storage bucket "warehouse-photos") ──
+const PHOTO_BUCKET='warehouse-photos';
+function photoThumbs(urls, key){
+  return urls.map((u,i)=>`<div class="photo-thumb"><a href="${esc(u)}" target="_blank" rel="noopener"><img src="${esc(u)}" alt="Warehouse photo ${i+1}" loading="lazy"></a><button type="button" title="Remove photo" onclick="removePhoto('${key}',${i})">✕</button></div>`).join('');
+}
+// Shrink to at most 1600px so uploads are quick on a phone
+function shrinkImage(file){
+  return new Promise((resolve,reject)=>{
+    const img=new Image(); const url=URL.createObjectURL(file);
+    img.onload=()=>{ const scale=Math.min(1,1600/Math.max(img.width,img.height)); const cv=document.createElement('canvas');
+      cv.width=Math.round(img.width*scale); cv.height=Math.round(img.height*scale); cv.getContext('2d').drawImage(img,0,0,cv.width,cv.height);
+      URL.revokeObjectURL(url); cv.toBlob(b=>b?resolve(b):reject(new Error('Could not read image')),'image/jpeg',0.82); };
+    img.onerror=()=>{ URL.revokeObjectURL(url); reject(new Error('Could not read image')); };
+    img.src=url;
+  });
+}
+// Photos are saved to the job right away so they aren't lost if Save isn't pressed
+async function savePhotoList(key, si, urls){
+  document.getElementById('f_'+key).value=JSON.stringify(urls);
+  document.getElementById('photoGrid_'+key).innerHTML=photoThumbs(urls,key);
+  const i=_customers.findIndex(x=>x.id===currentId); if(i===-1) return;
+  const c={..._customers[i], stepData:{..._customers[i].stepData}};
+  c.stepData[si]={...(c.stepData[si]||{}), [key]:JSON.stringify(urls)};
+  await upsertCustomer(c);
+}
+async function uploadPhotos(input, key, si){
+  const files=[...input.files]; input.value=''; if(!files.length) return;
+  const status=document.getElementById('photoStatus_'+key);
+  const urls=parseJSON(document.getElementById('f_'+key).value,[]);
+  let failed=0;
+  for(let n=0;n<files.length;n++){
+    status.textContent=`Uploading ${n+1} of ${files.length}…`;
+    try{
+      const blob=await shrinkImage(files[n]);
+      const path=`${currentId}/${Date.now()}-${Math.random().toString(36).slice(2,8)}.jpg`;
+      const {error}=await db.storage.from(PHOTO_BUCKET).upload(path, blob, {contentType:'image/jpeg'});
+      if(error) throw error;
+      urls.push(db.storage.from(PHOTO_BUCKET).getPublicUrl(path).data.publicUrl);
+    }catch(e){ console.error('Photo upload failed:', e); failed++; }
+  }
+  await savePhotoList(key, si, urls);
+  status.textContent=failed?`⚠️ ${failed} photo${failed>1?'s':''} failed to upload`:'✓ Photos saved';
+  if(!failed) setTimeout(()=>{ status.textContent=''; },2500);
+}
+async function removePhoto(key, idx){
+  if(!confirm('Remove this photo?')) return;
+  const urls=parseJSON(document.getElementById('f_'+key).value,[]);
+  const [gone]=urls.splice(idx,1);
+  const marker=`/${PHOTO_BUCKET}/`;
+  if(gone&&gone.includes(marker)) db.storage.from(PHOTO_BUCKET).remove([decodeURIComponent(gone.split(marker)[1])]).catch(()=>{});
+  await savePhotoList(key, currentStep, urls);
+}
+function pickArrived(btn, i, val){
+  const h=document.getElementById('f_received_lines'); const lines=parseJSON(h.value,[]);
+  const on=lines[i].arrived!==val; lines[i].arrived=on?val:''; h.value=JSON.stringify(lines);
+  btn.parentElement.querySelectorAll('.multichip-btn').forEach(b=>b.classList.remove('selected'));
+  if(on) btn.classList.add('selected');
 }
 function onTechChange(sel){
   if(sel.value!=='__add__'){ sel.dataset.prev=sel.value; return; }
@@ -2222,8 +2556,10 @@ function setJobsiteType(type) {
 }
 
 async function saveStep(){
+  const problem=stepProblems(currentStep); if(problem){ alert(problem); return; }
   const i=_customers.findIndex(x=>x.id===currentId); if(i===-1)return;
   const c={..._customers[i], stepData:{..._customers[i].stepData}};
+  const wasArchived=isArchived(c);
   const {stepData, customerProps}=collectStep(currentStep);
   if(currentStep===SCHED_STEP) setSchedStepData(c, stepData); else c.stepData[currentStep]={...c.stepData[currentStep], ...stepData};
   Object.assign(c, customerProps);
@@ -2231,13 +2567,204 @@ async function saveStep(){
   renderStep(c, currentStep); // re-render so multichip fields lock
   const n=document.getElementById('savedNote'); if(n){n.style.display='flex';setTimeout(()=>n.style.display='none',2000);}
   if(customerProps.name!==undefined) { const dn=document.getElementById('detailName'); if(dn) dn.textContent=c.name; }
+  if(isArchived(c)!==wasArchived){ openCustomer(c.id); showToast(isArchived(c)?'Job moved to the Archive':'Job is back on the board'); }
 }
+function markComplete(){
+  const d=document.getElementById('f_closeout_date');
+  if(d&&!d.value) d.value=localDateStr(new Date());
+  saveStep();
+}
+
+// ════════════════════════════════════════════
+// ARCHIVE (completed + lost jobs)
+// ════════════════════════════════════════════
+let _archiveTab='done';
+function openArchive(){ document.getElementById('archiveSearch').value=''; renderArchive(); document.getElementById('archiveModal').classList.add('open'); setTimeout(()=>document.getElementById('archiveSearch').focus(),100); }
+function closeArchive(){ document.getElementById('archiveModal').classList.remove('open'); }
+function setArchiveTab(t){ _archiveTab=t; renderArchive(); }
+function archivedDate(c){
+  const d=isLost(c)?(c.lastStepChange||c.created):(c.stepData?.[CLOSEOUT_STEP]?.closeout_date||c.lastStepChange);
+  return d?new Date(d.length===10?d+'T12:00':d).toLocaleDateString():'';
+}
+function renderArchive(){
+  const q=(document.getElementById('archiveSearch').value||'').toLowerCase().trim();
+  const match=c=>!q||[c.name,c.address,c.phone,c.email,c.company,c.salesman].join(' ').toLowerCase().includes(q);
+  const done=customers().filter(c=>isArchived(c)&&!isLost(c)&&match(c));
+  const lost=customers().filter(c=>isLost(c)&&match(c));
+  document.getElementById('archTabDone').textContent=`✓ Completed (${done.length})`;
+  document.getElementById('archTabLost').textContent=`✕ Lost (${lost.length})`;
+  document.getElementById('archTabDone').classList.toggle('active',_archiveTab==='done');
+  document.getElementById('archTabLost').classList.toggle('active',_archiveTab==='lost');
+  const list=(_archiveTab==='lost'?lost:done).sort((a,b)=>new Date(b.lastStepChange||b.created)-new Date(a.lastStepChange||a.created));
+  document.getElementById('archiveList').innerHTML=list.length?list.map(c=>{
+    const reason=isLost(c)?(c.stepData[APPROVAL_STEP].lost_reason||'No reason given'):'';
+    const tag=isLost(c)?`<span class="arch-tag" style="background:#fdecea;color:#c62828">${esc(reason)}</span>`:`<span class="arch-tag" style="background:#e3f0ff;color:#1565c0">✓ Done</span>`;
+    return `<div class="arch-row" onclick="closeArchive();openCustomer('${c.id}')">
+      <div class="arch-main"><div class="arch-name">${esc(c.name)}</div>
+      <div class="arch-meta">${esc(c.address||'')}${c.salesman?' · 👤 '+esc(c.salesman):''}${archivedDate(c)?' · '+archivedDate(c):''}</div></div>${tag}</div>`;
+  }).join(''):`<div class="arch-empty">${q?'No archived jobs match that search.':'Nothing here yet.'}</div>`;
+}
+function renderArchiveBanner(c){
+  const b=document.getElementById('archiveBanner');
+  if(!isArchived(c)){ b.style.display='none'; return; }
+  const lost=isLost(c);
+  const reason=lost?c.stepData[APPROVAL_STEP].lost_reason:'';
+  b.style.cssText=`display:flex;background:${lost?'#fdecea':'#e3f0ff'};color:${lost?'#c62828':'#1565c0'}`;
+  b.innerHTML=`<span>🗄 <b>${lost?'Lost':'Completed'}</b> — this job is in the Archive${reason?' (Reason: '+esc(reason)+')':''}.</span>
+    <button class="btn btn-secondary btn-sm" onclick="restoreJob()">↩ Restore to board</button>`;
+}
+async function restoreJob(){
+  const i=_customers.findIndex(x=>x.id===currentId); if(i===-1)return;
+  const c={..._customers[i], stepData:{..._customers[i].stepData}};
+  if(!confirm(`Bring "${c.name}" back to the board?`)) return;
+  // Undo whatever archived it: the "No" on Estimate Approved, or the close-out date
+  if(isLost(c)) c.stepData[APPROVAL_STEP]={...c.stepData[APPROVAL_STEP], estimate_approved:''};
+  if(isDone(c)) c.stepData[CLOSEOUT_STEP]={...c.stepData[CLOSEOUT_STEP], closeout_date:''};
+  c.lastStepChange=new Date().toISOString();
+  await upsertCustomer(c);
+  openCustomer(c.id); showToast('Job is back on the board');
+}
+
+// ════════════════════════════════════════════
+// PRINTABLE JOB SHEETS (installer sheet + full job details)
+// ════════════════════════════════════════════
+function togglePrintMenu(e){ e.stopPropagation(); document.getElementById('printMenu').classList.toggle('open'); }
+document.addEventListener('click', ()=>document.getElementById('printMenu')?.classList.remove('open'));
+function stepIdx(title){ return STEPS.findIndex(s=>s.title===title); }
+function fmtDate(v){
+  if(!v) return '';
+  const d=new Date(v.length===10?v+'T12:00':v);
+  return isNaN(d)?v:d.toLocaleDateString(undefined,{weekday:'short',month:'short',day:'numeric',year:'numeric'});
+}
+// One row per product to install: type, product, rooms, supplier / PO, arrived
+function jobProductRows(c){
+  const sd=c.stepData?.[SELECTION_STEP]||{};
+  const rooms=parseJSON(sd.flooring_rooms,{});
+  const map=finalProducts(c);
+  const types=Object.keys(map).length?Object.keys(map):typesOf(sd);
+  const orderLines=parseJSON(c.stepData?.[stepIdx('Order Placed')]?.supplier_lines,[]);
+  const recvLines=parseJSON(c.stepData?.[stepIdx('Order Received')]?.received_lines,[]);
+  const rows=[];
+  types.forEach(t=>{
+    let r=(rooms[t]||'').split(',').filter(Boolean).join(', ');
+    if(!r && !sd.flooring_rooms && sd.rooms_involved && types.length===1) r=sd.rooms_involved.split(',').join(', ');
+    const prods=(map[t]||[]).filter(hasAny);
+    (prods.length?prods:[{}]).forEach(p=>{
+      const product=productText(p), key=`${t}: ${product}`;
+      const ord=orderLines.find(x=>x.product===key)||{}, rec=recvLines.find(x=>x.product===key)||{};
+      rows.push({type:t, product, rooms:r, supplier:ord.supplier||'', po:ord.po||'', arrived:rec.arrived==='Yes'?'✓ Yes':rec.arrived==='No'?'Not yet':''});
+    });
+  });
+  return rows;
+}
+function printKV(pairs){
+  const rows=pairs.filter(([,v])=>v&&String(v).trim());
+  return rows.length?`<table class="kv">${rows.map(([k,v])=>`<tr><th>${esc(k)}</th><td>${esc(v)}</td></tr>`).join('')}</table>`:'<p class="none">Nothing entered.</p>';
+}
+function printSection(title, inner){ return `<section><h2>${esc(title)}</h2>${inner}</section>`; }
+function printCustomerSection(c){
+  return printSection('Customer & Job Site', printKV([
+    ['Customer', c.name], ['Phone', c.phone], ['Email', c.email], ['Company', c.company],
+    ['Address', c.address], ['Lock Box', c.lockbox==='Yes'?`Yes — Code: ${c.lockboxCode||'(not entered)'}`:c.lockbox==='No'?'No':''],
+    ['Contractor', [c.contractor,c.contractorPhone].filter(Boolean).join(' — ')], ['Salesman', c.salesman]
+  ]));
+}
+function printProductsTable(rows, cols){
+  if(!rows.length) return '<p class="none">No products entered.</p>';
+  return `<table class="grid"><tr>${cols.map(([,h])=>`<th>${esc(h)}</th>`).join('')}</tr>${rows.map(r=>`<tr>${cols.map(([k])=>`<td>${esc(r[k]||'')}</td>`).join('')}</tr>`).join('')}</table>`;
+}
+function openPrintWindow(docTitle, heading, c, body){
+  const w=window.open('','_blank');
+  if(!w){ alert('Your browser blocked the print page. Please allow pop-ups for this site and try again.'); return; }
+  w.document.write(`<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(docTitle)}</title><style>
+    *{box-sizing:border-box} body{font-family:Arial,Helvetica,sans-serif;color:#222;margin:0;padding:24px;font-size:13px;background:white}
+    .toolbar{display:flex;gap:8px;margin-bottom:18px} .toolbar button{font:inherit;font-weight:700;padding:9px 18px;border-radius:7px;border:1.5px solid #2c5f2e;background:#2c5f2e;color:white;cursor:pointer}
+    .toolbar button+button{background:white;color:#2c5f2e}
+    header{display:flex;justify-content:space-between;align-items:flex-end;border-bottom:3px solid #2c5f2e;padding-bottom:10px;margin-bottom:16px;gap:12px}
+    header .co{font-size:20px;font-weight:800;color:#2c5f2e} header .doc{font-size:15px;font-weight:700;margin-top:2px} header .meta{text-align:right;font-size:12px;color:#555}
+    header .cust{font-size:16px;font-weight:700;color:#222}
+    section{margin-bottom:14px;break-inside:avoid;page-break-inside:avoid} h2{font-size:12px;text-transform:uppercase;letter-spacing:.6px;color:#2c5f2e;background:#eef5ee;padding:5px 9px;margin:0 0 6px;border-radius:4px}
+    table{width:100%;border-collapse:collapse} .kv th{width:34%;text-align:left;font-weight:700;color:#555;padding:4px 9px;vertical-align:top} .kv td{padding:4px 9px;white-space:pre-line}
+    .kv tr+tr th,.kv tr+tr td{border-top:1px solid #eee}
+    .grid th{text-align:left;font-size:11px;text-transform:uppercase;color:#666;border-bottom:2px solid #ccc;padding:5px 7px} .grid td{border-bottom:1px solid #e3e3e3;padding:6px 7px;vertical-align:top}
+    .none{color:#999;margin:4px 9px} .lines div{border-bottom:1px solid #bbb;height:26px} .warn{color:#c62828;font-weight:700;margin:4px 9px}
+    .sign{display:flex;gap:24px;margin-top:24px} .sign div{flex:1;border-top:1px solid #333;padding-top:4px;font-size:11px;color:#555}
+    @media print{body{padding:0}.toolbar{display:none}@page{margin:.5in}}
+  </style></head><body>
+    <div class="toolbar"><button onclick="window.print()">🖨 Print</button><button onclick="window.close()">Close</button></div>
+    <header><div><div class="co">Harmony Flooring</div><div class="doc">${esc(heading)}</div></div>
+      <div class="meta"><div class="cust">${esc(c.name)}</div>${esc(c.address||'')}<br>Printed ${esc(new Date().toLocaleDateString())}</div></header>
+    ${body}<\/body><\/html>`);
+  w.document.close();
+}
+
+function printInstallerSheet(){
+  const c=customers().find(x=>x.id===currentId); if(!c) return;
+  const sel=c.stepData?.[SELECTION_STEP]||{}, sm=c.stepData?.[stepIdx('Schedule Measure')]||{}, m=c.stepData?.[stepIdx('Measure Checklist')]||{};
+  const rec=c.stepData?.[stepIdx('Order Received')]||{}, sch=schedStepData(c), inst=c.stepData?.[stepIdx('Installation')]||{};
+  const installDate=sch.confirmed_install_date||c.stepData?.[APPROVAL_STEP]?.install_date_target||'';
+  const yesNo=(v,detail)=>v==='Yes'?(detail?`Yes — ${detail}`:'Yes'):v;
+  const body=
+    printSection('Installation', printKV([['Install Date', fmtDate(installDate)], ['Start Time', sch.install_time], ['Crew', sch.crew_assigned]]))+
+    printCustomerSection(c)+
+    printSection('Materials', printProductsTable(jobProductRows(c), [['type','Type'],['product','Manufacturer · Style · Color'],['rooms','Rooms'],['arrived','Arrived']])+
+      printKV([['Stored At (bay / shelf)', rec.storage_location]]))+
+    printSection('Job Site Conditions', printKV([
+      ['Subfloor', [m.subfloor_condition, m.subfloor_type&&`(${m.subfloor_type.split(',').join(', ')})`].filter(Boolean).join(' ')],
+      ['Subfloor Notes', m.subfloor_notes],
+      ['Remove Existing Floor', m.existing_floor==='Yes'&&m.existing_floor_types?`Yes — ${m.existing_floor_types.split(',').join(', ')}`:m.existing_floor],
+      ['Electric / HVAC / Water', [m.electric&&`Electric ${m.electric}`, m.hvac&&`HVAC ${m.hvac}`, m.water&&`Water ${m.water}`].filter(Boolean).join(' · ')],
+      ['Steps', m.has_steps==='Yes'?[m.step_type, m.step_notes].filter(Boolean).join(' — ')||'Yes':m.has_steps],
+      ['Transitions', yesNo(m.has_transitions, m.transition_notes)],
+      ['Special Conditions', m.special_conditions],
+      ['Measure Notes', m.rooms_measured]
+    ]))+
+    printSection('Customer Notes & Access', printKV([
+      ['Project', sel.project_overview], ['Special Requirements', sel.special_requirements],
+      ['Access / Entry', sm.access_notes], ['Prep Instructions Given', sch.prep_instructions], ['Crew Instructions', sch.schedule_notes]
+    ]))+
+    printSection('Punch List', (inst.punch_list?`<table class="kv"><tr><td>${esc(inst.punch_list)}</td></tr></table>`:'')+`<div class="lines">${'<div></div>'.repeat(5)}</div>`)+
+    `<div class="sign"><div>Installer</div><div>Date Completed</div><div>Customer Signature</div></div>`;
+  openPrintWindow(`Installer Sheet — ${c.name}`, 'Installer Job Sheet', c, body);
+}
+
+function printJobDetails(){
+  const c=customers().find(x=>x.id===currentId); if(!c) return;
+  const s6=c.stepData?.[APPROVAL_STEP]||{};
+  // Shown elsewhere on the page, or not plain text
+  const skipTypes=['header','slabel','info','customer_type','photos','flooring_rooms','orig_products','final_products','supplier_lines','received_lines'];
+  let body=printCustomerSection(c);
+  body+=printSection(isLost(c)?'Status: Lost':isDone(c)?'Status: Completed':`Status: Step ${c.step+1} of ${STEPS.length} — ${STEPS[c.step].title}`, '');
+  let prodHtml=printProductsTable(jobProductRows(c), [['type','Type'],['product','Manufacturer · Style · Color'],['rooms','Rooms'],['supplier','Supplier'],['po','PO #'],['arrived','Arrived']]);
+  if(s6.selection_confirmed==='No'){
+    const orig=flattenProducts(originalProducts(c)).map(r=>`${r.type}: ${productText(r)}`);
+    prodHtml=`<p class="warn">⚠ Final selection was changed at Estimate Approved.</p>`+prodHtml+(orig.length?printKV([['Original Selection', orig.join('\n')]]):'');
+  }
+  body+=printSection('Products', prodHtml);
+  STEPS.forEach((step,si)=>{
+    const saved=si===SCHED_STEP?schedStepData(c):(c.stepData?.[si]||{});
+    const pairs=[];
+    step.fields.forEach(f=>{
+      if(skipTypes.includes(f.type)||f.customerField) return;
+      if(f.showIf && saved[f.showIf.field]!==f.showIf.value) return;
+      let v=saved[f.key]; if(!v) return;
+      if(f.type==='date') v=fmtDate(v);
+      else if(f.type==='multichip') v=v.split(',').join(', ');
+      pairs.push([f.label, v]);
+    });
+    if(pairs.length) body+=printSection(`Step ${si+1}: ${step.title}`, printKV(pairs));
+  });
+  openPrintWindow(`Job Details — ${c.name}`, 'Job Details', c, body);
+}
+
 async function saveAndAdvance(){
+  const problem=stepProblems(currentStep); if(problem){ alert(problem); return; }
   const i=_customers.findIndex(x=>x.id===currentId); if(i===-1)return;
   const c={..._customers[i], stepData:{..._customers[i].stepData}};
   const {stepData, customerProps}=collectStep(currentStep);
   if(currentStep===SCHED_STEP) setSchedStepData(c, stepData); else c.stepData[currentStep]={...c.stepData[currentStep], ...stepData};
   Object.assign(c, customerProps);
+  if(isLost(c)){ await upsertCustomer(c); openCustomer(c.id); showToast('Estimate not approved — job moved to the Archive'); return; }
   if(currentStep<STEPS.length-1){c.step=currentStep+1; c.lastStepChange=new Date().toISOString(); currentStep++;}
   await upsertCustomer(c);
   renderStepsNav(c); renderStep(c,currentStep);
