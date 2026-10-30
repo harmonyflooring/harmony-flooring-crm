@@ -326,7 +326,7 @@ header::-webkit-scrollbar { display: none; }
 .info-box { padding:8px 11px; background:#f6f5f2; border:1.5px solid #e8e5e0; border-radius:6px; font-size:0.85rem; color:#444; white-space:pre-line; }
 .floor-rooms { margin-top:10px; padding:10px 12px; background:#f3f8f3; border-left:3px solid #2c5f2e; border-radius:6px; }
 .fr-locked .multichip-btn:not(.selected) { display:none; }
-.prod-row { display:grid; grid-template-columns:1fr 1fr 1fr 28px; gap:6px; margin-bottom:6px; align-items:center; }
+.prod-row { position:relative; display:grid; grid-template-columns:1fr 1fr 1fr 28px; gap:6px; margin-bottom:6px; align-items:center; }
 .prod-row input, .sup-line input { width:100%; padding:7px 10px; border:1.5px solid #ddd; border-radius:6px; font-size:0.83rem; font-family:inherit; background:white; }
 .prod-row input:focus, .sup-line input:focus { outline:none; border-color:#2c5f2e; }
 .prod-remove { border:none; background:none; color:#c62828; font-size:0.9rem; cursor:pointer; padding:0; }
@@ -2035,25 +2035,28 @@ function onNewAddressInput(){
   if(_copySource && document.getElementById('newAddress').value.trim()!==_copyBase) clearCopySource();
   if(!_selectedExistingCustKey){box.classList.remove('open');box.innerHTML='';_addressSuggestCache=[];return;}
   const q=document.getElementById('newAddress').value.trim().toLowerCase();
-  const seen=new Set();
-  _addressSuggestCache=getCustomerJobs(_selectedExistingCustKey).filter(j=>{
-    if(!j.address) return false;
-    const key=j.address.toLowerCase();
-    if(seen.has(key)) return false;
-    if(q && !key.includes(q)) return false;
-    seen.add(key);
-    return true;
+  // One choice per building, however many units have had jobs there; the fullest past job comes first
+  const buildings=new Map();
+  getCustomerJobs(_selectedExistingCustKey).forEach(j=>{
+    if(!j.address) return;
+    const key=splitUnit(j.address).base.toLowerCase();
+    if(q && !key.includes(q)) return;
+    if(!buildings.has(key)) buildings.set(key,[]);
+    buildings.get(key).push(j);
   });
+  const copyScore=j=>COPY_STEPS.filter(si=>stepCopyData(j,si)).length;
+  _addressSuggestCache=[...buildings.values()].map(jobs=>jobs.sort((a,b)=>copyScore(b)-copyScore(a)));
   if(!_addressSuggestCache.length){box.classList.remove('open');box.innerHTML='';return;}
-  box.innerHTML=_addressSuggestCache.map((j,i)=>`<div class="ac-item" onmousedown="event.preventDefault();selectExistingAddress(${i})"><div class="ac-name">${esc(j.address)}</div><div class="ac-sub">${j.lockbox==='Yes'?'🔒 Lock box'+(j.lockboxCode?': '+esc(j.lockboxCode):''):'No lock box on file'}</div></div>`).join('');
+  box.innerHTML=_addressSuggestCache.map(([j],i)=>`<div class="ac-item" onmousedown="event.preventDefault();selectExistingAddress(${i})"><div class="ac-name">${esc(splitUnit(j.address).base)}</div><div class="ac-sub">${j.lockbox==='Yes'?'🔒 Lock box'+(j.lockboxCode?': '+esc(j.lockboxCode):''):'No lock box on file'}</div></div>`).join('');
   box.classList.add('open');
 }
 function hideNewAddressSuggestions(){
   setTimeout(()=>{const box=document.getElementById('newAddressSuggest');box.classList.remove('open');box.innerHTML='';},150);
 }
 function selectExistingAddress(i){
-  const job=_addressSuggestCache[i];
-  if(!job)return;
+  const jobs=_addressSuggestCache[i];
+  if(!jobs)return;
+  const job=jobs[0];
   const {base}=splitUnit(job.address);
   document.getElementById('newAddress').value=base;
   document.getElementById('newAddress2').value='';
@@ -2063,7 +2066,7 @@ function selectExistingAddress(i){
   fillContractor(job);
   const box=document.getElementById('newAddressSuggest');
   box.classList.remove('open');box.innerHTML='';
-  _copySource=job; _copyBase=base;
+  _copySource=job; _copyJobs=jobs; _copyBase=base;
   renderCopyPanel();
   document.getElementById('newAddress2').focus();
 }
@@ -2076,8 +2079,9 @@ const PRODUCT_JSON_KEYS=['flooring_products','selection_products','final_product
 // Different for every unit, so these never copy (nor do any dates)
 const COPY_SKIP_KEYS=['contract_number','deposit_amount','deposit_method','lost_reason','lost_notes'];
 const COPY_HIDDEN_TYPES=['header','slabel','info','customer_type','photos','flooring_rooms','orig_products','final_products','supplier_lines','received_lines'];
-let _copySource=null, _copyBase='';
-function clearCopySource(){ _copySource=null; _copyBase=''; renderCopyPanel(); }
+let _copySource=null, _copyJobs=[], _copyBase='';
+function clearCopySource(){ _copySource=null; _copyJobs=[]; _copyBase=''; renderCopyPanel(); }
+function onCopyFromChange(sel){ _copySource=_copyJobs[+sel.value]; renderCopyPanel(); }
 // "12 Main St, Unit 4" or "12 Main St, 7-30" → building "12 Main St" + the unit (a 5-digit zip is not a unit)
 function splitUnit(address){
   const m=address.match(/^(.*?),\s*((?:(?:suite|ste|apt|apartment|unit|bldg|building|floor)\b\.?|#)\s*.+|(?!\d{5}$)[a-z]?\d+[a-z]?|\d+-\d+[a-z]?)$/i);
@@ -2199,7 +2203,8 @@ function renderCopyPanel(){
   }).join(''):'';
   panel.style.display=_copySource?'block':'none';
   panel.innerHTML=_copySource?`<div class="copy-head"><span>Same building, different unit?</span><button type="button" class="btn btn-secondary btn-sm" onclick="clearCopySource()">Don't copy</button></div>
-    <div class="copy-sub">Copy from past job: ${esc(_copySource.address)}. Enter the new unit above. Dates, order # and deposit are not copied.</div>${rows||'<div class="copy-sub">This past job has nothing saved to copy.</div>'}<label class="copy-start">Start this job at<select id="copyStartStep" onchange="onCopyStartChange()"></select></label>`:'';
+    <div class="copy-sub">${_copyJobs.length>1?'':`Copy from past job: ${esc(_copySource.address)}. `}Enter the new unit above. Dates, order # and deposit are not copied.</div>
+    ${_copyJobs.length>1?`<label class="copy-start" style="margin:0 0 10px">Copy from past job<select onchange="onCopyFromChange(this)">${_copyJobs.map((j,i)=>`<option value="${i}"${j===_copySource?' selected':''}>${esc(j.address)} (${esc(fmtDate(localDateStr(new Date(j.created))))})</option>`).join('')}</select></label>`:''}${rows||'<div class="copy-sub">This past job has nothing saved to copy.</div>'}<label class="copy-start">Start this job at<select id="copyStartStep" onchange="onCopyStartChange()"></select></label>`:'';
   if(_copySource) updateCopyStart();
 }
 function openNewModal(){
@@ -2589,7 +2594,21 @@ function stockPickHtml(r, type){
   if(!items.length&&!r.stock) return '';
   const cur=r.stock?items.find(s=>PRODUCT_KEYS.every(k=>s[k]===r[k])):null;
   const gone=r.stock&&!cur?`<option value="saved" selected>${esc(productText(r))}</option>`:'';
-  return `<select class="stock-pick" onchange="pickStock(this)"><option value="">📦 Pick a stock product…</option>${gone}${items.map(s=>`<option value="${esc(s.id)}"${cur&&cur.id===s.id?' selected':''}>${esc(s.name)}</option>`).join('')}</select>`;
+  return `<select class="stock-pick" onchange="pickStock(this)"><option value="">📦 Pick a stock product…</option>${gone}${items.map(s=>`<option value="${esc(s.id)}"${cur&&cur.id===s.id?' selected':''}>${esc(s.name)}</option>`).join('')}</select><div class="ac-list stock-ac"></div>`;
+}
+// Typing in manufacturer, style or color lists matching stock products of this type
+function stockSuggest(input){
+  const box=input.closest('.prod-row').querySelector('.stock-ac'); if(!box) return;
+  const type=input.closest('[data-type]').dataset.type, q=input.value.trim().toLowerCase();
+  const hits=q?_stockProducts.filter(s=>s.type===type&&['name',...PRODUCT_KEYS].some(k=>(s[k]||'').toLowerCase().includes(q))).slice(0,8):[];
+  box.innerHTML=hits.map(s=>`<div class="ac-item" data-id="${esc(s.id)}" onmousedown="event.preventDefault();pickStockSuggestion(this)"><div class="ac-name">📦 ${esc(s.name)}</div><div class="ac-sub">${esc(productText(s))}</div></div>`).join('');
+  box.classList.toggle('open',hits.length>0);
+}
+function hideStockSuggest(input){ input.closest('.prod-row').querySelector('.stock-ac')?.classList.remove('open'); }
+function pickStockSuggestion(item){
+  const row=item.closest('.prod-row'), pick=row.querySelector('.stock-pick');
+  pick.value=item.dataset.id; pickStock(pick);
+  row.querySelector('.stock-ac').classList.remove('open');
 }
 function pickStock(sel){
   const s=_stockProducts.find(x=>x.id===sel.value);
@@ -2607,7 +2626,7 @@ function skipOrderSteps(c,s){
   return all.length&&all.every(r=>r.stock)?RECEIVED_STEP+1:s;
 }
 function productRowHtml(r, removable, type){
-  return `<div class="prod-row">${stockPickHtml(r,type)}${PRODUCT_KEYS.map(k=>`<input type="text" placeholder="${k[0].toUpperCase()+k.slice(1)}" data-k="${k}" value="${esc(r[k]||'')}" oninput="syncProducts(this)">`).join('')}${removable?`<button type="button" class="prod-remove" title="Remove this product" onclick="removeProductRow(this)">✕</button>`:'<span></span>'}</div>`;
+  return `<div class="prod-row">${stockPickHtml(r,type)}${PRODUCT_KEYS.map(k=>`<input type="text" placeholder="${k[0].toUpperCase()+k.slice(1)}" data-k="${k}" value="${esc(r[k]||'')}" autocomplete="off" oninput="syncProducts(this);stockSuggest(this)" onblur="hideStockSuggest(this)">`).join('')}${removable?`<button type="button" class="prod-remove" title="Remove this product" onclick="removeProductRow(this)">✕</button>`:'<span></span>'}</div>`;
 }
 function productRowsHtml(rows, type){
   rows=rows&&rows.length?rows:[{}];
