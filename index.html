@@ -330,6 +330,26 @@ header::-webkit-scrollbar { display: none; }
 .prod-row input, .sup-line input { width:100%; padding:7px 10px; border:1.5px solid #ddd; border-radius:6px; font-size:0.83rem; font-family:inherit; background:white; }
 .prod-row input:focus, .sup-line input:focus { outline:none; border-color:#2c5f2e; }
 .prod-remove { border:none; background:none; color:#c62828; font-size:0.9rem; cursor:pointer; padding:0; }
+.stock-pick { grid-column:1/-1; width:100%; padding:7px 10px; border:1.5px solid #ddd; border-radius:6px; font-size:0.83rem; font-family:inherit; background:#f6f5f2; }
+.stock-form { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin:12px 0 20px; }
+.stock-form input, .stock-form select { width:100%; padding:8px 10px; border:1.5px solid #ddd; border-radius:6px; font-size:0.85rem; font-family:inherit; background:white; }
+.copy-panel { display:none; background:#f6f5f2; border:1.5px solid #e0ddd8; border-radius:8px; padding:12px; margin:0 0 14px; }
+.copy-head { display:flex; justify-content:space-between; align-items:center; gap:10px; font-size:0.85rem; font-weight:700; color:#2c5f2e; }
+.copy-sub { font-size:0.77rem; color:#777; margin:3px 0 10px; }
+.copy-step { display:block; background:white; border-radius:6px; padding:8px 10px; margin-bottom:6px; font-size:0.82rem; font-weight:600; cursor:pointer; }
+.copy-step input { margin-right:6px; }
+.copy-lines { font-size:0.77rem; font-weight:400; color:#555; white-space:pre-line; margin:4px 0 0 21px; }
+.copy-start { font-size:0.8rem; font-weight:700; color:#2c5f2e; margin-top:8px; }
+.rv-head { background:#fdecea; border-radius:7px; padding:9px 12px; font-size:0.84rem; font-weight:700; color:#c62828; margin-bottom:12px; }
+.rv-head.rv-ok { background:#e8f5e9; color:#2c5f2e; }
+.rv-step { border:1.5px solid #e8e5e0; border-radius:8px; padding:10px 12px; margin-bottom:10px; }
+.rv-title { display:flex; justify-content:space-between; align-items:center; gap:10px; font-size:0.84rem; font-weight:700; color:#2c5f2e; margin-bottom:6px; }
+.rv-row { display:grid; grid-template-columns:minmax(120px,38%) 1fr; gap:8px; font-size:0.81rem; padding:2px 0; }
+.rv-label { color:#777; }
+.rv-val { color:#333; white-space:pre-line; }
+.rv-missing .rv-label, .rv-missing .rv-val { color:#c62828; font-weight:700; }
+.rv-note { font-size:0.81rem; color:#2c5f2e; font-weight:600; }
+.copy-start select { display:block; width:100%; margin-top:4px; padding:7px 10px; border:1.5px solid #ddd; border-radius:6px; font-size:0.83rem; font-family:inherit; background:white; }
 .sup-line { display:grid; grid-template-columns:1.4fr 1fr 1fr; gap:8px; align-items:center; margin-bottom:6px; }
 .recv-line { display:grid; grid-template-columns:1.4fr 1fr; gap:8px; align-items:center; margin-bottom:6px; }
 .sup-head { font-size:0.7rem; font-weight:700; color:#999; text-transform:uppercase; letter-spacing:0.4px; margin-bottom:2px; }
@@ -900,6 +920,16 @@ header::-webkit-scrollbar { display: none; }
       <div class="settings-inner">
         <div class="settings-section-title">Users &amp; Passwords</div>
         <div id="settingsUserList"><div style="color:#aaa;font-size:0.85rem">Loading…</div></div>
+        <div class="settings-section-title" style="margin-top:24px">Stock Products</div>
+        <div id="stockList"></div>
+        <div class="stock-form">
+          <input type="text" id="stockName" placeholder="Name (e.g. Carpet T2)">
+          <select id="stockType"></select>
+          <input type="text" id="stockManufacturer" placeholder="Manufacturer">
+          <input type="text" id="stockStyle" placeholder="Style">
+          <input type="text" id="stockColor" placeholder="Color">
+          <button class="btn btn-primary" onclick="addStockProduct()">+ Add Stock Product</button>
+        </div>
       </div>
     </div>
   </div>
@@ -1088,6 +1118,8 @@ header::-webkit-scrollbar { display: none; }
       </div>
     </div>
 
+    <div class="copy-panel" id="copyPanel"></div>
+
     <div class="slabel">Contractor (if applicable)</div>
     <div class="form-row">
       <div class="form-group"><label>Contractor Name</label><input type="text" id="newContractor" placeholder="Name"></div>
@@ -1138,6 +1170,7 @@ header::-webkit-scrollbar { display: none; }
     <div class="form-group"><label>Company</label><input type="text" id="editCompany" placeholder="Company name (optional)"></div>
 
     <div class="slabel">Job Info</div>
+    <div class="form-group"><label>Date</label><input type="date" id="editJobDate"></div>
     <div class="form-group"><label>Job Address <span class="req">*</span></label><input type="text" id="editAddress" placeholder="123 Main St, City, State"></div>
     <div class="form-row">
       <div class="form-group">
@@ -1259,7 +1292,7 @@ header::-webkit-scrollbar { display: none; }
 const STEP_COLORS = Array(12).fill('#4d7b79');
 
 const STEPS = [
-  { title:"New Jobs", desc:"Customer contact information and job site details.", fields:[
+  { title:"New Job", desc:"Customer contact information and job site details.", fields:[
     {key:"_s_customer",    type:"slabel", label:"Customer Info"},
     {key:"customer_type",  label:"Customer Type",     type:"customer_type"},
     {key:"name",           label:"Full Name",         type:"text",    placeholder:"e.g. John Smith",          customerField:true},
@@ -1429,6 +1462,7 @@ const ADMIN_EMAIL = 'sales@harmonyflooring.net';
 
 // ── IN-MEMORY CACHE ──────────────────────────
 let _customers = [];
+let _stockProducts = [];
 let _messages  = [];
 let _scheduleEntries = [];
 let _schedWeekStart  = mondayOf(new Date());
@@ -1440,7 +1474,8 @@ let _schedWeekStart  = mondayOf(new Date());
 // This keeps old saved data and any copy of the old app working.
 const DB_CONTRACT_STEP = 6;
 const CONTRACT_KEYS = ['contract_date','contract_number','deposit_amount','deposit_method','install_date_target','final_product_selected','contract_notes'];
-function stepFromDb(n){ return n>=DB_CONTRACT_STEP ? n-1 : n; }
+// Step 1 is now the New Job form, so any job still saved at step 1 belongs on step 2
+function stepFromDb(n){ return n>=DB_CONTRACT_STEP ? n-1 : Math.max(n,1); }
 function stepToDb(n){ return n>=DB_CONTRACT_STEP ? n+1 : n; }
 function stepDataFromDb(sd){
   const out={};
@@ -1527,6 +1562,7 @@ async function upsertCustomer(c) {
   if(i !== -1) _customers[i] = c; else _customers.push(c);
   const { error } = await db.from('customers').upsert(C.toRow(c));
   if(error) console.error('Supabase upsert customer error:', error);
+  return !error;
 }
 async function removeCustomer(id) {
   _customers = _customers.filter(x => x.id !== id);
@@ -1553,11 +1589,14 @@ async function removeMessage(id) {
 
 // ── FETCH ALL DATA ON STARTUP ──
 async function fetchAll() {
-  const [{ data: custs, error: e1 }, { data: msgs, error: e2 }, { data: sched, error: e3 }] = await Promise.all([
+  const [{ data: custs, error: e1 }, { data: msgs, error: e2 }, { data: sched, error: e3 }, { data: stock, error: e4 }] = await Promise.all([
     db.from('customers').select('*'),
     db.from('messages').select('*'),
-    db.from('schedule_entries').select('*').order('sort_order')
+    db.from('schedule_entries').select('*').order('sort_order'),
+    db.from('stock_products').select('*').order('name')
   ]);
+  if(e4) console.error('Failed to load stock products:', e4);
+  _stockProducts = stock || [];
   if(e1) console.error('Failed to load customers:', e1);
   if(e2) console.error('Failed to load messages:', e2);
   if(e3) console.error('Failed to load schedule:', e3);
@@ -1573,6 +1612,10 @@ function subscribeRealtime() {
       const { data } = await db.from('customers').select('*');
       _customers = (data || []).map(C.fromRow);
       refreshAll();
+    })
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'stock_products' }, async () => {
+      const { data } = await db.from('stock_products').select('*').order('name');
+      _stockProducts = data || [];
     })
     .on('postgres_changes', { event: '*', schema: 'public', table: 'messages' }, async () => {
       const { data } = await db.from('messages').select('*');
@@ -1719,6 +1762,8 @@ const CLOSEOUT_STEP = STEPS.length-1;
 function isDone(c){ return c.step===CLOSEOUT_STEP&&c.stepData?.[CLOSEOUT_STEP]?.closeout_date; }
 // Archived jobs leave the main screens but stay in the database (see the Archive window)
 const APPROVAL_STEP = 5;
+const ORDER_STEP = STEPS.findIndex(s => s.title === 'Order Placed');
+const RECEIVED_STEP = STEPS.findIndex(s => s.title === 'Order Received');
 function isLost(c){ return c.stepData?.[APPROVAL_STEP]?.estimate_approved==='No'; }
 function isArchived(c){ return !!(isDone(c)||isLost(c)); }
 
@@ -1734,9 +1779,9 @@ function renderStepsStrip() {
     const count = counts[i]||0;
     const isActive = activeStepFilter===i;
     const color = STEP_COLORS[i];
-    // Step 1 doubles as the New Job button: it shows step-1 jobs and opens the New Job form
-    const click = i===0 ? 'newJobFromStrip()' : `filterByStep(${i})`;
-    const tip = i===0 ? 'Add a new job (also shows New Jobs)' : s.title;
+    // Step 1 is the New Job button: it opens the New Job form
+    const click = i===0 ? 'openNewModal()' : `filterByStep(${i})`;
+    const tip = i===0 ? 'Add a new job' : s.title;
     return `<button class="step-btn ${i===0?'step-new':''} ${isActive?'sf-active':''}" onclick="${click}" title="${tip}" style="--sc:${color}">
       ${count>0?`<span class="step-count-badge" style="background:${color}">${count}</span>`:''}
       <div class="step-circle">${i===0?'+':i+1}</div>
@@ -1747,7 +1792,6 @@ function renderStepsStrip() {
 }
 function filterByStep(i){ activeStepFilter=(activeStepFilter===i)?null:i; refreshAll(); }
 function clearStepFilter(){ activeStepFilter=null; refreshAll(); }
-function newJobFromStrip(){ activeStepFilter=0; refreshAll(); openNewModal(); }
 
 // ════════════════════════════════════════════
 // LAYOUT: CARD GRID
@@ -1837,6 +1881,7 @@ function renderKanban() {
   const data = getFiltered();
   const board = document.getElementById('kanbanBoard');
   board.innerHTML = STEPS.map((s,i)=>{
+    if(i===0) return ''; // no jobs wait in Step 1, the New Job form
     const cards = data.filter(c=>c.step===i).sort((a,b)=>bizDays(b.lastStepChange||b.created)-bizDays(a.lastStepChange||a.created));
     const cardsHtml = cards.length
       ? cards.map(c=>{
@@ -1932,6 +1977,7 @@ function setNewJobCustType(type){
   setActiveToggle(type);
   if(type==='new'){
     _selectedExistingCustKey=null;
+    clearCopySource();
     const abox=document.getElementById('newAddressSuggest');
     abox.classList.remove('open');abox.innerHTML='';
   } else {
@@ -1949,7 +1995,7 @@ function onNewNameInput(){
   if(!matches.length){box.classList.remove('open');box.innerHTML='';return;}
   box.innerHTML=matches.map(c=>{
     const sub=[c.phone,c.email].filter(Boolean).join('  ·  ');
-    return `<div class="ac-item" onmousedown="selectExistingCustomer('${c.id}')"><div class="ac-name">${esc(c.name)}${c.company?` <span style="font-weight:400;color:#999">— ${esc(c.company)}</span>`:''}</div><div class="ac-sub">${esc(sub)}</div></div>`;
+    return `<div class="ac-item" onmousedown="event.preventDefault();selectExistingCustomer('${c.id}')"><div class="ac-name">${esc(c.name)}${c.company?` <span style="font-weight:400;color:#999">— ${esc(c.company)}</span>`:''}</div><div class="ac-sub">${esc(sub)}</div></div>`;
   }).join('');
   box.classList.add('open');
 }
@@ -1964,17 +2010,29 @@ function selectExistingCustomer(id){
   document.getElementById('newEmail').value=c.email||'';
   document.getElementById('newCompany').value=c.company||'';
   _selectedExistingCustKey=custKey(c);
+  clearCopySource();
   setActiveToggle('existing');
+  const sm=document.getElementById('newSalesman');
+  if([...sm.options].some(o=>o.value===c.salesman)) sm.value=c.salesman;
+  fillContractor(c);
   const box=document.getElementById('newNameSuggest');
   box.classList.remove('open');box.innerHTML='';
   document.getElementById('newAddress').focus();
   onNewAddressInput();
+  if(_addressSuggestCache.length===1) selectExistingAddress(0); // only one place to go
+}
+// Use this job's contractor, or the customer's latest job that has one
+function fillContractor(job){
+  const src=job.contractor?job:getCustomerJobs(custKey(job)).find(j=>j.contractor);
+  document.getElementById('newContractor').value=src?.contractor||'';
+  document.getElementById('newContractorPhone').value=src?.contractorPhone||'';
 }
 function getCustomerJobs(key){
-  return customers().filter(c=>custKey(c)===key);
+  return customers().filter(c=>custKey(c)===key).sort((a,b)=>new Date(b.created)-new Date(a.created)); // newest first
 }
 function onNewAddressInput(){
   const box=document.getElementById('newAddressSuggest');
+  if(_copySource && document.getElementById('newAddress').value.trim()!==_copyBase) clearCopySource();
   if(!_selectedExistingCustKey){box.classList.remove('open');box.innerHTML='';_addressSuggestCache=[];return;}
   const q=document.getElementById('newAddress').value.trim().toLowerCase();
   const seen=new Set();
@@ -1987,7 +2045,7 @@ function onNewAddressInput(){
     return true;
   });
   if(!_addressSuggestCache.length){box.classList.remove('open');box.innerHTML='';return;}
-  box.innerHTML=_addressSuggestCache.map((j,i)=>`<div class="ac-item" onmousedown="selectExistingAddress(${i})"><div class="ac-name">${esc(j.address)}</div><div class="ac-sub">${j.lockbox==='Yes'?'🔒 Lock box'+(j.lockboxCode?': '+esc(j.lockboxCode):''):'No lock box on file'}</div></div>`).join('');
+  box.innerHTML=_addressSuggestCache.map((j,i)=>`<div class="ac-item" onmousedown="event.preventDefault();selectExistingAddress(${i})"><div class="ac-name">${esc(j.address)}</div><div class="ac-sub">${j.lockbox==='Yes'?'🔒 Lock box'+(j.lockboxCode?': '+esc(j.lockboxCode):''):'No lock box on file'}</div></div>`).join('');
   box.classList.add('open');
 }
 function hideNewAddressSuggestions(){
@@ -1996,12 +2054,153 @@ function hideNewAddressSuggestions(){
 function selectExistingAddress(i){
   const job=_addressSuggestCache[i];
   if(!job)return;
-  document.getElementById('newAddress').value=job.address;
+  const {base}=splitUnit(job.address);
+  document.getElementById('newAddress').value=base;
+  document.getElementById('newAddress2').value='';
   document.getElementById('newLockbox').value=job.lockbox||'';
   toggleLockboxCode();
   if(job.lockbox==='Yes') document.getElementById('newLockboxCode').value=job.lockboxCode||'';
+  fillContractor(job);
   const box=document.getElementById('newAddressSuggest');
   box.classList.remove('open');box.innerHTML='';
+  _copySource=job; _copyBase=base;
+  renderCopyPanel();
+  document.getElementById('newAddress2').focus();
+}
+
+// ── Same building, different unit: copy steps from a past job and jump ahead ──
+const COPY_STEPS=[1,2,3,4,5];
+const COPY_DEFAULT_THROUGH=3; // Customer Selection, Schedule Measure, Measure Checklist start ticked
+const COPY_LAST_START=STEPS.findIndex(s=>s.title==='Installation'); // furthest step a copied job can start at
+const PRODUCT_JSON_KEYS=['flooring_products','selection_products','final_products'];
+// Different for every unit, so these never copy (nor do any dates)
+const COPY_SKIP_KEYS=['contract_number','deposit_amount','deposit_method','lost_reason','lost_notes'];
+const COPY_HIDDEN_TYPES=['header','slabel','info','customer_type','photos','flooring_rooms','orig_products','final_products','supplier_lines','received_lines'];
+let _copySource=null, _copyBase='';
+function clearCopySource(){ _copySource=null; _copyBase=''; renderCopyPanel(); }
+// "12 Main St, Unit 4" or "12 Main St, 7-30" → building "12 Main St" + the unit (a 5-digit zip is not a unit)
+function splitUnit(address){
+  const m=address.match(/^(.*?),\s*((?:(?:suite|ste|apt|apartment|unit|bldg|building|floor)\b\.?|#)\s*.+|(?!\d{5}$)[a-z]?\d+[a-z]?|\d+-\d+[a-z]?)$/i);
+  return m?{base:m[1],unit:m[2]}:{base:address,unit:''};
+}
+function stepCopyData(c,si){
+  const src=c.stepData?.[si];
+  if(!src || (si===APPROVAL_STEP&&src.estimate_approved!=='Yes')) return null;
+  const out={...src};
+  STEPS[si].fields.filter(f=>f.type==='date').forEach(f=>delete out[f.key]);
+  COPY_SKIP_KEYS.forEach(k=>delete out[k]);
+  PRODUCT_JSON_KEYS.forEach(k=>{ if(out[k]) out[k]=markStockRows(out[k]); });
+  return Object.values(out).some(Boolean)?out:null;
+}
+// Past jobs may have a stock product typed in by hand: recognise it from the stock list
+function markStockRows(json){
+  const map=parseJSON(json,null); if(!map) return json;
+  const norm=v=>(v||'').trim().toLowerCase();
+  Object.entries(map).forEach(([t,rows])=>(rows||[]).forEach(r=>{
+    if(_stockProducts.some(s=>s.type===t&&PRODUCT_KEYS.every(k=>norm(s[k])===norm(r[k])))) r.stock=true;
+  }));
+  return JSON.stringify(map);
+}
+function copyLines(c,si,data){
+  const lines=[];
+  if(si===SELECTION_STEP){
+    const rooms=roomsSummary(data); if(rooms) lines.push(rooms);
+    flattenProducts(originalProducts({stepData:{[si]:data}})).forEach(r=>lines.push(`${r.type}: ${productText(r)}${r.stock?' (in stock)':''}`));
+  }
+  STEPS[si].fields.forEach(f=>{
+    if(COPY_HIDDEN_TYPES.includes(f.type)) return;
+    if(f.showIf && data[f.showIf.field]!==f.showIf.value) return;
+    const v=data[f.key]; if(!v) return;
+    lines.push(`${f.label}: ${f.type==='multichip'?v.split(',').join(', '):v}`);
+  });
+  return lines.join('\n');
+}
+function pickedCopySteps(){ return [...document.querySelectorAll('#copyPanel input[data-si]:checked')].map(i=>+i.dataset.si); }
+// Starts at the step picked, otherwise at the first step not copied (a step with nothing to copy doesn't hold it back)
+function applyCopy(job,picked,start){
+  picked.forEach(si=>{ job.stepData[si]=stepCopyData(_copySource,si); });
+  const last=Math.max(0,...picked);
+  let s=1; while(picked.includes(s)||(s<last&&!stepCopyData(_copySource,s))) s++;
+  job.step=skipOrderSteps(job,start||s);
+}
+function pickedCopyStart(){ return +document.getElementById('copyStartStep')?.value||undefined; }
+function updateCopyStart(start){
+  const job={stepData:{}}; applyCopy(job,pickedCopySteps(),start);
+  const opts=[];
+  for(let i=1;i<=COPY_LAST_START;i++){
+    const noOrder=skipOrderSteps(job,i)!==i;
+    opts.push(`<option value="${i}"${i===job.step?' selected':''}${noOrder?' disabled':''}>Step ${i+1}: ${esc(STEPS[i].title)}${noOrder?' (in stock, no order needed)':''}</option>`);
+  }
+  document.getElementById('copyStartStep').innerHTML=opts.join('');
+}
+// Picking a step copies everything before it, so its product selection comes along
+function onCopyStartChange(){
+  const s=pickedCopyStart();
+  document.querySelectorAll('#copyPanel input[data-si]').forEach(i=>{ i.checked=+i.dataset.si<s; });
+  updateCopyStart(s);
+}
+// Review page: a copied job shows this on the step it landed on until someone confirms it
+const REVIEW_SKIP_TYPES=[...COPY_HIDDEN_TYPES,'textarea'];
+function reviewRow(label,val,missing){
+  return `<div class="rv-row${missing?' rv-missing':''}"><div class="rv-label">${esc(label)}</div><div class="rv-val">${esc(missing?'Missing':val)}</div></div>`;
+}
+function reviewValue(f,v){ return f.type==='date'?fmtDate(v):f.type==='multichip'?v.split(',').join(', '):v; }
+// One step's rows; returns how many are missing
+function reviewStep(c,si){
+  const saved=si===SCHED_STEP?schedStepData(c):(c.stepData?.[si]||{});
+  const hasProducts=flattenProducts(finalProducts(c)).length>0;
+  const rows=[]; let missing=0, filled=0;
+  if(si===SELECTION_STEP){
+    const rooms=roomsSummary(saved), prods=flattenProducts(finalProducts(c));
+    if(saved.flooring_type){ filled++; rows.push(reviewRow('Flooring and rooms',rooms)); } else { missing++; rows.push(reviewRow('Flooring and rooms','',true)); }
+    if(prods.length) rows.push(reviewRow('Products',prods.map(r=>`${r.type}: ${productText(r)}${r.stock?' (in stock)':''}`).join('\n')));
+    const need=typesOf(saved).filter(t=>PRODUCT_TYPES.includes(t)&&!prods.some(r=>r.type===t&&isCompleteRow(r)));
+    need.forEach(t=>{ missing++; rows.push(reviewRow(`${t} product`,'',true)); });
+  }
+  STEPS[si].fields.forEach(f=>{
+    const v=saved[f.key];
+    if(f.showIf && saved[f.showIf.field]!==f.showIf.value) return;
+    if(f.type==='textarea'){ if(v){ filled++; rows.push(reviewRow(f.label,v)); } return; } // notes are optional
+    if(REVIEW_SKIP_TYPES.includes(f.type)||f.hiddenField||(f.onlyWithoutProducts&&hasProducts)) return;
+    if(v){ filled++; rows.push(reviewRow(f.label,reviewValue(f,v))); } else { missing++; rows.push(reviewRow(f.label,'',true)); }
+  });
+  if(!filled) return {html:reviewRow('Nothing entered in this step','',true).replace('>Missing<','>Skipped<'), missing:1};
+  return {html:rows.join(''), missing};
+}
+function copyReviewHtml(c,si){
+  const allStock=skipOrderSteps(c,ORDER_STEP)!==ORDER_STEP;
+  let total=0;
+  const jobRows=[['Customer',c.name],['Phone',c.phone],['Email',c.email],['Company',c.company],['Job Address',c.address],['Date',fmtDate(c.stepData?.[0]?.job_date)],['Lock Box',c.lockbox==='Yes'?`Yes${c.lockboxCode?': '+c.lockboxCode:''}`:c.lockbox],['Contractor',[c.contractor,c.contractorPhone].filter(Boolean).join(' · ')],['Salesman',c.salesman]]
+    .filter(([,v])=>v).map(([l,v])=>reviewRow(l,v)).join('');
+  const section=(i,body)=>`<div class="rv-step"><div class="rv-title"><span>Step ${i+1}: ${esc(STEPS[i].title)}</span><button type="button" class="multichip-change-btn" onclick="switchStep(${i})">✏️ Edit</button></div>${body}</div>`;
+  let sections=section(0,jobRows);
+  for(let i=1;i<si;i++){
+    if(allStock&&(i===ORDER_STEP||i===RECEIVED_STEP)){ sections+=section(i,'<div class="rv-note">📦 All products are in stock. No order needed.</div>'); continue; }
+    const {html,missing}=reviewStep(c,i); total+=missing; sections+=section(i,html);
+  }
+  return `<div class="step-form-inner"><h3>Review Copied Job</h3>
+    <div class="sdesc">Copied from ${esc(c.stepData?.[0]?.copied_from||'a past job')}. Check everything before continuing.</div>
+    <div class="rv-head${total?'':' rv-ok'}">${total?`⚠ ${total} ${total===1?'thing is':'things are'} missing below`:'✓ Nothing is missing'}</div>
+    ${sections}
+    <div class="step-actions"><button class="btn btn-primary" onclick="confirmCopyReview()">✓ Looks good, go to Step ${si+1}: ${esc(STEPS[si].title)}</button></div></div>`;
+}
+async function confirmCopyReview(){
+  const i=_customers.findIndex(x=>x.id===currentId); if(i===-1) return;
+  const s0={..._customers[i].stepData[0]}; delete s0.review_pending;
+  const c={..._customers[i], stepData:{..._customers[i].stepData, 0:s0}};
+  await upsertCustomer(c);
+  renderStep(c,currentStep);
+}
+function renderCopyPanel(){
+  const panel=document.getElementById('copyPanel');
+  const rows=_copySource?COPY_STEPS.map(si=>{
+    const data=stepCopyData(_copySource,si); if(!data) return '';
+    return `<label class="copy-step"><input type="checkbox" data-si="${si}"${si<=COPY_DEFAULT_THROUGH?' checked':''} onchange="updateCopyStart()">Step ${si+1}: ${esc(STEPS[si].title)}<div class="copy-lines">${esc(copyLines(_copySource,si,data))}</div></label>`;
+  }).join(''):'';
+  panel.style.display=_copySource?'block':'none';
+  panel.innerHTML=_copySource?`<div class="copy-head"><span>Same building, different unit?</span><button type="button" class="btn btn-secondary btn-sm" onclick="clearCopySource()">Don't copy</button></div>
+    <div class="copy-sub">Copy from past job: ${esc(_copySource.address)}. Enter the new unit above. Dates, order # and deposit are not copied.</div>${rows||'<div class="copy-sub">This past job has nothing saved to copy.</div>'}<label class="copy-start">Start this job at<select id="copyStartStep" onchange="onCopyStartChange()"></select></label>`:'';
+  if(_copySource) updateCopyStart();
 }
 function openNewModal(){
   ['newName','newPhone','newEmail','newAddress','newAddress2','newCompany','newContractor','newContractorPhone','newLockboxCode'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
@@ -2010,13 +2209,16 @@ function openNewModal(){
   document.getElementById('newJobDate').value=localDateStr(new Date());
   document.getElementById('lockboxCodeGroup').style.display='none';
   _selectedExistingCustKey=null;
+  clearCopySource();
   setActiveToggle('new');
   ['newNameSuggest','newAddressSuggest'].forEach(id=>{const box=document.getElementById(id);box.classList.remove('open');box.innerHTML='';});
   document.getElementById('newModal').classList.add('open');
   setTimeout(()=>document.getElementById('newName').focus(),100);
 }
 function closeNewModal(){ document.getElementById('newModal').classList.remove('open'); }
+let _creatingJob=false;
 async function createCustomer(){
+  if(_creatingJob)return; // a second click while saving would create a duplicate job
   const name=document.getElementById('newName').value.trim();
   const phone=document.getElementById('newPhone').value.trim();
   const address=document.getElementById('newAddress').value.trim();
@@ -2028,8 +2230,19 @@ async function createCustomer(){
   if(err.length){alert('Please fill in:\n• '+err.join('\n• '));return;}
   const now=new Date().toISOString();
   const fullAddress=address2?`${address}, ${address2}`:address;
-  const c={id:Date.now().toString(),name,phone,email:document.getElementById('newEmail').value.trim(),company:document.getElementById('newCompany').value.trim(),address:fullAddress,lockbox,lockboxCode:lockbox==='Yes'?document.getElementById('newLockboxCode').value.trim():'',contractor:document.getElementById('newContractor').value.trim(),contractorPhone:document.getElementById('newContractorPhone').value.trim(),salesman,step:0,stepData:{0:{job_date:document.getElementById('newJobDate').value||localDateStr(new Date())}},created:now,lastStepChange:now};
-  await upsertCustomer(c);
+  const c={id:Date.now().toString(),name,phone,email:document.getElementById('newEmail').value.trim(),company:document.getElementById('newCompany').value.trim(),address:fullAddress,lockbox,lockboxCode:lockbox==='Yes'?document.getElementById('newLockboxCode').value.trim():'',contractor:document.getElementById('newContractor').value.trim(),contractorPhone:document.getElementById('newContractorPhone').value.trim(),salesman,step:1,stepData:{0:{job_date:document.getElementById('newJobDate').value||localDateStr(new Date())}},created:now,lastStepChange:now};
+  if(_copySource){
+    applyCopy(c,pickedCopySteps(),pickedCopyStart());
+    if(c.step>1) Object.assign(c.stepData[0],{review_pending:true,copied_from:_copySource.address});
+  }
+  _creatingJob=true;
+  const saved=await upsertCustomer(c);
+  _creatingJob=false;
+  if(!saved){
+    _customers=_customers.filter(x=>x.id!==c.id);
+    alert('This job did not save. Please check your internet connection and press Create Job again.');
+    return;
+  }
   closeNewModal(); showToast(`"${name}" added!`);
   refreshAll(); openCustomer(c.id);
 }
@@ -2090,7 +2303,7 @@ function renderStepsNav(c){
     </button>`;
   }).join('');
 }
-function switchStep(i){ currentStep=i; const c=customers().find(x=>x.id===currentId); renderStepsNav(c); renderStep(c,i); }
+function switchStep(i){ if(i===0){ openEditModal(); return; } currentStep=i; const c=customers().find(x=>x.id===currentId); renderStepsNav(c); renderStep(c,i); }
 
 function toggleChip(btn, inputId) {
   if(btn.closest('.multichip-locked')) return; // locked — ignore clicks
@@ -2197,8 +2410,8 @@ function renderFieldHtml(f, val, vals, si) {
     const p2=parseJSON(sd.flooring_products,{}), ov=parseJSON(val,{});
     const blocks=typesOf(sd).map(t=>{
       const rows=((ov[t]&&ov[t].some(hasAny))?ov[t]:(p2[t]||[])).filter(hasAny);
-      if(rows.length&&rows.every(isCompleteRow)) return `<div class="sel-block"><div class="sel-type">${esc(t)}</div>${rows.map(r=>`<div class="sel-line">${esc(productText(r))}</div>`).join('')}</div>`;
-      return `<div class="sel-block sel-missing" data-type="${esc(t)}"><div class="sel-type">${esc(t)} <span class="sel-need">— needs manufacturer, style and color</span></div>${productRowsHtml(rows)}</div>`;
+      if(rows.length&&rows.every(isCompleteRow)) return `<div class="sel-block"><div class="sel-type">${esc(t)}</div>${rows.map(r=>`<div class="sel-line">${esc(productText(r))}${r.stock?' 📦 In stock':''}</div>`).join('')}</div>`;
+      return `<div class="sel-block sel-missing" data-type="${esc(t)}"><div class="sel-type">${esc(t)} <span class="sel-need">— needs manufacturer, style and color</span></div>${productRowsHtml(rows,t)}</div>`;
     }).join('');
     inner=`<label>${f.label}</label><input type="hidden" id="f_${f.key}" value="${esc(val)}"><div class="sel-wrap" data-store="f_${f.key}">${blocks||'<div class="sel-line">No flooring type picked in Customer Selection (Step 2).</div>'}</div>`;
   } else if(f.type==='final_products'){
@@ -2211,8 +2424,10 @@ function renderFieldHtml(f, val, vals, si) {
       <div class="multichip-group" style="margin-bottom:8px">${chips}</div><div id="finalBox" data-store="f_${f.key}">${finalTypeBlocks(map)}</div>`;
   } else if(f.type==='supplier_lines'){
     // One line per product from Customer Selection, starting with its manufacturer
-    const prods=flattenProducts(finalProducts(vals._customer));
-    if(!prods.length){
+    const all=flattenProducts(finalProducts(vals._customer)), prods=all.filter(r=>!r.stock);
+    if(all.length&&!prods.length){
+      inner=`<label>Products to Order</label><div class="info-box">📦 All products are in stock. No order needed.</div>`;
+    } else if(!prods.length){
       inner=`<label>${f.label}</label><input type="text" id="f_${f.key}" value="${esc(val)}" placeholder="${f.placeholder||''}">`;
     } else {
       let saved=[]; try{ saved=JSON.parse(vals.supplier_lines||'[]')||[]; }catch(e){}
@@ -2220,7 +2435,7 @@ function renderFieldHtml(f, val, vals, si) {
       inner=`<label>Products to Order</label><input type="hidden" id="f_supplier_lines" value="${esc(JSON.stringify(lines))}">
         <input type="hidden" id="f_${f.key}" value="${esc([...new Set(lines.map(l=>l.supplier).filter(Boolean))].join(', '))}">
         <div class="sup-line sup-head"><div>Product</div><div>Supplier / Vendor</div><div>Order / PO #</div></div>
-        ${lines.map((l,i)=>`<div class="sup-line"><div class="sup-product">${esc(l.product)}</div><input type="text" data-i="${i}" data-k="supplier" value="${esc(l.supplier)}" placeholder="Supplier" oninput="onSupplierInput(this)"><input type="text" data-i="${i}" data-k="po" value="${esc(l.po)}" placeholder="PO #" oninput="onSupplierInput(this)"></div>`).join('')}`;
+        ${lines.map((l,i)=>`<div class="sup-line"><div class="sup-product">${esc(l.product)}</div><input type="text" data-i="${i}" data-k="supplier" value="${esc(l.supplier)}" placeholder="Supplier" oninput="onSupplierInput(this)"><input type="text" data-i="${i}" data-k="po" value="${esc(l.po)}" placeholder="PO #" oninput="onSupplierInput(this)"></div>`).join('')}${stockNote(all)}`;
     }
   } else if(f.type==='photos'){
     inner=`<label>${f.label}</label><input type="hidden" id="f_${f.key}" value="${esc(val||'[]')}">
@@ -2229,12 +2444,13 @@ function renderFieldHtml(f, val, vals, si) {
       <span class="photo-status" id="photoStatus_${f.key}"></span>`;
   } else if(f.type==='received_lines'){
     // Each product from Order Placed with an "arrived?" Yes / No
-    const prods=flattenProducts(finalProducts(vals._customer));
-    if(!prods.length) return {html:'', compact:false};
+    const all=flattenProducts(finalProducts(vals._customer)), prods=all.filter(r=>!r.stock);
+    if(!all.length) return {html:'', compact:false};
     const saved=parseJSON(val,[]);
     const lines=prods.map(r=>{ const product=`${r.type}: ${productText(r)}`; return {product, arrived:(saved.find(x=>x.product===product)||{}).arrived||''}; });
-    inner=`<label>${f.label}</label><input type="hidden" id="f_${f.key}" value="${esc(JSON.stringify(lines))}">
-      ${lines.map((l,i)=>`<div class="recv-line"><div class="sup-product">${esc(l.product)}</div><div class="multichip-group">${['Yes','No'].map(o=>`<button type="button" class="multichip-btn${l.arrived===o?' selected':''}" onclick="pickArrived(this,${i},'${o}')">${o==='Yes'?'✓ Arrived':'✕ Not yet'}</button>`).join('')}</div></div>`).join('')}`;
+    inner=prods.length?`<label>${f.label}</label><input type="hidden" id="f_${f.key}" value="${esc(JSON.stringify(lines))}">
+      ${lines.map((l,i)=>`<div class="recv-line"><div class="sup-product">${esc(l.product)}</div><div class="multichip-group">${['Yes','No'].map(o=>`<button type="button" class="multichip-btn${l.arrived===o?' selected':''}" onclick="pickArrived(this,${i},'${o}')">${o==='Yes'?'✓ Arrived':'✕ Not yet'}</button>`).join('')}</div></div>`).join('')}${stockNote(all)}`
+      :`<label>${f.label}</label><div class="info-box">📦 All products are in stock. Nothing to receive.</div>`;
   } else if(f.type==='info'){
     inner=`<label>${f.label}</label><div class="info-box">${esc(val)}</div>`;
   } else if(f.autoDate && (f.alwaysHidden || !val)){
@@ -2258,11 +2474,10 @@ function renderFieldHtml(f, val, vals, si) {
 }
 
 function renderStep(c,si){
+  if(si===c.step&&c.stepData?.[0]?.review_pending){ document.getElementById('stepContent').innerHTML=copyReviewHtml(c,si); return; }
   const step=STEPS[si]; const saved=si===SCHED_STEP?schedStepData(c):(c.stepData?.[si]||{});
   const vals={...saved};
   step.fields.forEach(f=>{ if(f.customerField) vals[f.key]=c[f.key]||''; });
-  // Older jobs have no job_date: fall back to the old step-2 inquiry date, then the created date
-  if(si===0 && !vals.job_date) vals.job_date=c.stepData?.[1]?.inquiry_date||localDateStr(new Date(c.created));
   step.fields.forEach(f=>{ if(f.compute) vals[f.key]=f.compute(c); });
   // Install date starts as the Target Installation Date from Estimate Approved
   if(si===SCHED_STEP && !vals.confirmed_install_date) vals.confirmed_install_date=c.stepData?.[APPROVAL_STEP]?.install_date_target||'';
@@ -2352,7 +2567,7 @@ function renderFloorRoomsBox(){
     const chips=f.roomOptions.map(r=>`<button type="button" class="multichip-btn${sel.includes(r)?' selected':''}" data-value="${esc(r)}" onclick="toggleFloorRoom(this)">${esc(r)}</button>`).join('');
     let prodHtml='';
     if(PRODUCT_TYPES.includes(t)){
-      prodHtml=`<div class="floor-rooms-q" style="margin-top:12px">Products</div>`+productRowsHtml(products[t]);
+      prodHtml=`<div class="floor-rooms-q" style="margin-top:12px">Products</div>`+productRowsHtml(products[t],t);
     }
     return `<div class="floor-rooms" data-type="${esc(t)}"><div class="floor-rooms-q">Which rooms get <b>${esc(t)}</b>?</div><div class="multichip-group">${chips}</div>${prodHtml}</div>`;
   }).join('');
@@ -2368,24 +2583,49 @@ function productText(r){ return [r.manufacturer,r.style,r.color].filter(Boolean)
 
 // Product rows editor. The nearest [data-store] names the hidden input holding {type:[rows]};
 // each [data-type] block inside it holds that type's rows.
-function productRowHtml(r, removable){
-  return `<div class="prod-row">${PRODUCT_KEYS.map(k=>`<input type="text" placeholder="${k[0].toUpperCase()+k.slice(1)}" data-k="${k}" value="${esc(r[k]||'')}" oninput="syncProducts(this)">`).join('')}${removable?`<button type="button" class="prod-remove" title="Remove this product" onclick="removeProductRow(this)">✕</button>`:'<span></span>'}</div>`;
+// Stock products of this type; picking one fills the row and marks it as not needing an order
+function stockPickHtml(r, type){
+  const items=_stockProducts.filter(s=>s.type===type);
+  if(!items.length&&!r.stock) return '';
+  const cur=r.stock?items.find(s=>PRODUCT_KEYS.every(k=>s[k]===r[k])):null;
+  const gone=r.stock&&!cur?`<option value="saved" selected>${esc(productText(r))}</option>`:'';
+  return `<select class="stock-pick" onchange="pickStock(this)"><option value="">📦 Pick a stock product…</option>${gone}${items.map(s=>`<option value="${esc(s.id)}"${cur&&cur.id===s.id?' selected':''}>${esc(s.name)}</option>`).join('')}</select>`;
 }
-function productRowsHtml(rows){
+function pickStock(sel){
+  const s=_stockProducts.find(x=>x.id===sel.value);
+  if(sel.value!=='saved') sel.closest('.prod-row').querySelectorAll('input[data-k]').forEach(i=>{ i.value=s?s[i.dataset.k]:''; });
+  syncProducts(sel);
+}
+function stockNote(prods){
+  const stock=prods.filter(r=>r.stock);
+  return stock.length?`<div class="info-box" style="margin-top:8px">📦 In stock, no order needed:\n${stock.map(r=>esc(`${r.type}: ${productText(r)}`)).join('\n')}</div>`:'';
+}
+// Jobs where every product is in stock skip Order Placed and Order Received
+function skipOrderSteps(c,s){
+  if(s<ORDER_STEP||s>RECEIVED_STEP) return s;
+  const all=flattenProducts(finalProducts(c));
+  return all.length&&all.every(r=>r.stock)?RECEIVED_STEP+1:s;
+}
+function productRowHtml(r, removable, type){
+  return `<div class="prod-row">${stockPickHtml(r,type)}${PRODUCT_KEYS.map(k=>`<input type="text" placeholder="${k[0].toUpperCase()+k.slice(1)}" data-k="${k}" value="${esc(r[k]||'')}" oninput="syncProducts(this)">`).join('')}${removable?`<button type="button" class="prod-remove" title="Remove this product" onclick="removeProductRow(this)">✕</button>`:'<span></span>'}</div>`;
+}
+function productRowsHtml(rows, type){
   rows=rows&&rows.length?rows:[{}];
-  return rows.map((r,i)=>productRowHtml(r,i>0)).join('')+`<button type="button" class="multichip-change-btn" style="margin-top:4px" onclick="addProductRow(this)">+ Add another product</button>`;
+  return rows.map((r,i)=>productRowHtml(r,i>0,type)).join('')+`<button type="button" class="multichip-change-btn" style="margin-top:4px" onclick="addProductRow(this)">+ Add another product</button>`;
 }
 function syncProducts(el){
   const store=el.closest('[data-store]'); const hid=document.getElementById(store.dataset.store);
+  // Typing over a stock product makes it a regular product
+  if(el.matches('input[data-k]')){ const pick=el.closest('.prod-row').querySelector('.stock-pick'); if(pick) pick.value=''; }
   const map=parseJSON(hid.value,{});
   store.querySelectorAll('[data-type]').forEach(b=>{
     const rows=[...b.querySelectorAll('.prod-row')];
     if(!rows.length) return;
-    map[b.dataset.type]=rows.map(row=>{ const r={}; row.querySelectorAll('input[data-k]').forEach(i=>{ if(i.value.trim()) r[i.dataset.k]=i.value.trim(); }); return r; });
+    map[b.dataset.type]=rows.map(row=>{ const r={}; row.querySelectorAll('input[data-k]').forEach(i=>{ if(i.value.trim()) r[i.dataset.k]=i.value.trim(); }); if(row.querySelector('.stock-pick')?.value) r.stock=true; return r; });
   });
   hid.value=JSON.stringify(map);
 }
-function addProductRow(btn){ btn.insertAdjacentHTML('beforebegin', productRowHtml({}, true)); syncProducts(btn); }
+function addProductRow(btn){ btn.insertAdjacentHTML('beforebegin', productRowHtml({}, true, btn.closest('[data-type]').dataset.type)); syncProducts(btn); }
 function removeProductRow(btn){ const block=btn.closest('[data-type]'); btn.closest('.prod-row').remove(); syncProducts(block); }
 
 // Original selection: Customer Selection products, with anything completed in step 6 taking over for that type
@@ -2408,7 +2648,7 @@ function flattenProducts(map){
   return out;
 }
 function finalTypeBlocks(map){
-  return Object.keys(map).map(t=>`<div class="floor-rooms" data-type="${esc(t)}"><div class="floor-rooms-q"><b>${esc(t)}</b> — manufacturer, style and color</div>${productRowsHtml(map[t])}</div>`).join('');
+  return Object.keys(map).map(t=>`<div class="floor-rooms" data-type="${esc(t)}"><div class="floor-rooms-q"><b>${esc(t)}</b> — manufacturer, style and color</div>${productRowsHtml(map[t],t)}</div>`).join('');
 }
 function toggleFinalType(btn){
   const hid=document.getElementById('f_final_products'); const map=parseJSON(hid.value,{}); const t=btn.dataset.value;
@@ -2652,7 +2892,7 @@ function jobProductRows(c){
     (prods.length?prods:[{}]).forEach(p=>{
       const product=productText(p), key=`${t}: ${product}`;
       const ord=orderLines.find(x=>x.product===key)||{}, rec=recvLines.find(x=>x.product===key)||{};
-      rows.push({type:t, product, rooms:r, supplier:ord.supplier||'', po:ord.po||'', arrived:rec.arrived==='Yes'?'✓ Yes':rec.arrived==='No'?'Not yet':''});
+      rows.push({type:t, product, rooms:r, supplier:p.stock?'In stock':ord.supplier||'', po:ord.po||'', arrived:p.stock?'✓ In stock':rec.arrived==='Yes'?'✓ Yes':rec.arrived==='No'?'Not yet':''});
     });
   });
   return rows;
@@ -2765,10 +3005,11 @@ async function saveAndAdvance(){
   if(currentStep===SCHED_STEP) setSchedStepData(c, stepData); else c.stepData[currentStep]={...c.stepData[currentStep], ...stepData};
   Object.assign(c, customerProps);
   if(isLost(c)){ await upsertCustomer(c); openCustomer(c.id); showToast('Estimate not approved — job moved to the Archive'); return; }
-  if(currentStep<STEPS.length-1){c.step=currentStep+1; c.lastStepChange=new Date().toISOString(); currentStep++;}
+  const prevStep=currentStep;
+  if(currentStep<STEPS.length-1){c.step=skipOrderSteps(c,currentStep+1); c.lastStepChange=new Date().toISOString(); currentStep=c.step;}
   await upsertCustomer(c);
   renderStepsNav(c); renderStep(c,currentStep);
-  showToast(`Moved to Step ${currentStep+1}: ${STEPS[currentStep].title}`);
+  showToast(`Moved to Step ${currentStep+1}: ${STEPS[currentStep].title}${currentStep>prevStep+1?' (in stock, no order needed)':''}`);
 }
 async function deleteCurrentCustomer(){
   const c=_customers.find(x=>x.id===currentId); if(!c)return;
@@ -2784,6 +3025,8 @@ function openEditModal() {
   document.getElementById('editPhone').value = c.phone||'';
   document.getElementById('editEmail').value = c.email||'';
   document.getElementById('editCompany').value = c.company||'';
+  // Older jobs have no job_date: fall back to the old step-2 inquiry date, then the created date
+  document.getElementById('editJobDate').value = c.stepData?.[0]?.job_date||c.stepData?.[1]?.inquiry_date||localDateStr(new Date(c.created));
   document.getElementById('editAddress').value = c.address||'';
   document.getElementById('editLockbox').value = c.lockbox||'';
   document.getElementById('editLockboxCode').value = c.lockboxCode||'';
@@ -2817,6 +3060,7 @@ async function saveCustomerInfo() {
   c.phone = phone;
   c.email = document.getElementById('editEmail').value.trim();
   c.company = document.getElementById('editCompany').value.trim();
+  c.stepData = {...c.stepData, 0:{...c.stepData?.[0], job_date:document.getElementById('editJobDate').value}};
   c.address = address;
   c.lockbox = lockbox;
   c.lockboxCode = lockbox==='Yes' ? document.getElementById('editLockboxCode').value.trim() : '';
@@ -3738,6 +3982,37 @@ function openSettings() {
   hideAllViews();
   document.getElementById('settingsView').style.display = 'flex';
   renderSettingsUsers();
+  renderStockSettings();
+}
+
+function renderStockSettings() {
+  const types = STEPS[SELECTION_STEP].fields.find(f=>f.type==='flooring_rooms').options;
+  document.getElementById('stockType').innerHTML = types.map(t=>`<option value="${esc(t)}">${esc(t)}</option>`).join('');
+  document.getElementById('stockList').innerHTML = _stockProducts.length
+    ? _stockProducts.map(s=>`<div class="user-settings-card">
+        <div class="us-info"><div class="us-name">${esc(s.name)}</div><div class="us-status" style="color:#777">${esc(s.type)} · ${esc(productText(s))}</div></div>
+        <button class="btn btn-danger btn-sm" onclick="removeStockProduct('${esc(s.id)}')">Remove</button>
+      </div>`).join('')
+    : '<div style="color:#aaa;font-size:0.85rem">No stock products yet.</div>';
+}
+async function addStockProduct() {
+  const val = id => document.getElementById(id).value.trim();
+  const s = { id: Date.now().toString(), name: val('stockName'), type: val('stockType'), manufacturer: val('stockManufacturer'), style: val('stockStyle'), color: val('stockColor') };
+  if(!s.name||!s.manufacturer||!s.style||!s.color) { alert('Please fill in name, manufacturer, style and color.'); return; }
+  const { error } = await db.from('stock_products').insert(s);
+  if(error) { console.error('Supabase stock product error:', error); alert('This stock product did not save. Please try again.'); return; }
+  _stockProducts = [..._stockProducts, s].sort((a,b)=>a.name.localeCompare(b.name));
+  ['stockName','stockManufacturer','stockStyle','stockColor'].forEach(id=>document.getElementById(id).value='');
+  renderStockSettings();
+  showToast(`"${s.name}" added to stock`);
+}
+async function removeStockProduct(id) {
+  const s = _stockProducts.find(x=>x.id===id); if(!s) return;
+  if(!confirm(`Remove "${s.name}" from stock products?`)) return;
+  const { error } = await db.from('stock_products').delete().eq('id', id);
+  if(error) { console.error('Supabase stock product error:', error); alert('This stock product was not removed. Please try again.'); return; }
+  _stockProducts = _stockProducts.filter(x=>x.id!==id);
+  renderStockSettings();
 }
 
 async function renderSettingsUsers() {
