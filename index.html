@@ -2104,7 +2104,7 @@ function selectExistingAddress(i){
   const job=jobs[0];
   const {base}=splitUnit(job.address);
   document.getElementById('newAddress').value=base;
-  document.getElementById('newAddress2').value='';
+  document.getElementById('newAddress2').value=_newJobKind==='repair'?(splitUnit(job.address).unit||''):''; // a repair goes back to that exact unit
   document.getElementById('newLockbox').value=job.lockbox||'';
   toggleLockboxCode();
   if(job.lockbox==='Yes') document.getElementById('newLockboxCode').value=job.lockboxCode||'';
@@ -2241,6 +2241,7 @@ async function confirmCopyReview(){
   renderStep(c,currentStep);
 }
 function renderCopyPanel(){
+  if(_newJobKind==='repair'){ document.getElementById('copyPanel').innerHTML=''; return; }
   const panel=document.getElementById('copyPanel');
   const rows=_copySource?COPY_STEPS.map(si=>{
     const data=stepCopyData(_copySource,si); if(!data) return '';
@@ -2252,13 +2253,17 @@ function renderCopyPanel(){
     ${_copyJobs.length>1?`<label class="copy-start" style="margin:0 0 10px">Copy from past job<select onchange="onCopyFromChange(this)">${_copyJobs.map((j,i)=>`<option value="${i}"${j===_copySource?' selected':''}>${esc(j.address)} (${esc(fmtDate(localDateStr(new Date(j.created))))})</option>`).join('')}</select></label>`:''}${rows||'<div class="copy-sub">This past job has nothing saved to copy.</div>'}<label class="copy-start">Start this job at<select id="copyStartStep" onchange="onCopyStartChange()"></select></label>`:'';
   if(_copySource) updateCopyStart();
 }
-let _newJobInstallDate=null;
+let _newJobInstallDate=null, _newJobKind=null;
 // installDate: the day clicked on the calendar, so the new job lands on it
-function openNewModal(installDate){
+// kind: 'pending' or 'repair' when added from those calendar panels
+function openNewModal(installDate, kind){
   _newJobInstallDate=installDate||null;
+  _newJobKind=kind||null;
   const fromCal=document.getElementById('newFromCalendar');
-  fromCal.style.display=_newJobInstallDate?'block':'none';
+  fromCal.style.display=(_newJobInstallDate||_newJobKind)?'block':'none';
   if(_newJobInstallDate) fromCal.textContent='📅 This job will go on the calendar for '+new Date(_newJobInstallDate+'T12:00:00').toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'});
+  if(_newJobKind==='pending') fromCal.textContent='⏳ This job will go in Pending Jobs until it has a day.';
+  if(_newJobKind==='repair') fromCal.textContent='🔧 Repair: look up the old job by customer, then pick its address. If it is not from an old job, click New Customer.';
   ['newName','newPhone','newEmail','newAddress','newAddress2','newCompany','newContractor','newContractorPhone','newLockboxCode'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
   document.getElementById('newSalesman').value = activeProfile&&activeProfile.name!=='Admin'?activeProfile.name:'';
   document.getElementById('newLockbox').value='';
@@ -2268,6 +2273,7 @@ function openNewModal(installDate){
   clearCopySource();
   setActiveToggle('new');
   ['newNameSuggest','newAddressSuggest'].forEach(id=>{const box=document.getElementById(id);box.classList.remove('open');box.innerHTML='';});
+  if(_newJobKind==='repair') setNewJobCustType('existing');
   document.getElementById('newModal').classList.add('open');
   setTimeout(()=>document.getElementById('newName').focus(),100);
 }
@@ -2287,12 +2293,16 @@ async function createCustomer(){
   const now=new Date().toISOString();
   const fullAddress=address2?`${address}, ${address2}`:address;
   const c={id:Date.now().toString(),name,phone,email:document.getElementById('newEmail').value.trim(),company:document.getElementById('newCompany').value.trim(),address:fullAddress,lockbox,lockboxCode:lockbox==='Yes'?document.getElementById('newLockboxCode').value.trim():'',contractor:document.getElementById('newContractor').value.trim(),contractorPhone:document.getElementById('newContractorPhone').value.trim(),salesman,step:1,stepData:{0:{job_date:document.getElementById('newJobDate').value||localDateStr(new Date())}},created:now,lastStepChange:now};
-  if(_copySource){
+  const repairOf=_newJobKind==='repair'?_copySource:null;
+  if(_copySource&&_newJobKind!=='repair'){
     applyCopy(c,pickedCopySteps(),pickedCopyStart());
     if(c.step>1) Object.assign(c.stepData[0],{review_pending:true,copied_from:_copySource.address});
   }
   const fromCalendar=_newJobInstallDate;
+  const kind=_newJobKind;
   if(fromCalendar) c.stepData[SCHED_STEP]={...c.stepData[SCHED_STEP],confirmed_install_date:fromCalendar};
+  if(kind) c.stepData[SCHED_STEP]={...c.stepData[SCHED_STEP],calendar_type:kind};
+  if(repairOf) c.stepData[SELECTION_STEP]={...c.stepData[SELECTION_STEP],project_overview:'Repair from old job: '+repairOf.address+' ('+repairOf.name+')'};
   _creatingJob=true;
   const saved=await upsertCustomer(c);
   _creatingJob=false;
@@ -2302,7 +2312,7 @@ async function createCustomer(){
     return;
   }
   closeNewModal(); showToast(`"${name}" added!`);
-  if(fromCalendar && !_schedSidePanel){ document.getElementById('scheduleView').style.display='none'; document.getElementById('hdrSchedBtn').classList.remove('active'); }
+  if((fromCalendar||kind) && !_schedSidePanel){ document.getElementById('scheduleView').style.display='none'; document.getElementById('hdrSchedBtn').classList.remove('active'); }
   refreshAll(); openCustomer(c.id);
 }
 
@@ -4293,13 +4303,20 @@ const SELECTION_STEP = STEPS.findIndex(s => s.title === 'Customer Selection');
 
 // ── CRM jobs that have a confirmed install date ──
 function getCrmCalendarJobs() {
-  const jobs = [];
-  (_customers || []).forEach(c => {
-    const sd10 = schedStepData(c); // Schedule Installation step
-    if(sd10.confirmed_install_date) {
+  return (_customers || []).filter(c => schedStepData(c).confirmed_install_date).map(crmCalendarJob);
+}
+// CRM jobs waiting in the Pending Jobs or Repairs panel, with no day yet
+function getCrmPanelJobs(kind) {
+  return (_customers || []).filter(c => {
+    const sd10 = schedStepData(c);
+    return !sd10.confirmed_install_date && sd10.calendar_type === kind && !isArchived(c);
+  }).map(crmCalendarJob);
+}
+function crmCalendarJob(c) {
+      const sd10 = schedStepData(c); // Schedule Installation step
       const sel = c.stepData?.[SELECTION_STEP] || {};
       const flooring = (sel.flooring_type || '').split(',').map(v => v.trim()).filter(Boolean).join(', ');
-      jobs.push({
+      return {
         id: 'crm_' + c.id,
         address: c.address || c.name,
         notes: c.name + (sd10.crew_assigned ? ' · ' + sd10.crew_assigned : '') + (sd10.schedule_notes ? ' · ' + sd10.schedule_notes : ''),
@@ -4310,11 +4327,9 @@ function getCrmCalendarJobs() {
         customer: c.name,
         flooring,
         description: (sel.project_overview || '').trim(),
+        calendarType: sd10.calendar_type || '',
         type: 'crm'
-      });
-    }
-  });
-  return jobs;
+      };
 }
 
 // ── Toggle between week / month view ──
@@ -4508,8 +4523,8 @@ function renderWeekView() {
     </div>`;
   }).join('');
 
-  const pending = _scheduleEntries.filter(e => e.type === 'pending').sort((a,b) => (a.sort_order||0) - (b.sort_order||0));
-  const repairs = _scheduleEntries.filter(e => e.type === 'repair').sort((a,b) => (a.sort_order||0) - (b.sort_order||0));
+  const pending = [..._scheduleEntries.filter(e => e.type === 'pending').sort((a,b) => (a.sort_order||0) - (b.sort_order||0)), ...getCrmPanelJobs('pending')];
+  const repairs = [..._scheduleEntries.filter(e => e.type === 'repair').sort((a,b) => (a.sort_order||0) - (b.sort_order||0)), ...getCrmPanelJobs('repair')];
 
   document.getElementById('schedBottom').innerHTML = `
     <div class="sched-panel">
@@ -4520,7 +4535,7 @@ function renderWeekView() {
       <div class="sched-panel-jobs">
         ${pending.length ? pending.map(e => schedJobCard(e)).join('') : '<div class="sched-empty-day">No pending jobs</div>'}
       </div>
-      <button class="sched-panel-add" onclick="openSchedModal('pending',null)">+ Add Pending Job</button>
+      <button class="sched-panel-add" onclick="openNewModal(null,'pending')">+ Add Pending Job</button>
     </div>
     <div class="sched-panel">
       <div class="sched-panel-hdr">
@@ -4530,7 +4545,7 @@ function renderWeekView() {
       <div class="sched-panel-jobs">
         ${repairs.length ? repairs.map(e => schedJobCard(e)).join('') : '<div class="sched-empty-day">No repairs</div>'}
       </div>
-      <button class="sched-panel-add" onclick="openSchedModal('repair',null)">+ Add Repair</button>
+      <button class="sched-panel-add" onclick="openNewModal(null,'repair')">+ Add Repair</button>
     </div>`;
 }
 
@@ -4598,13 +4613,14 @@ function schedJobDetailsHtml(e) {
   const parts = [];
   if(e.flooring) parts.push(`<b>${esc(e.flooring)}</b>`);
   if(e.description) parts.push(esc(e.description));
+  const rep = e.calendarType === 'repair' ? '<div class="sched-job-lockbox" style="color:#c0392b">🔧 Repair</div>' : '';
   const lock = e.lockbox ? `<div class="sched-job-lockbox">🔒 Lock Box: ${esc(e.lockbox)}</div>` : '';
-  return lock + (parts.length ? `<div class="sched-job-details">${parts.join(' — ')}</div>` : '');
+  return rep + lock + (parts.length ? `<div class="sched-job-details">${parts.join(' — ')}</div>` : '');
 }
 
 // ── JOB CARD ──
 function schedJobCard(e) {
-  const isRepair = e.type === 'repair';
+  const isRepair = e.type === 'repair' || e.calendarType === 'repair';
   const cls = 'sched-job' + (isRepair ? ' repair-job' : '');
   const borderColor = isRepair ? '#c0392b' : '#4d7b79';
 
@@ -4689,7 +4705,7 @@ async function moveSchedJob(id, ds) {
     const from = schedStepData(_customers[ci]).confirmed_install_date;
     if(from === ds) return;
     const c = { ..._customers[ci], stepData: { ..._customers[ci].stepData } };
-    setSchedStepData(c, { confirmed_install_date: ds });
+    setSchedStepData(c, { confirmed_install_date: ds, calendar_type: schedStepData(c).calendar_type === 'pending' ? '' : schedStepData(c).calendar_type });
     logCalendarChange(c, [calChange('Install day', from, ds)]);
     ok = await upsertCustomer(c);
   } else {
@@ -4733,7 +4749,7 @@ function openSchedModal(type, date, id) {
     if(!c) return;
     const sd10 = schedStepData(c);
     document.getElementById('schedEntryId').value    = id;
-    document.getElementById('schedEntryType').value  = 'job';
+    document.getElementById('schedEntryType').value  = sd10.calendar_type || 'job';
     document.getElementById('schedEntryDate').value  = date || sd10.confirmed_install_date || '';
     document.getElementById('schedAddr').value        = c.address || '';
     document.getElementById('schedInstaller').value   = sd10.crew_assigned || '';
@@ -4788,7 +4804,7 @@ async function saveSchedEntry() {
       const desc = document.getElementById('schedDesc').value.trim();
       const changes = [];
       if(addr && addr !== (old.address || '')) changes.push(calChange('Address', old.address, addr));
-      if(date !== oldSd.confirmed_install_date) changes.push(calChange('Install day', oldSd.confirmed_install_date, date));
+      if((date || '') !== oldSd.confirmed_install_date) changes.push(calChange('Install day', oldSd.confirmed_install_date, date));
       if(installer !== (oldSd.crew_assigned || '')) changes.push(calChange('Installer', oldSd.crew_assigned, installer));
       const lock = document.getElementById('schedLock').value.trim();
       if(lock !== (old.lockboxCode || '')) changes.push(calChange('Lock Box Code', old.lockboxCode, lock));
@@ -4800,7 +4816,7 @@ async function saveSchedEntry() {
       if(addr) c.address = addr;
       c.lockboxCode = lock;
       if(lock) c.lockbox = 'Yes';
-      setSchedStepData(c, { crew_assigned: installer, confirmed_install_date: date, schedule_notes: notes });
+      setSchedStepData(c, { crew_assigned: installer, confirmed_install_date: date || '', schedule_notes: notes, calendar_type: date && oldSd.calendar_type === 'pending' ? '' : (oldSd.calendar_type || '') });
       c.stepData[SELECTION_STEP] = { ...(c.stepData[SELECTION_STEP] || {}), project_overview: desc };
       logCalendarChange(c, changes);
       if(!await upsertCustomer(c)) showToast('Could not save. Please refresh and try again.');
@@ -4836,14 +4852,14 @@ async function saveSchedEntry() {
 
 async function deleteSchedEntry(id) {
   if(id.startsWith('crm_')) {
-    if(!confirm('Remove this job from the calendar?\nThis will clear the install date in the CRM record.')) return;
+    if(!confirm('Remove this job from the calendar?\nThe job stays in the CRM. Any install date on it will be cleared.')) return;
     const custId = id.slice(4);
     const ci = _customers.findIndex(c => c.id === custId);
     if(ci !== -1) {
       const c = { ..._customers[ci], stepData: { ..._customers[ci].stepData } };
       const from = schedStepData(c).confirmed_install_date;
-      setSchedStepData(c, { confirmed_install_date: '' });
-      logCalendarChange(c, [calChange('Install day', from, '')]);
+      setSchedStepData(c, { confirmed_install_date: '', calendar_type: from ? schedStepData(c).calendar_type : '' });
+      logCalendarChange(c, [from ? calChange('Install day', from, '') : 'Removed from the calendar panel']);
       await upsertCustomer(c);
     }
     renderScheduleView();
