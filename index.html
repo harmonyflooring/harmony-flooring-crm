@@ -713,6 +713,8 @@ header::-webkit-scrollbar { display: none; }
 .sched-week { display:flex; gap:10px; min-height:300px; }
 .sched-day-col { min-width:200px; flex:1; display:flex; flex-direction:column; background:white; border-radius:10px; overflow:hidden; box-shadow:0 1px 4px rgba(0,0,0,0.07); }
 .sched-day-col.today-col { box-shadow:0 0 0 2.5px #2c5f2e, 0 2px 8px rgba(0,0,0,0.1); }
+.sched-job[draggable="true"], .sched-month-job[draggable="true"] { cursor:grab; }
+.sched-day-col.sched-drop, .sched-month-cell.sched-drop { outline:2px dashed #2c5f2e; outline-offset:-2px; background:#f0faf0; }
 .sched-day-hdr { padding:9px 11px 7px; display:flex; align-items:center; justify-content:space-between; border-bottom:1px solid #f0ede8; }
 .sched-day-name { font-size:0.75rem; font-weight:800; text-transform:uppercase; letter-spacing:0.5px; color:#2c5f2e; }
 .sched-day-date { font-size:0.7rem; color:#aaa; }
@@ -1008,9 +1010,17 @@ header::-webkit-scrollbar { display: none; }
       <label>Address / Job Description <span class="req">*</span></label>
       <input type="text" id="schedAddr" placeholder="e.g. 47 Harmony Ave, Lakewood">
     </div>
+    <div class="form-group" id="schedDateGroup">
+      <label>Day</label>
+      <input type="date" id="schedEntryDate">
+    </div>
     <div class="form-group">
       <label>Installer</label>
       <input type="text" id="schedInstaller" placeholder="e.g. Moshe, Team A">
+    </div>
+    <div class="form-group" id="schedDescGroup">
+      <label>Project Description (from Customer Selection)</label>
+      <textarea id="schedDesc" rows="2"></textarea>
     </div>
     <div class="form-group">
       <label>Notes (materials, sq ft, lock box, etc.)</label>
@@ -1018,7 +1028,6 @@ header::-webkit-scrollbar { display: none; }
     </div>
     <input type="hidden" id="schedEntryId">
     <input type="hidden" id="schedEntryType">
-    <input type="hidden" id="schedEntryDate">
     <div class="modal-actions">
       <button class="btn btn-secondary" onclick="closeSchedModal()">Cancel</button>
       <button class="btn btn-green" onclick="saveSchedEntry()">Save</button>
@@ -1319,6 +1328,7 @@ const STEPS = [
       roomOptions:["Living Room","Kitchen","Master Bedroom","Bedroom","Dining Room","Hallway","Stairs","Basement","Office","Bathroom","Laundry","Other"]},
     {key:"project_overview",label:"Project Description",type:"textarea",placeholder:"Timeline, scope, any special details…"},
     {key:"special_requirements",label:"Special Requirements",type:"textarea",placeholder:"Pets, allergies, subfloor concerns, transitions…"},
+    {key:"_calendar_changes",label:"Changes Made From the Calendar",type:"info",compute:c=>c.stepData?.[1]?.calendar_changes||'None'},
     {key:"_h_samples",    type:"header", label:"Selection"},
     {key:"samples_taken", label:"Samples Taken Home?",type:"select",options:["Yes","No"],controls:true},
     {key:"sample_taken_details",label:"Sample Details",type:"textarea",placeholder:"Which samples, quantities, product codes…",showIf:{field:"samples_taken",value:"Yes"}}
@@ -4248,7 +4258,8 @@ function getCrmCalendarJobs() {
       jobs.push({
         id: 'crm_' + c.id,
         address: c.address || c.name,
-        notes: c.name + (sd10.crew_assigned ? ' · ' + sd10.crew_assigned : ''),
+        notes: c.name + (sd10.crew_assigned ? ' · ' + sd10.crew_assigned : '') + (sd10.schedule_notes ? ' · ' + sd10.schedule_notes : ''),
+        calendarNotes: sd10.schedule_notes || '',
         installer: sd10.crew_assigned || '',
         scheduled_date: sd10.confirmed_install_date,
         customer: c.name,
@@ -4439,7 +4450,7 @@ function renderWeekView() {
       ...crmDay.map(e => schedJobCard(e))
     ].join('') || `<div class="sched-empty-day">No jobs</div>`;
 
-    return `<div class="sched-day-col${isToday?' today-col':''}">
+    return `<div class="sched-day-col${isToday?' today-col':''}" ${schedDropAttrs(ds)}>
       <div class="sched-day-hdr${isToday?' today-hdr':''}" style="cursor:pointer" onclick="openDayDetail('${ds}')" title="Click to view full day">
         <div>
           <div class="sched-day-name">${day}</div>
@@ -4511,10 +4522,10 @@ function renderMonthView() {
     const shown = allJobs.slice(0, 3);
     const more  = allJobs.length - 3;
     const jobsHtml = shown.map(e =>
-      `<div class="sched-month-job type-${e.type}" onclick="event.stopPropagation();openSchedModal('${e.type}','${ds}','${e.id}')" title="${esc(e.address)}${e.installer?' · '+esc(e.installer):''}${e.flooring?' · '+esc(e.flooring):''}${e.description?'\n'+esc(e.description):''}">${esc(e.address)}</div>`
+      `<div class="sched-month-job type-${e.type}" ${schedDragAttrs(e)} onclick="event.stopPropagation();openSchedModal('${e.type}','${ds}','${e.id}')" title="${esc(e.address)}${e.installer?' · '+esc(e.installer):''}${e.flooring?' · '+esc(e.flooring):''}${e.description?'\n'+esc(e.description):''}">${esc(e.address)}</div>`
     ).join('');
 
-    html += `<div class="sched-month-cell${isToday?' today-cell':''}${!isThisMonth?' other-month':''}" onclick="switchToWeekOfDate('${ds}')">
+    html += `<div class="sched-month-cell${isToday?' today-cell':''}${!isThisMonth?' other-month':''}" ${schedDropAttrs(ds)} onclick="switchToWeekOfDate('${ds}')">
       <div class="sched-month-date-num${isToday?' is-today':''}" style="${!isThisMonth?'color:#bbb':''}">${d.getDate()}</div>
       ${jobsHtml}
       ${more > 0 ? `<div class="sched-month-more">+${more} more</div>` : ''}
@@ -4567,7 +4578,7 @@ function schedJobCard(e) {
     <button class="sched-job-btn" title="Delete" onclick="deleteSchedEntry('${e.id}')">🗑</button>
   </div>`;
 
-  return `<div class="${cls}" id="sje_${e.id}" style="border-left-color:${borderColor}">
+  return `<div class="${cls}" id="sje_${e.id}" ${schedDragAttrs(e)} style="border-left-color:${borderColor}">
     ${installerCol}
     <div class="sched-job-main">
       <div class="sched-job-addr">${esc(e.address)}</div>
@@ -4577,13 +4588,87 @@ function schedJobCard(e) {
   </div>`;
 }
 
+// Keeps a dated history in step 2 of what was changed from the calendar
+function logCalendarChange(c, changes) {
+  const sel = c.stepData[SELECTION_STEP] || {};
+  const when = new Date().toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' });
+  const entry = when + ' — ' + (activeProfile?.name || 'Unknown') + ':\n' + changes.map(x => '• ' + x).join('\n');
+  c.stepData[SELECTION_STEP] = { ...sel, calendar_changes: sel.calendar_changes ? sel.calendar_changes + '\n\n' + entry : entry };
+}
+function calChange(label, from, to) {
+  return label + ': "' + (from || 'blank') + '" → "' + (to || 'blank') + '"';
+}
+
+// ── MOVE A JOB TO ANOTHER DAY ──
+let _schedMoveId = null;
+function schedDragAttrs(e) {
+  if(e.type !== 'job' && e.type !== 'crm') return '';
+  return `draggable="true" ondragstart="schedMoveStart(event,'${e.id}')" ondragend="schedMoveEnd()"`;
+}
+function schedDropAttrs(ds) {
+  return `ondragover="schedMoveOver(event)" ondragleave="schedMoveLeave(event)" ondrop="schedMoveDrop(event,'${ds}')"`;
+}
+function schedMoveStart(e, id) {
+  _schedMoveId = id;
+  e.dataTransfer.effectAllowed = 'move';
+  e.dataTransfer.setData('text/plain', id);
+}
+function schedMoveOver(e) {
+  if(!_schedMoveId) return;
+  e.preventDefault();
+  e.currentTarget.classList.add('sched-drop');
+}
+function schedMoveLeave(e) {
+  if(!e.currentTarget.contains(e.relatedTarget)) e.currentTarget.classList.remove('sched-drop');
+}
+function schedMoveEnd() {
+  _schedMoveId = null;
+  document.querySelectorAll('.sched-drop').forEach(el => el.classList.remove('sched-drop'));
+}
+async function schedMoveDrop(e, ds) {
+  e.preventDefault();
+  e.stopPropagation();
+  const id = _schedMoveId;
+  schedMoveEnd();
+  if(id) await moveSchedJob(id, ds);
+}
+async function moveSchedJob(id, ds) {
+  const label = new Date(ds + 'T12:00:00').toLocaleDateString('en-US', { weekday:'short', month:'short', day:'numeric' });
+  let ok = true;
+  if(id.startsWith('crm_')) {
+    const custId = id.slice(4);
+    const ci = _customers.findIndex(c => c.id === custId);
+    if(ci === -1) return;
+    const from = schedStepData(_customers[ci]).confirmed_install_date;
+    if(from === ds) return;
+    const c = { ..._customers[ci], stepData: { ..._customers[ci].stepData } };
+    setSchedStepData(c, { confirmed_install_date: ds });
+    logCalendarChange(c, [calChange('Install day', from, ds)]);
+    ok = await upsertCustomer(c);
+  } else {
+    const idx = _scheduleEntries.findIndex(e => e.id === id);
+    if(idx === -1 || _scheduleEntries[idx].scheduled_date === ds) return;
+    const old = _scheduleEntries[idx];
+    const sort_order = _scheduleEntries.filter(e => e.scheduled_date === ds && e.type === old.type)
+      .reduce((m,e) => Math.max(m, e.sort_order||0), 0) + 1;
+    _scheduleEntries[idx] = { ...old, scheduled_date: ds, sort_order };
+    const { error } = await db.from('schedule_entries').update({ scheduled_date: ds, sort_order }).eq('id', id);
+    if(error) { console.error('Schedule move error:', error); _scheduleEntries[idx] = old; ok = false; }
+  }
+  renderScheduleView();
+  showToast(ok ? 'Moved to ' + label + ' ✓' : 'Could not move the job. Please refresh and try again.');
+}
+
 async function saveInstallerInline(id, val) {
   if(id.startsWith('crm_')) {
     const custId = id.slice(4);
     const ci = _customers.findIndex(c => c.id === custId);
     if(ci !== -1) {
+      const from = schedStepData(_customers[ci]).crew_assigned;
+      if(from === val.trim()) return;
       const c = { ..._customers[ci], stepData: { ..._customers[ci].stepData } };
-      setSchedStepData(c, { crew_assigned: val });
+      setSchedStepData(c, { crew_assigned: val.trim() });
+      logCalendarChange(c, [calChange('Installer', from, val.trim())]);
       await upsertCustomer(c);
     }
     return;
@@ -4605,8 +4690,11 @@ function openSchedModal(type, date, id) {
     document.getElementById('schedEntryDate').value  = date || sd10.confirmed_install_date || '';
     document.getElementById('schedAddr').value        = c.address || '';
     document.getElementById('schedInstaller').value   = sd10.crew_assigned || '';
-    document.getElementById('schedNotes').value       = c.name || '';
-    document.getElementById('schedModalTitle').textContent = 'Edit Install Job';
+    document.getElementById('schedNotes').value       = sd10.schedule_notes || '';
+    document.getElementById('schedDateGroup').style.display = '';
+    document.getElementById('schedDescGroup').style.display = '';
+    document.getElementById('schedDesc').value = c.stepData?.[SELECTION_STEP]?.project_overview || '';
+    document.getElementById('schedModalTitle').textContent = 'Edit Install Job — ' + (c.name || '');
     document.getElementById('schedModal').classList.add('open');
     setTimeout(() => document.getElementById('schedAddr').focus(), 80);
     return;
@@ -4618,6 +4706,8 @@ function openSchedModal(type, date, id) {
   document.getElementById('schedAddr').value        = entry ? entry.address : '';
   document.getElementById('schedInstaller').value   = entry ? (entry.installer || '') : '';
   document.getElementById('schedNotes').value       = entry ? (entry.notes || '') : '';
+  document.getElementById('schedDateGroup').style.display = type === 'job' ? '' : 'none';
+  document.getElementById('schedDescGroup').style.display = 'none';
   const titles = { job:'Add Job', pending:'Add Pending Job', repair:'Add Repair' };
   document.getElementById('schedModalTitle').textContent = entry ? 'Edit Entry' : (titles[type] || 'Add Entry');
   document.getElementById('schedModal').classList.add('open');
@@ -4630,20 +4720,36 @@ function closeSchedModal() {
 
 async function saveSchedEntry() {
   const addr = document.getElementById('schedAddr').value.trim();
-  if(!addr) { alert('Please enter an address or job description.'); return; }
   const id        = document.getElementById('schedEntryId').value;
   const type      = document.getElementById('schedEntryType').value;
+  const isCrm     = !!id && id.startsWith('crm_');
+  if(!addr && !isCrm) { alert('Please enter an address or job description.'); return; }
   const date      = document.getElementById('schedEntryDate').value || null;
   const installer = document.getElementById('schedInstaller').value.trim();
   const notes     = document.getElementById('schedNotes').value.trim();
+  if(type === 'job' && !date) { alert('Please pick a day. To take a job off the calendar, use the trash button.'); return; }
 
-  if(id && id.startsWith('crm_')) {
+  if(isCrm) {
     const custId = id.slice(4);
     const ci = _customers.findIndex(c => c.id === custId);
     if(ci !== -1) {
-      const c = { ..._customers[ci], stepData: { ..._customers[ci].stepData } };
-      setSchedStepData(c, { crew_assigned: installer, confirmed_install_date: date });
-      await upsertCustomer(c);
+      const old = _customers[ci], oldSd = schedStepData(old);
+      const oldDesc = (old.stepData?.[SELECTION_STEP]?.project_overview || '').trim();
+      const desc = document.getElementById('schedDesc').value.trim();
+      const changes = [];
+      if(addr && addr !== (old.address || '')) changes.push(calChange('Address', old.address, addr));
+      if(date !== oldSd.confirmed_install_date) changes.push(calChange('Install day', oldSd.confirmed_install_date, date));
+      if(installer !== (oldSd.crew_assigned || '')) changes.push(calChange('Installer', oldSd.crew_assigned, installer));
+      if(desc !== oldDesc) changes.push(calChange('Project Description', oldDesc, desc));
+      if(notes !== (oldSd.schedule_notes || '')) changes.push(calChange('Notes', oldSd.schedule_notes, notes));
+      if(!changes.length) { closeSchedModal(); return; }
+      if(!confirm('You are about to change this job in the CRM:\n\n' + changes.join('\n') + '\n\nThis will also leave a note in Step 2. Save these changes?')) return;
+      const c = { ...old, stepData: { ...old.stepData } };
+      if(addr) c.address = addr;
+      setSchedStepData(c, { crew_assigned: installer, confirmed_install_date: date, schedule_notes: notes });
+      c.stepData[SELECTION_STEP] = { ...(c.stepData[SELECTION_STEP] || {}), project_overview: desc };
+      logCalendarChange(c, changes);
+      if(!await upsertCustomer(c)) showToast('Could not save. Please refresh and try again.');
     }
     closeSchedModal();
     renderScheduleView();
@@ -4668,7 +4774,7 @@ async function saveSchedEntry() {
   if(idx !== -1) _scheduleEntries[idx] = row; else _scheduleEntries.push(row);
 
   const { error } = await db.from('schedule_entries').upsert(row);
-  if(error) console.error('Schedule save error:', error);
+  if(error) { console.error('Schedule save error:', error); showToast('Could not save. Please refresh and try again.'); }
 
   closeSchedModal();
   renderScheduleView();
@@ -4681,7 +4787,9 @@ async function deleteSchedEntry(id) {
     const ci = _customers.findIndex(c => c.id === custId);
     if(ci !== -1) {
       const c = { ..._customers[ci], stepData: { ..._customers[ci].stepData } };
+      const from = schedStepData(c).confirmed_install_date;
       setSchedStepData(c, { confirmed_install_date: '' });
+      logCalendarChange(c, [calChange('Install day', from, '')]);
       await upsertCustomer(c);
     }
     renderScheduleView();
@@ -4757,7 +4865,7 @@ function copyDaySchedule(ds, dayName) {
   jobs.forEach((e, i) => {
     lines.push(`${i+1}. ${e.address}${e.installer ? ' — ' + e.installer : ''}`);
     // CRM jobs: show just the customer name (installer is already on the line above)
-    const notes = e.type === 'crm' ? e.customer : e.notes;
+    const notes = e.type === 'crm' ? [e.customer, e.calendarNotes].filter(Boolean).join(' — ') : e.notes;
     if(notes) lines.push(`   ${notes}`);
     const details = [e.flooring, e.description].filter(Boolean).join(' — ');
     if(details) lines.push(`   ${details}`);
