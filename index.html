@@ -8,7 +8,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
-body { font-family: 'Segoe UI', Arial, sans-serif; background: #f0ede8; color: #2c2c2c; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+body { font-family: 'Segoe UI', Arial, sans-serif; background: #f0ede8; color: #2c2c2c; height: calc(100vh / var(--zoom,1)); display: flex; flex-direction: column; overflow: hidden; }
 
 /* ── BUTTONS ── */
 .btn { border: none; border-radius: 7px; font-size: 0.85rem; font-weight: 600; cursor: pointer; padding: 8px 16px; transition: all 0.18s; }
@@ -74,6 +74,7 @@ body { font-family: 'Segoe UI', Arial, sans-serif; background: #f0ede8; color: #
 /* HEADER */
 header { background: #2c5f2e; color: white; padding: 10px 18px; display: flex; align-items: center; gap: 12px; flex-shrink: 0; box-shadow: 0 2px 8px rgba(0,0,0,0.2); overflow-x: auto; -webkit-overflow-scrolling: touch; }
 header::-webkit-scrollbar { display: none; }
+.zoomed-in header { flex-wrap: wrap; }
 .header-logo { font-size: 1rem; font-weight: 800; letter-spacing: 0.3px; white-space: nowrap; flex-shrink: 0; }
 .header-user { display: flex; align-items: center; gap: 8px; background: rgba(255,255,255,0.12); border-radius: 20px; padding: 4px 12px 4px 6px; cursor: pointer; transition: background 0.2s; flex-shrink: 0; }
 .header-user:hover { background: rgba(255,255,255,0.2); }
@@ -84,6 +85,10 @@ header::-webkit-scrollbar { display: none; }
 .layout-btn { width: 32px; height: 28px; border-radius: 5px; border: none; background: transparent; color: rgba(255,255,255,0.6); cursor: pointer; font-size: 1rem; display: flex; align-items: center; justify-content: center; transition: all 0.15s; }
 .layout-btn:hover { background: rgba(255,255,255,0.15); color: white; }
 .layout-btn.active { background: white; color: #2c5f2e; }
+.zoom-control { display:flex; align-items:center; gap:2px; background:rgba(0,0,0,0.2); border-radius:8px; padding:3px; flex-shrink:0; }
+.zoom-control button { width:26px; height:26px; border:none; border-radius:5px; background:transparent; color:white; font-size:1rem; font-weight:700; cursor:pointer; }
+.zoom-control button:hover { background:rgba(255,255,255,0.15); }
+.zoom-control span { min-width:42px; text-align:center; font-size:0.78rem; font-weight:600; color:white; }
 .filter-toggle { display: flex; align-items: center; gap: 6px; font-size: 0.8rem; color: rgba(255,255,255,0.8); cursor: pointer; user-select: none; flex-shrink: 0; white-space: nowrap; }
 .filter-toggle input { cursor: pointer; accent-color: #e8a020; width: 15px; height: 15px; }
 
@@ -135,7 +140,7 @@ header::-webkit-scrollbar { display: none; }
 .step-filter-btn { padding:7px 12px; border:1.5px solid #ddd; border-radius:7px; background:white; font-size:0.82rem; font-weight:600; color:#2c5f2e; cursor:pointer; white-space:nowrap; }
 .step-filter-btn:hover { border-color:#2c5f2e; }
 .step-filter-btn.on { background:#fff3e0; border-color:#e8a020; color:#b26a00; }
-.step-filter-panel { display:none; position:absolute; top:calc(100% + 6px); right:0; z-index:60; width:270px; max-height:70vh; overflow-y:auto; background:white; border:1px solid #e0ddd8; border-radius:10px; box-shadow:0 6px 24px rgba(0,0,0,0.16); padding:10px; }
+.step-filter-panel { display:none; position:absolute; top:calc(100% + 6px); right:0; z-index:60; width:270px; max-height:calc(70vh / var(--zoom,1)); overflow-y:auto; background:white; border:1px solid #e0ddd8; border-radius:10px; box-shadow:0 6px 24px rgba(0,0,0,0.16); padding:10px; }
 .step-filter-panel.open { display:block; }
 .step-filter-quick { display:flex; flex-direction:column; gap:6px; padding-bottom:8px; margin-bottom:6px; border-bottom:1px solid #eee; }
 .step-filter-quick button { padding:6px 8px; border:none; border-radius:6px; background:#e8f5e9; color:#2c5f2e; font-size:0.78rem; font-weight:600; cursor:pointer; text-align:left; }
@@ -405,7 +410,7 @@ header::-webkit-scrollbar { display: none; }
 /* MODAL */
 .modal-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.45); z-index:100; align-items:center; justify-content:center; }
 .modal-overlay.open { display:flex; }
-.modal { background:white; border-radius:14px; padding:26px 30px; width:100%; max-width:520px; max-height:90vh; overflow-y:auto; box-shadow:0 8px 40px rgba(0,0,0,0.18); }
+.modal { background:white; border-radius:14px; padding:26px 30px; width:100%; max-width:520px; max-height:calc(90vh / var(--zoom,1)); overflow-y:auto; box-shadow:0 8px 40px rgba(0,0,0,0.18); }
 .modal h2 { margin-bottom:5px; font-size:1.1rem; color:#2c5f2e; }
 .modal-actions { display:flex; gap:8px; margin-top:20px; justify-content:flex-end; }
 .req { color:#c0392b; }
@@ -530,7 +535,7 @@ header::-webkit-scrollbar { display: none; }
 .msg-sidebar-username { font-size:0.85rem; font-weight:700; color:#1a1a1a; }
 .msg-sidebar-status { font-size:0.7rem; color:#aaa; }
 /* ── SIDE PANEL MODE ── */
-#msgView.msg-side-panel { position:fixed; right:20px; bottom:20px; width:420px; height:640px; max-height:88vh; z-index:45; border-radius:16px; box-shadow:0 12px 48px rgba(0,0,0,0.22), 0 2px 8px rgba(0,0,0,0.1); border:1px solid #d8d4ce; overflow:hidden; flex:none !important; flex-direction:column; display:flex !important; }
+#msgView.msg-side-panel { position:fixed; right:20px; bottom:20px; width:420px; height:640px; max-height:calc(88vh / var(--zoom,1)); z-index:45; border-radius:16px; box-shadow:0 12px 48px rgba(0,0,0,0.22), 0 2px 8px rgba(0,0,0,0.1); border:1px solid #d8d4ce; overflow:hidden; flex:none !important; flex-direction:column; display:flex !important; }
 #msgView.msg-side-panel .msg-drag-handle { display:flex; }
 #msgView.msg-side-panel .msg-topbar { display:none; }
 #msgView.msg-side-panel .msg-sidebar { display:none; }
@@ -553,7 +558,7 @@ header::-webkit-scrollbar { display: none; }
 
 @media(max-width:680px){
   /* ── BODY ── */
-  body { overflow:auto; height:auto; min-height:100vh; }
+  body { overflow:auto; height:auto; min-height:calc(100vh / var(--zoom,1)); }
 
   /* ── HEADER ── */
   header { padding:8px 12px; gap:8px; }
@@ -575,6 +580,7 @@ header::-webkit-scrollbar { display: none; }
   /* ── SEARCH BAR ── */
   .search-bar { flex-wrap:wrap; padding:8px 12px; }
   .search-bar select { width:100%; }
+  .zoom-control { display:none; }
   .step-filter, .step-filter-btn { width:100%; }
   .step-filter-panel { left:0; right:0; width:auto; }
 
@@ -584,7 +590,7 @@ header::-webkit-scrollbar { display: none; }
 
   /* ── SIDEBAR LAYOUT ── */
   .sb-layout { flex-direction:column; }
-  .sb-left { width:100%; max-height:38vh; }
+  .sb-left { width:100%; max-height:calc(38vh / var(--zoom,1)); }
   .sb-right { padding:12px 14px; }
   .sb-stats { gap:8px; }
   .sb-stat { min-width:80px; padding:10px 12px; }
@@ -625,7 +631,7 @@ header::-webkit-scrollbar { display: none; }
   .modal {
     border-radius:16px 16px 0 0;
     max-width:100%;
-    max-height:88vh;
+    max-height:calc(88vh / var(--zoom,1));
     padding:20px 18px 28px;
     width:100%;
   }
@@ -646,8 +652,8 @@ header::-webkit-scrollbar { display: none; }
   .msg-nav-btn { width:auto; padding:9px 11px; font-size:0.8rem; flex-shrink:0; white-space:nowrap; box-shadow:none !important; }
   .msg-nav-btn.active { border-radius:7px; }
   .msg-compose-btn { margin:6px 8px; flex-shrink:0; padding:8px 12px; font-size:0.78rem; white-space:nowrap; align-self:center; }
-  .msg-list-panel { width:100%; flex-shrink:0; max-height:40vh; border-right:none; border-bottom:1px solid #e8e5e0; }
-  .msg-detail-panel { min-height:50vh; }
+  .msg-list-panel { width:100%; flex-shrink:0; max-height:calc(40vh / var(--zoom,1)); border-right:none; border-bottom:1px solid #e8e5e0; }
+  .msg-detail-panel { min-height:calc(50vh / var(--zoom,1)); }
   .msg-detail-head { padding:14px 16px 10px; }
   .msg-detail-body { padding:14px 16px; }
   .msg-detail-actions { padding:0 16px 16px; flex-wrap:wrap; }
@@ -786,6 +792,11 @@ header::-webkit-scrollbar { display: none; }
     <div class="header-user" onclick="switchProfile()" title="Switch profile">
       <div class="user-dot" id="headerDot"></div>
       <span id="headerName"></span>
+    </div>
+    <div class="zoom-control" title="Make the whole screen bigger or smaller">
+      <button onclick="stepZoom(-1)" title="Smaller">−</button>
+      <span id="zoomLabel">100%</span>
+      <button onclick="stepZoom(1)" title="Bigger">+</button>
     </div>
     <div class="header-spacer"></div>
     <label class="filter-toggle" title="Show only your jobs">
@@ -1019,7 +1030,7 @@ header::-webkit-scrollbar { display: none; }
       <h2 id="dayDetailDate" style="font-size:1.15rem;color:#2c5f2e;margin:0"></h2>
       <button class="back-btn" onclick="closeDayDetail()">✕ Close</button>
     </div>
-    <div id="dayDetailJobs" style="display:flex;flex-direction:column;gap:10px;max-height:60vh;overflow-y:auto;padding-right:2px"></div>
+    <div id="dayDetailJobs" style="display:flex;flex-direction:column;gap:10px;max-height:calc(60vh / var(--zoom,1));overflow-y:auto;padding-right:2px"></div>
     <div style="margin-top:14px;border-top:1px solid #f0ede8;padding-top:12px;display:flex;gap:8px">
       <button class="btn btn-green" id="dayDetailAddBtn">+ Add Job</button>
       <button class="btn btn-secondary" id="dayDetailCopyBtn">📋 Copy Day</button>
@@ -1732,6 +1743,7 @@ function doLogin(name) {
   const defaultMyJobs = (name !== 'Admin' && name !== 'Yisroel');
   const savedMyJobs = getPref(name,'myJobs', defaultMyJobs);
   hiddenSteps = getPref(name,'hiddenSteps',[]);
+  applyZoom(getPref(name,'zoom',100));
   document.getElementById('headerDot').style.background = sm.color;
   document.getElementById('headerDot').textContent = sm.initial;
   document.getElementById('headerName').textContent = sm.name;
@@ -1743,6 +1755,29 @@ function doLogin(name) {
   setLayout(savedLayout, true);
   refreshAll();
   updateMsgBadge();
+}
+
+// ════════════════════════════════════════════
+// SCREEN ZOOM
+// ════════════════════════════════════════════
+const ZOOM_STEPS=[80,90,100,110,125,150];
+let pageZoom=100;
+function zoomScale(){ return pageZoom/100; }
+function applyZoom(pct){
+  pageZoom=ZOOM_STEPS.includes(pct)?pct:100;
+  const root=document.documentElement;
+  root.style.zoom=zoomScale();
+  root.style.setProperty('--zoom',zoomScale());
+  root.classList.toggle('zoomed-in',pageZoom>100);
+  document.getElementById('zoomLabel').textContent=pageZoom+'%';
+  const sv=document.getElementById('scheduleView');
+  if(sv.classList.contains('side-panel')) fitSchedSidePanel(sv);
+}
+function stepZoom(dir){
+  const i=ZOOM_STEPS.indexOf(pageZoom)+dir;
+  if(i<0||i>=ZOOM_STEPS.length) return;
+  applyZoom(ZOOM_STEPS[i]);
+  if(activeProfile) setPref(activeProfile.name,'zoom',pageZoom);
 }
 
 function openAsAdmin() { selectProfile('Admin'); }
@@ -3470,10 +3505,10 @@ function startMsgDrag(e) {
 function onMsgDragMove(e) {
   if(!_msgDragging) return;
   const panel = document.getElementById('msgView');
-  const x = Math.max(0, Math.min(e.clientX - _msgDragOffX, window.innerWidth - panel.offsetWidth));
-  const y = Math.max(0, Math.min(e.clientY - _msgDragOffY, window.innerHeight - panel.offsetHeight));
-  panel.style.left = x + 'px';
-  panel.style.top  = y + 'px';
+  const x = Math.max(0, Math.min(e.clientX - _msgDragOffX, window.innerWidth - panel.offsetWidth * zoomScale()));
+  const y = Math.max(0, Math.min(e.clientY - _msgDragOffY, window.innerHeight - panel.offsetHeight * zoomScale()));
+  panel.style.left = (x / zoomScale()) + 'px';
+  panel.style.top  = (y / zoomScale()) + 'px';
   panel.style.right = 'auto';
   panel.style.bottom = 'auto';
 }
@@ -4482,6 +4517,12 @@ function getSidePanelTop() {
   return 52;
 }
 
+function fitSchedSidePanel(sv) {
+  const t = getSidePanelTop();
+  sv.style.top = (t / zoomScale()) + 'px';
+  sv.style.height = ((window.innerHeight - t) / zoomScale()) + 'px';
+}
+
 function toggleSchedSidePanel() {
   _schedSidePanel = !_schedSidePanel;
   const btn = document.getElementById('schedSideBtn');
@@ -4490,9 +4531,7 @@ function toggleSchedSidePanel() {
   const sv = document.getElementById('scheduleView');
   if(sv.style.display === 'flex') {
     if(_schedSidePanel) {
-      const t = getSidePanelTop();
-      sv.style.top = t + 'px';
-      sv.style.height = (window.innerHeight - t) + 'px';
+      fitSchedSidePanel(sv);
       sv.style.right = '0'; sv.style.bottom = 'auto';
       sv.classList.add('side-panel');
       Object.keys(LAYOUT_IDS).forEach(k => {
@@ -4517,9 +4556,7 @@ function toggleScheduleView() {
   } else {
     if(_schedSidePanel) {
       sv.classList.add('side-panel');
-      const t2 = getSidePanelTop();
-      sv.style.top = t2 + 'px';
-      sv.style.height = (window.innerHeight - t2) + 'px';
+      fitSchedSidePanel(sv);
       sv.style.right = '0'; sv.style.bottom = 'auto';
       sv.style.display = 'flex';
       document.getElementById('hdrSchedBtn').classList.add('active');
@@ -4567,10 +4604,10 @@ function startSchedDrag(e) {
 function onSchedDragMove(e) {
   if(!_schedDragging) return;
   const panel = document.getElementById('scheduleView');
-  const x = Math.max(0, Math.min(e.clientX - _schedDragOffX, window.innerWidth - panel.offsetWidth));
-  const y = Math.max(0, Math.min(e.clientY - _schedDragOffY, window.innerHeight - panel.offsetHeight));
-  panel.style.left   = x + 'px';
-  panel.style.top    = y + 'px';
+  const x = Math.max(0, Math.min(e.clientX - _schedDragOffX, window.innerWidth - panel.offsetWidth * zoomScale()));
+  const y = Math.max(0, Math.min(e.clientY - _schedDragOffY, window.innerHeight - panel.offsetHeight * zoomScale()));
+  panel.style.left   = (x / zoomScale()) + 'px';
+  panel.style.top    = (y / zoomScale()) + 'px';
   panel.style.right  = 'auto';
   panel.style.bottom = 'auto';
 }
