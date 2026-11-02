@@ -131,6 +131,19 @@ header::-webkit-scrollbar { display: none; }
 .search-bar input { flex:1; padding:7px 12px; border:1.5px solid #ddd; border-radius:7px; font-size:0.85rem; }
 .search-bar input:focus { outline:none; border-color:#2c5f2e; }
 .search-bar select { padding:7px 10px; border:1.5px solid #ddd; border-radius:7px; font-size:0.82rem; }
+.step-filter { position:relative; flex-shrink:0; }
+.step-filter-btn { padding:7px 12px; border:1.5px solid #ddd; border-radius:7px; background:white; font-size:0.82rem; font-weight:600; color:#2c5f2e; cursor:pointer; white-space:nowrap; }
+.step-filter-btn:hover { border-color:#2c5f2e; }
+.step-filter-btn.on { background:#fff3e0; border-color:#e8a020; color:#b26a00; }
+.step-filter-panel { display:none; position:absolute; top:calc(100% + 6px); right:0; z-index:60; width:270px; max-height:70vh; overflow-y:auto; background:white; border:1px solid #e0ddd8; border-radius:10px; box-shadow:0 6px 24px rgba(0,0,0,0.16); padding:10px; }
+.step-filter-panel.open { display:block; }
+.step-filter-quick { display:flex; flex-direction:column; gap:6px; padding-bottom:8px; margin-bottom:6px; border-bottom:1px solid #eee; }
+.step-filter-quick button { padding:6px 8px; border:none; border-radius:6px; background:#e8f5e9; color:#2c5f2e; font-size:0.78rem; font-weight:600; cursor:pointer; text-align:left; }
+.step-filter-quick button:hover { background:#c8e6c9; }
+.step-filter-row { display:flex; align-items:center; gap:8px; padding:5px 4px; font-size:0.82rem; cursor:pointer; border-radius:5px; }
+.step-filter-row:hover { background:#f6f4f0; }
+.step-filter-row input { flex:none; padding:0; margin:0; accent-color:#2c5f2e; width:15px; height:15px; cursor:pointer; }
+.step-btn.step-off { opacity:0.35; }
 
 /* ── LAYOUT: CARD GRID ── */
 #layoutGrid { flex:1; overflow-y:auto; padding:20px; display:none; }
@@ -330,6 +343,10 @@ header::-webkit-scrollbar { display: none; }
 .prod-row input, .sup-line input { width:100%; padding:7px 10px; border:1.5px solid #ddd; border-radius:6px; font-size:0.83rem; font-family:inherit; background:white; }
 .prod-row input:focus, .sup-line input:focus { outline:none; border-color:#2c5f2e; }
 .prod-remove { border:none; background:none; color:#c62828; font-size:0.9rem; cursor:pointer; padding:0; }
+.prod-kind { grid-column:1/-1; display:flex; flex-wrap:wrap; align-items:center; gap:6px; font-size:0.76rem; color:#777; }
+.prod-kind-btn { padding:4px 10px; border:1.5px solid #ddd; border-radius:6px; background:white; font-size:0.76rem; font-family:inherit; cursor:pointer; color:#555; }
+.prod-kind-btn.selected { background:#2c5f2e; border-color:#2c5f2e; color:white; font-weight:600; }
+.step-nav-tag { display:block; font-size:0.65rem; font-weight:600; color:#b26a00; margin-left:30px; }
 .stock-pick { grid-column:1/-1; width:100%; padding:7px 10px; border:1.5px solid #ddd; border-radius:6px; font-size:0.83rem; font-family:inherit; background:#f6f5f2; }
 .stock-form { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin:12px 0 20px; }
 .stock-form input, .stock-form select { width:100%; padding:8px 10px; border:1.5px solid #ddd; border-radius:6px; font-size:0.85rem; font-family:inherit; background:white; }
@@ -558,6 +575,8 @@ header::-webkit-scrollbar { display: none; }
   /* ── SEARCH BAR ── */
   .search-bar { flex-wrap:wrap; padding:8px 12px; }
   .search-bar select { width:100%; }
+  .step-filter, .step-filter-btn { width:100%; }
+  .step-filter-panel { left:0; right:0; width:auto; }
 
   /* ── CARD GRID ── */
   #layoutGrid { padding:10px; }
@@ -805,6 +824,10 @@ header::-webkit-scrollbar { display: none; }
     <select id="filterSalesman" onchange="refreshAll()">
       <option value="">All Salesmen</option>
     </select>
+    <div class="step-filter" onclick="event.stopPropagation()">
+      <button class="step-filter-btn" id="stepFilterBtn" onclick="toggleStepFilterPanel()" title="Choose which steps to show">Filter Steps</button>
+      <div class="step-filter-panel" id="stepFilterPanel"></div>
+    </div>
   </div>
 
   <!-- LAYOUTS -->
@@ -923,15 +946,16 @@ header::-webkit-scrollbar { display: none; }
       <div class="settings-inner">
         <div class="settings-section-title">Users &amp; Passwords</div>
         <div id="settingsUserList"><div style="color:#aaa;font-size:0.85rem">Loading…</div></div>
-        <div class="settings-section-title" style="margin-top:24px">Stock Products</div>
+        <div class="settings-section-title" style="margin-top:24px">Product Library</div>
         <div id="stockList"></div>
         <div class="stock-form">
           <input type="text" id="stockName" placeholder="Name (e.g. Carpet T2)">
           <select id="stockType"></select>
+          <select id="stockKind"><option value="stock">Stock</option><option value="special">Special Order</option></select>
           <input type="text" id="stockManufacturer" placeholder="Manufacturer">
           <input type="text" id="stockStyle" placeholder="Style">
           <input type="text" id="stockColor" placeholder="Color">
-          <button class="btn btn-primary" onclick="addStockProduct()">+ Add Stock Product</button>
+          <button class="btn btn-primary" onclick="addStockProduct()">+ Add Product</button>
         </div>
       </div>
     </div>
@@ -1306,6 +1330,7 @@ header::-webkit-scrollbar { display: none; }
 // ════════════════════════════════════════════
 const STEP_COLORS = Array(12).fill('#4d7b79');
 
+const NO_MEASURE = "No Measure – Winging It";
 const STEPS = [
   { title:"New Job", desc:"Customer contact information and job site details.", fields:[
     {key:"_s_customer",    type:"slabel", label:"Customer Info"},
@@ -1327,25 +1352,26 @@ const STEPS = [
     {key:"salesman",       label:"Salesman",          type:"salesman_select",                                 customerField:true}
   ]},
   { title:"Customer Selection", desc:"Initial inquiry, consultation details, and selection.", fields:[
-    {key:"_h_inquiry",    type:"header", label:"Initial Inquiry"},
-    {key:"inquiry_source",label:"How did they hear about us?",type:"select",options:["Phone","Email","Website","Referral","Walk-in","Social Media","Other"]},
     {key:"_h_consult",    type:"header", label:"Consultation"},
     {key:"flooring_type", label:"Type of Flooring",type:"flooring_rooms",options:["LVP / Luxury Vinyl","Tile","Carpet","Laminate","Other"],
+      wholeOptions:["Whole Basement","Whole First Floor","Whole Second Floor"],
       roomOptions:["Living Room","Kitchen","Master Bedroom","Bedroom","Dining Room","Hallway","Stairs","Basement","Office","Bathroom","Laundry","Other"]},
     {key:"project_overview",label:"Project Description",type:"textarea",placeholder:"Timeline, scope, any special details…"},
     {key:"special_requirements",label:"Special Requirements",type:"textarea",placeholder:"Pets, allergies, subfloor concerns, transitions…"},
-    {key:"_calendar_changes",label:"Changes Made From the Calendar",type:"info",compute:c=>c.stepData?.[1]?.calendar_changes||'None'},
-    {key:"_h_samples",    type:"header", label:"Selection"},
+    {key:"_h_more",       type:"header", label:"Additional Information"},
     {key:"samples_taken", label:"Samples Taken Home?",type:"select",options:["Yes","No"],controls:true},
-    {key:"sample_taken_details",label:"Sample Details",type:"textarea",placeholder:"Which samples, quantities, product codes…",showIf:{field:"samples_taken",value:"Yes"}}
+    {key:"sample_taken_details",label:"Sample Details",type:"textarea",placeholder:"Which samples, quantities, product codes…",showIf:{field:"samples_taken",value:"Yes"}},
+    {key:"inquiry_source",label:"How did they hear about us?",type:"select",options:["Phone","Email","Website","Referral","Walk-in","Social Media","Other"]},
+    {key:"_calendar_changes",label:"Changes Made From the Calendar",type:"info",compute:c=>c.stepData?.[1]?.calendar_changes||'None'}
   ]},
   { title:"Schedule Measure", desc:"Book the in-home measurement appointment and assign a technician.", fields:[
-    {key:"schedule_date",label:"Date Measure Was Scheduled",type:"date",autoDate:true},
-    {key:"measure_appt_date",label:"Measure Appointment Date",type:"date"},
-    {key:"measure_appt_time",label:"Appointment Time",type:"text",placeholder:"e.g. 10:00 AM"},
-    {key:"technician",label:"Technician Assigned",type:"tech_select",options:["Paul","Shlomy","Eli","Yisroel"]},
-    {key:"_lockbox_info",label:"Lock Box (from New Jobs)",type:"info",compute:c=>c.lockbox==='Yes'?`🔒 Yes${c.lockboxCode?' — Code: '+c.lockboxCode:''}`:c.lockbox==='No'?'No lock box':'Not entered'},
-    {key:"access_notes",label:"Other Access / Entry Notes",type:"textarea",placeholder:"Gate code, contact on site…"}
+    {key:"measure_plan",label:"Are We Measuring?",type:"buttons",options:["Measure",NO_MEASURE],controls:true},
+    {key:"schedule_date",label:"Date Measure Was Scheduled",type:"date",autoDate:true,showIf:{field:"measure_plan",not:NO_MEASURE}},
+    {key:"measure_appt_date",label:"Measure Appointment Date",type:"date",showIf:{field:"measure_plan",not:NO_MEASURE}},
+    {key:"measure_appt_time",label:"Appointment Time",type:"text",placeholder:"e.g. 10:00 AM",showIf:{field:"measure_plan",not:NO_MEASURE}},
+    {key:"technician",label:"Technician Assigned",type:"tech_select",options:["Paul","Shlomy","Eli","Yisroel"],showIf:{field:"measure_plan",not:NO_MEASURE}},
+    {key:"_lockbox_info",label:"Lock Box (from New Jobs)",type:"info",compute:c=>c.lockbox==='Yes'?`🔒 Yes${c.lockboxCode?' — Code: '+c.lockboxCode:''}`:c.lockbox==='No'?'No lock box':'Not entered',showIf:{field:"measure_plan",not:NO_MEASURE}},
+    {key:"access_notes",label:"Other Access / Entry Notes",type:"textarea",placeholder:"Gate code, contact on site…",showIf:{field:"measure_plan",not:NO_MEASURE}}
   ]},
   { title:"Measure Checklist", desc:"On-site measurement and full condition assessment of the job site.", unlockAfter:"photos_taken", fields:[
     {key:"measure_date",label:"Actual Measure Date",type:"date",autoDate:true},
@@ -1374,14 +1400,15 @@ const STEPS = [
     {key:"estimate_approved",label:"Estimate Approved?",type:"select",options:["Yes","No"],controls:true},
     {key:"contract_date",label:"Order Signed Date",type:"date",showIf:{field:"estimate_approved",value:"Yes"}},
     {key:"contract_number",label:"Order #",type:"text",placeholder:"Order number",showIf:{field:"estimate_approved",value:"Yes"}},
-    {key:"deposit_amount",label:"Deposit Amount ($)",type:"text",placeholder:"0.00",showIf:{field:"estimate_approved",value:"Yes"}},
-    {key:"deposit_method",label:"Deposit Payment Method",type:"select",options:["Cash","Check","Credit Card","ACH / Bank Transfer","Financing"],showIf:{field:"estimate_approved",value:"Yes"}},
+    {key:"_h_more_approval",type:"header",label:"Additional Information",showIf:{field:"estimate_approved",value:"Yes"}},
     {key:"install_date_target",label:"Target Installation Date",type:"date",showIf:{field:"estimate_approved",value:"Yes"}},
     {key:"selection_products",label:"Selection (from Customer Selection)",type:"orig_products",showIf:{field:"estimate_approved",value:"Yes"}},
     {key:"_project_info",label:"Project Details (from Customer Selection)",type:"info",compute:c=>(c.stepData?.[1]?.project_overview||'').trim()||'No project description entered',showIf:{field:"estimate_approved",value:"Yes"}},
     {key:"selection_confirmed",label:"Final product / color confirmed?",type:"buttons",options:["Yes","No"],controls:true,showIf:{field:"estimate_approved",value:"Yes"}},
     {key:"final_products",label:"Final Selection",type:"final_products",showIf:{field:"selection_confirmed",value:"No"}},
     {key:"final_product_selected",label:"Notes About the Change",type:"textarea",placeholder:"Why it changed, anything to know…",showIf:{field:"selection_confirmed",value:"No"}},
+    {key:"deposit_amount",label:"Deposit Amount ($)",type:"text",placeholder:"0.00",showIf:{field:"estimate_approved",value:"Yes"}},
+    {key:"deposit_method",label:"Deposit Payment Method",type:"select",options:["Cash","Check","Credit Card","ACH / Bank Transfer","Financing"],showIf:{field:"estimate_approved",value:"Yes"}},
     {key:"approval_notes",label:"Notes",type:"textarea",placeholder:"Special contract terms, any additional notes…",showIf:{field:"estimate_approved",value:"Yes"}},
     {key:"lost_reason",label:"Why didn't they approve?",type:"buttons",options:["Price","Went with someone else","No response","Other"],showIf:{field:"estimate_approved",value:"No"}},
     {key:"lost_notes",label:"Notes",type:"textarea",placeholder:"Anything else about why…",showIf:{field:"estimate_approved",value:"No"}}
@@ -1405,8 +1432,9 @@ const STEPS = [
   { title:"Schedule Installation", desc:"Assign the install crew and confirm the install date.", fields:[
     {key:"crew_assigned",label:"Install Crew Assigned",type:"text",placeholder:"Crew lead name"},
     {key:"confirmed_install_date",label:"Install Date",type:"date"},
-    {key:"install_time",label:"Install Start Time",type:"text",placeholder:"e.g. 8:00 AM"},
+    {key:"_h_more_sched",type:"header",label:"Additional Information"},
     {key:"prep_instructions",label:"Prep Instructions Given to Customer",type:"textarea",placeholder:"Move furniture, clear the area, pets secured…"},
+    {key:"install_time",label:"Install Start Time",type:"text",placeholder:"e.g. 8:00 AM"},
     {key:"schedule_notes",label:"Notes",type:"textarea",placeholder:"Access details, special instructions for crew…"}
   ]},
   { title:"Installation", desc:"Crew completes installation and does quality walk-through.", fields:[
@@ -1441,6 +1469,7 @@ let _selectedNewColor = SALESMAN_COLORS[0];
 let activeProfile = null; // {name, color, initial}
 let activeLayout = 'grid';
 let activeStepFilter = null;
+let hiddenSteps = [];
 let activeSidebarId = null;
 let currentId = null;
 let currentStep = 0;
@@ -1702,6 +1731,7 @@ function doLogin(name) {
   // Yisroel and Admin default to seeing all jobs; others default to their own
   const defaultMyJobs = (name !== 'Admin' && name !== 'Yisroel');
   const savedMyJobs = getPref(name,'myJobs', defaultMyJobs);
+  hiddenSteps = getPref(name,'hiddenSteps',[]);
   document.getElementById('headerDot').style.background = sm.color;
   document.getElementById('headerDot').textContent = sm.initial;
   document.getElementById('headerName').textContent = sm.name;
@@ -1781,7 +1811,13 @@ function getFiltered() {
   if(q) data = data.filter(c=>(c.name+c.phone+c.email+c.address+c.company+c.salesman).toLowerCase().includes(q));
   if(sal) data = data.filter(c=>c.salesman===sal);
   if(activeStepFilter!==null) data = data.filter(c=>c.step===activeStepFilter);
+  data = data.filter(c=>!stepIsHidden(c.step));
   return data;
+}
+// A search, or clicking a step on the strip, still finds jobs on a hidden step
+function stepIsHidden(i){
+  if(activeStepFilter===i || (document.getElementById('searchInput').value||'').trim()) return false;
+  return hiddenSteps.includes(i);
 }
 
 // ════════════════════════════════════════════
@@ -1807,6 +1843,7 @@ const CLOSEOUT_STEP = STEPS.length-1;
 function isDone(c){ return c.step===CLOSEOUT_STEP&&c.stepData?.[CLOSEOUT_STEP]?.closeout_date; }
 // Archived jobs leave the main screens but stay in the database (see the Archive window)
 const APPROVAL_STEP = 5;
+const MEASURE_STEP = STEPS.findIndex(s => s.title === 'Measure Checklist');
 const ORDER_STEP = STEPS.findIndex(s => s.title === 'Order Placed');
 const RECEIVED_STEP = STEPS.findIndex(s => s.title === 'Order Received');
 function isLost(c){ return c.stepData?.[APPROVAL_STEP]?.estimate_approved==='No'; }
@@ -1827,16 +1864,39 @@ function renderStepsStrip() {
     // Step 1 is the New Job button: it opens the New Job form
     const click = i===0 ? 'openNewModal()' : `filterByStep(${i})`;
     const tip = i===0 ? 'Add a new job' : s.title;
-    return `<button class="step-btn ${i===0?'step-new':''} ${isActive?'sf-active':''}" onclick="${click}" title="${tip}" style="--sc:${color}">
+    return `<button class="step-btn ${i===0?'step-new':''} ${isActive?'sf-active':''} ${hiddenSteps.includes(i)?'step-off':''}" onclick="${click}" title="${tip}" style="--sc:${color}">
       ${count>0?`<span class="step-count-badge" style="background:${color}">${count}</span>`:''}
       <div class="step-circle">${i===0?'+':i+1}</div>
       <div class="step-btn-label">${s.title}</div>
     </button>`;
   }).join('');
   document.getElementById('stripClear').style.display = activeStepFilter!==null?'inline':'none';
+  renderStepFilter();
 }
 function filterByStep(i){ activeStepFilter=(activeStepFilter===i)?null:i; refreshAll(); }
 function clearStepFilter(){ activeStepFilter=null; refreshAll(); }
+
+// ════════════════════════════════════════════
+// FILTER STEPS BUTTON
+// ════════════════════════════════════════════
+function renderStepFilter(){
+  const btn=document.getElementById('stepFilterBtn');
+  btn.textContent=hiddenSteps.length?`Filter Steps (${hiddenSteps.length} hidden)`:'Filter Steps';
+  btn.classList.toggle('on',hiddenSteps.length>0);
+  document.getElementById('stepFilterPanel').innerHTML=`<div class="step-filter-quick">
+      <button onclick="setHiddenSteps([])">Show all steps</button>
+    </div>`+STEPS.map((s,i)=>i===0?'':`<label class="step-filter-row">
+      <input type="checkbox" ${hiddenSteps.includes(i)?'':'checked'} onchange="toggleHiddenStep(${i},this.checked)">
+      <span>${i+1}. ${s.title}</span>
+    </label>`).join('');
+}
+function toggleStepFilterPanel(){ document.getElementById('stepFilterPanel').classList.toggle('open'); }
+function setHiddenSteps(list){
+  hiddenSteps=list;
+  if(activeProfile) setPref(activeProfile.name,'hiddenSteps',hiddenSteps);
+  refreshAll();
+}
+function toggleHiddenStep(i,show){ setHiddenSteps(show?hiddenSteps.filter(n=>n!==i):[...hiddenSteps,i]); }
 
 // ════════════════════════════════════════════
 // LAYOUT: CARD GRID
@@ -1926,7 +1986,7 @@ function renderKanban() {
   const data = getFiltered();
   const board = document.getElementById('kanbanBoard');
   board.innerHTML = STEPS.map((s,i)=>{
-    if(i===0) return ''; // no jobs wait in Step 1, the New Job form
+    if(i===0||stepIsHidden(i)) return ''; // no jobs wait in Step 1, the New Job form
     const cards = data.filter(c=>c.step===i).sort((a,b)=>bizDays(b.lastStepChange||b.created)-bizDays(a.lastStepChange||a.created));
     const cardsHtml = cards.length
       ? cards.map(c=>{
@@ -2146,7 +2206,7 @@ function markStockRows(json){
   const map=parseJSON(json,null); if(!map) return json;
   const norm=v=>(v||'').trim().toLowerCase();
   Object.entries(map).forEach(([t,rows])=>(rows||[]).forEach(r=>{
-    if(_stockProducts.some(s=>s.type===t&&PRODUCT_KEYS.every(k=>norm(s[k])===norm(r[k])))) r.stock=true;
+    if(_stockProducts.some(s=>s.type===t&&PRODUCT_KEYS.every(k=>norm(s[k])===norm(r[k]))&&libKind(s)==='stock')) r.stock=true;
   }));
   return JSON.stringify(map);
 }
@@ -2154,11 +2214,11 @@ function copyLines(c,si,data){
   const lines=[];
   if(si===SELECTION_STEP){
     const rooms=roomsSummary(data); if(rooms) lines.push(rooms);
-    flattenProducts(originalProducts({stepData:{[si]:data}})).forEach(r=>lines.push(`${r.type}: ${productText(r)}${r.stock?' (in stock)':''}`));
+    flattenProducts(originalProducts({stepData:{[si]:data}})).forEach(r=>lines.push(`${r.type}: ${productText(r)}${r.stock?' (from stock)':''}`));
   }
   STEPS[si].fields.forEach(f=>{
     if(COPY_HIDDEN_TYPES.includes(f.type)) return;
-    if(f.showIf && data[f.showIf.field]!==f.showIf.value) return;
+    if(f.showIf && !showIfMatches(f,data[f.showIf.field])) return;
     const v=data[f.key]; if(!v) return;
     lines.push(`${f.label}: ${f.type==='multichip'?v.split(',').join(', '):v}`);
   });
@@ -2178,7 +2238,7 @@ function updateCopyStart(start){
   const opts=[];
   for(let i=1;i<=COPY_LAST_START;i++){
     const noOrder=skipOrderSteps(job,i)!==i;
-    opts.push(`<option value="${i}"${i===job.step?' selected':''}${noOrder?' disabled':''}>Step ${i+1}: ${esc(STEPS[i].title)}${noOrder?' (in stock, no order needed)':''}</option>`);
+    opts.push(`<option value="${i}"${i===job.step?' selected':''}${noOrder?' disabled':''}>Step ${i+1}: ${esc(STEPS[i].title)}${noOrder?' (from stock, no order needed)':''}</option>`);
   }
   document.getElementById('copyStartStep').innerHTML=opts.join('');
 }
@@ -2202,13 +2262,13 @@ function reviewStep(c,si){
   if(si===SELECTION_STEP){
     const rooms=roomsSummary(saved), prods=flattenProducts(finalProducts(c));
     if(saved.flooring_type){ filled++; rows.push(reviewRow('Flooring and rooms',rooms)); } else { missing++; rows.push(reviewRow('Flooring and rooms','',true)); }
-    if(prods.length) rows.push(reviewRow('Products',prods.map(r=>`${r.type}: ${productText(r)}${r.stock?' (in stock)':''}`).join('\n')));
+    if(prods.length) rows.push(reviewRow('Products',prods.map(r=>`${r.type}: ${productText(r)}${r.stock?' (from stock)':''}`).join('\n')));
     const need=typesOf(saved).filter(t=>PRODUCT_TYPES.includes(t)&&!prods.some(r=>r.type===t&&isCompleteRow(r)));
     need.forEach(t=>{ missing++; rows.push(reviewRow(`${t} product`,'',true)); });
   }
   STEPS[si].fields.forEach(f=>{
     const v=saved[f.key];
-    if(f.showIf && saved[f.showIf.field]!==f.showIf.value) return;
+    if(f.showIf && !showIfMatches(f,saved[f.showIf.field])) return;
     if(f.type==='textarea'){ if(v){ filled++; rows.push(reviewRow(f.label,v)); } return; } // notes are optional
     if(REVIEW_SKIP_TYPES.includes(f.type)||f.hiddenField||(f.onlyWithoutProducts&&hasProducts)) return;
     if(v){ filled++; rows.push(reviewRow(f.label,reviewValue(f,v))); } else { missing++; rows.push(reviewRow(f.label,'',true)); }
@@ -2224,7 +2284,7 @@ function copyReviewHtml(c,si){
   const section=(i,body)=>`<div class="rv-step"><div class="rv-title"><span>Step ${i+1}: ${esc(STEPS[i].title)}</span><button type="button" class="multichip-change-btn" onclick="switchStep(${i})">✏️ Edit</button></div>${body}</div>`;
   let sections=section(0,jobRows);
   for(let i=1;i<si;i++){
-    if(allStock&&(i===ORDER_STEP||i===RECEIVED_STEP)){ sections+=section(i,'<div class="rv-note">📦 All products are in stock. No order needed.</div>'); continue; }
+    if(allStock&&(i===ORDER_STEP||i===RECEIVED_STEP)){ sections+=section(i,'<div class="rv-note">📦 All products are from stock. No order needed.</div>'); continue; }
     const {html,missing}=reviewStep(c,i); total+=missing; sections+=section(i,html);
   }
   return `<div class="step-form-inner"><h3>Review Copied Job</h3>
@@ -2367,8 +2427,9 @@ function openCustomer(id){
 function renderStepsNav(c){
   document.getElementById('stepsNav').innerHTML=STEPS.map((s,i)=>{
     const done=i<c.step, active=i===currentStep;
+    const tag=i===MEASURE_STEP&&measureSkipped(c)?'No measure':(i===ORDER_STEP||i===RECEIVED_STEP)&&skipOrderSteps(c,ORDER_STEP)!==ORDER_STEP?'📦 From stock':'';
     return `<button class="step-nav-item ${done?'done':''} ${active?'active':''}" onclick="switchStep(${i})">
-      <span class="sn ${done&&!active?'done-n':''}">${done&&!active?'✓':i+1}</span>${s.title}
+      <span class="sn ${done&&!active?'done-n':''}">${done&&!active?'✓':i+1}</span>${s.title}${tag?`<span class="step-nav-tag">${tag}</span>`:''}
     </button>`;
   }).join('');
 }
@@ -2388,6 +2449,7 @@ function editChips(inputId) {
   if(cb) cb.style.display = 'none';
 }
 
+function showIfMatches(f,v){ return f.showIf.not!==undefined ? v!==f.showIf.not : v===f.showIf.value; }
 // Show/hide every "showIf" field; a field also hides when the field it depends on is hidden
 function handleFieldChange(key, val, si) {
   const shown = {};
@@ -2395,7 +2457,7 @@ function handleFieldChange(key, val, si) {
     const el = document.getElementById('fg_'+f.key);
     if(!f.showIf){ shown[f.key] = !el || el.style.display !== 'none'; return; }
     const parent = document.getElementById('f_'+f.showIf.field);
-    const vis = shown[f.showIf.field] !== false && !!parent && parent.value === f.showIf.value;
+    const vis = shown[f.showIf.field] !== false && !!parent && showIfMatches(f, parent.value);
     shown[f.key] = vis;
     if(el) el.style.display = vis ? '' : 'none';
   });
@@ -2408,14 +2470,14 @@ function unlockStep(btn){
 }
 
 function renderFieldHtml(f, val, vals, si) {
-  if(f.type==='header') return {html:`<div class="step-section-header">${esc(f.label)}</div>`, compact:false};
+  if(f.type==='header') return {html:`<div class="step-section-header"${f.showIf?` id="fg_${f.key}"${showIfMatches(f,vals[f.showIf.field])?'':' style="display:none"'}`:''}>${esc(f.label)}</div>`, compact:false};
   if(f.hiddenField) return {html:`<input type="hidden" id="f_${f.key}" value="${esc(val)}">`, compact:false};
   // Replaced by per-product lines when the job has products
   if(f.onlyWithoutProducts && vals._customer && flattenProducts(finalProducts(vals._customer)).length)
     return {html:`<input type="hidden" id="f_${f.key}" value="${esc(val)}">`, compact:false};
   if(f.type==='slabel') return {html:`<div class="slabel">${esc(f.label)}</div>`, compact:false};
   const fgId=`id="fg_${f.key}"`;
-  const hidden=f.showIf?(vals[f.showIf.field]===f.showIf.value?'':' style="display:none"'):'';
+  const hidden=f.showIf?(showIfMatches(f,vals[f.showIf.field])?'':' style="display:none"'):'';
   let inner='';
   if(f.type==='customer_type'){
     const isExist=val==='Existing Customer';
@@ -2479,7 +2541,7 @@ function renderFieldHtml(f, val, vals, si) {
     const p2=parseJSON(sd.flooring_products,{}), ov=parseJSON(val,{});
     const blocks=typesOf(sd).map(t=>{
       const rows=((ov[t]&&ov[t].some(hasAny))?ov[t]:(p2[t]||[])).filter(hasAny);
-      if(rows.length&&rows.every(isCompleteRow)) return `<div class="sel-block"><div class="sel-type">${esc(t)}</div>${rows.map(r=>`<div class="sel-line">${esc(productText(r))}${r.stock?' 📦 In stock':''}</div>`).join('')}</div>`;
+      if(rows.length&&rows.every(isCompleteRow)) return `<div class="sel-block"><div class="sel-type">${esc(t)}</div>${rows.map(r=>`<div class="sel-line">${esc(productText(r))}${r.stock?' 📦 From stock':''}</div>`).join('')}</div>`;
       return `<div class="sel-block sel-missing" data-type="${esc(t)}"><div class="sel-type">${esc(t)} <span class="sel-need">— needs manufacturer, style and color</span></div>${productRowsHtml(rows,t)}</div>`;
     }).join('');
     inner=`<label>${f.label}</label><input type="hidden" id="f_${f.key}" value="${esc(val)}"><div class="sel-wrap" data-store="f_${f.key}">${blocks||'<div class="sel-line">No flooring type picked in Customer Selection (Step 2).</div>'}</div>`;
@@ -2495,7 +2557,7 @@ function renderFieldHtml(f, val, vals, si) {
     // One line per product from Customer Selection, starting with its manufacturer
     const all=flattenProducts(finalProducts(vals._customer)), prods=all.filter(r=>!r.stock);
     if(all.length&&!prods.length){
-      inner=`<label>Products to Order</label><div class="info-box">📦 All products are in stock. No order needed.</div>`;
+      inner=`<label>Products to Order</label><div class="info-box">📦 All products are from stock. No order needed.</div>`;
     } else if(!prods.length){
       inner=`<label>${f.label}</label><input type="text" id="f_${f.key}" value="${esc(val)}" placeholder="${f.placeholder||''}">`;
     } else {
@@ -2519,7 +2581,7 @@ function renderFieldHtml(f, val, vals, si) {
     const lines=prods.map(r=>{ const product=`${r.type}: ${productText(r)}`; return {product, arrived:(saved.find(x=>x.product===product)||{}).arrived||''}; });
     inner=prods.length?`<label>${f.label}</label><input type="hidden" id="f_${f.key}" value="${esc(JSON.stringify(lines))}">
       ${lines.map((l,i)=>`<div class="recv-line"><div class="sup-product">${esc(l.product)}</div><div class="multichip-group">${['Yes','No'].map(o=>`<button type="button" class="multichip-btn${l.arrived===o?' selected':''}" onclick="pickArrived(this,${i},'${o}')">${o==='Yes'?'✓ Arrived':'✕ Not yet'}</button>`).join('')}</div></div>`).join('')}${stockNote(all)}`
-      :`<label>${f.label}</label><div class="info-box">📦 All products are in stock. Nothing to receive.</div>`;
+      :`<label>${f.label}</label><div class="info-box">📦 All products are from stock. Nothing to receive.</div>`;
   } else if(f.type==='info'){
     inner=`<label>${f.label}</label><div class="info-box">${esc(val)}</div>`;
   } else if(f.autoDate && (f.alwaysHidden || !val)){
@@ -2633,7 +2695,8 @@ function renderFloorRoomsBox(){
   const products=parseJSON(document.getElementById('f_flooring_products').value,{});
   box.innerHTML=types.map(t=>{
     const sel=(rooms[t]||'').split(',').filter(Boolean);
-    const chips=f.roomOptions.map(r=>`<button type="button" class="multichip-btn${sel.includes(r)?' selected':''}" data-value="${esc(r)}" onclick="toggleFloorRoom(this)">${esc(r)}</button>`).join('');
+    const roomChoices=PRODUCT_TYPES.includes(t)?[...f.wholeOptions,...f.roomOptions]:f.roomOptions;
+    const chips=roomChoices.map(r=>`<button type="button" class="multichip-btn${sel.includes(r)?' selected':''}" data-value="${esc(r)}" onclick="toggleFloorRoom(this)">${esc(r)}</button>`).join('');
     let prodHtml='';
     if(PRODUCT_TYPES.includes(t)){
       prodHtml=`<div class="floor-rooms-q" style="margin-top:12px">Products</div>`+productRowsHtml(products[t],t);
@@ -2652,20 +2715,23 @@ function productText(r){ return [r.manufacturer,r.style,r.color].filter(Boolean)
 
 // Product rows editor. The nearest [data-store] names the hidden input holding {type:[rows]};
 // each [data-type] block inside it holds that type's rows.
-// Stock products of this type; picking one fills the row and marks it as not needing an order
+// Library products of this type; picking one fills the row. Stock ones need no order
+function libKind(s){ return s.kind==='special'?'special':'stock'; }
+function kindLabel(kind){ return kind==='special'?'Special Order':'Stock'; }
+function rowKind(r){ return r.stock?'stock':r.special?'special':''; }
 function stockPickHtml(r, type){
   const items=_stockProducts.filter(s=>s.type===type);
   if(!items.length&&!r.stock) return '';
-  const cur=r.stock?items.find(s=>PRODUCT_KEYS.every(k=>s[k]===r[k])):null;
-  const gone=r.stock&&!cur?`<option value="saved" selected>${esc(productText(r))}</option>`:'';
-  return `<select class="stock-pick" onchange="pickStock(this)"><option value="">📦 Pick a stock product…</option>${gone}${items.map(s=>`<option value="${esc(s.id)}"${cur&&cur.id===s.id?' selected':''}>${esc(s.name)}</option>`).join('')}</select><div class="ac-list stock-ac"></div>`;
+  const cur=rowKind(r)?items.find(s=>PRODUCT_KEYS.every(k=>s[k]===r[k])):null;
+  const gone=rowKind(r)&&!cur?`<option value="saved" selected>${esc(productText(r))}</option>`:'';
+  return `<select class="stock-pick" onchange="pickStock(this)"><option value="">📚 Pick from the product library…</option>${gone}${items.map(s=>`<option value="${esc(s.id)}"${cur&&cur.id===s.id?' selected':''}>${esc(s.name)} (${kindLabel(libKind(s))})</option>`).join('')}</select><div class="ac-list stock-ac"></div>`;
 }
 // Typing in manufacturer, style or color lists matching stock products of this type
 function stockSuggest(input){
   const box=input.closest('.prod-row').querySelector('.stock-ac'); if(!box) return;
   const type=input.closest('[data-type]').dataset.type, q=input.value.trim().toLowerCase();
   const hits=q?_stockProducts.filter(s=>s.type===type&&['name',...PRODUCT_KEYS].some(k=>(s[k]||'').toLowerCase().includes(q))).slice(0,8):[];
-  box.innerHTML=hits.map(s=>`<div class="ac-item" data-id="${esc(s.id)}" onmousedown="event.preventDefault();pickStockSuggestion(this)"><div class="ac-name">📦 ${esc(s.name)}</div><div class="ac-sub">${esc(productText(s))}</div></div>`).join('');
+  box.innerHTML=hits.map(s=>`<div class="ac-item" data-id="${esc(s.id)}" onmousedown="event.preventDefault();pickStockSuggestion(this)"><div class="ac-name">📚 ${esc(s.name)} (${kindLabel(libKind(s))})</div><div class="ac-sub">${esc(productText(s))}</div></div>`).join('');
   box.classList.toggle('open',hits.length>0);
 }
 function hideStockSuggest(input){ input.closest('.prod-row').querySelector('.stock-ac')?.classList.remove('open'); }
@@ -2676,21 +2742,37 @@ function pickStockSuggestion(item){
 }
 function pickStock(sel){
   const s=_stockProducts.find(x=>x.id===sel.value);
-  if(sel.value!=='saved') sel.closest('.prod-row').querySelectorAll('input[data-k]').forEach(i=>{ i.value=s?s[i.dataset.k]:''; });
+  if(sel.value!=='saved'){
+    const row=sel.closest('.prod-row');
+    row.querySelectorAll('input[data-k]').forEach(i=>{ i.value=s?s[i.dataset.k]:''; });
+    setRowKind(row,s?libKind(s):'');
+  }
   syncProducts(sel);
+}
+function setRowKind(row,kind){
+  row.dataset.kind=kind;
+  row.querySelectorAll('.prod-kind-btn').forEach(b=>b.classList.toggle('selected',b.dataset.kind===kind));
+}
+function pickProductKind(btn){
+  const row=btn.closest('.prod-row');
+  setRowKind(row,row.dataset.kind===btn.dataset.kind?'':btn.dataset.kind);
+  syncProducts(btn);
 }
 function stockNote(prods){
   const stock=prods.filter(r=>r.stock);
-  return stock.length?`<div class="info-box" style="margin-top:8px">📦 In stock, no order needed:\n${stock.map(r=>esc(`${r.type}: ${productText(r)}`)).join('\n')}</div>`:'';
+  return stock.length?`<div class="info-box" style="margin-top:8px">📦 From stock, no order needed:\n${stock.map(r=>esc(`${r.type}: ${productText(r)}`)).join('\n')}</div>`:'';
 }
-// Jobs where every product is in stock skip Order Placed and Order Received
+function measureSkipped(c){ return c.stepData?.[MEASURE_STEP-1]?.measure_plan===NO_MEASURE; }
+// Jobs where every product is from stock skip Order Placed and Order Received
 function skipOrderSteps(c,s){
   if(s<ORDER_STEP||s>RECEIVED_STEP) return s;
   const all=flattenProducts(finalProducts(c));
   return all.length&&all.every(r=>r.stock)?RECEIVED_STEP+1:s;
 }
 function productRowHtml(r, removable, type){
-  return `<div class="prod-row">${stockPickHtml(r,type)}${PRODUCT_KEYS.map(k=>`<input type="text" placeholder="${k[0].toUpperCase()+k.slice(1)}" data-k="${k}" value="${esc(r[k]||'')}" autocomplete="off" oninput="syncProducts(this);stockSuggest(this)" onblur="hideStockSuggest(this)">`).join('')}${removable?`<button type="button" class="prod-remove" title="Remove this product" onclick="removeProductRow(this)">✕</button>`:'<span></span>'}</div>`;
+  const kind=rowKind(r);
+  const kindBtn=k=>`<button type="button" class="prod-kind-btn${kind===k?' selected':''}" data-kind="${k}" onclick="pickProductKind(this)">${kindLabel(k)}</button>`;
+  return `<div class="prod-row" data-kind="${kind}">${stockPickHtml(r,type)}${PRODUCT_KEYS.map(k=>`<input type="text" placeholder="${k[0].toUpperCase()+k.slice(1)}" data-k="${k}" value="${esc(r[k]||'')}" autocomplete="off" oninput="syncProducts(this);stockSuggest(this)" onblur="hideStockSuggest(this)">`).join('')}${removable?`<button type="button" class="prod-remove" title="Remove this product" onclick="removeProductRow(this)">✕</button>`:'<span></span>'}<div class="prod-kind">Stock or special order? ${kindBtn('stock')}${kindBtn('special')}</div></div>`;
 }
 function productRowsHtml(rows, type){
   rows=rows&&rows.length?rows:[{}];
@@ -2698,13 +2780,13 @@ function productRowsHtml(rows, type){
 }
 function syncProducts(el){
   const store=el.closest('[data-store]'); const hid=document.getElementById(store.dataset.store);
-  // Typing over a stock product makes it a regular product
-  if(el.matches('input[data-k]')){ const pick=el.closest('.prod-row').querySelector('.stock-pick'); if(pick) pick.value=''; }
+  // Typing over a library product makes it a new product, so ask again
+  if(el.matches('input[data-k]')){ const row=el.closest('.prod-row'), pick=row.querySelector('.stock-pick'); if(pick&&pick.value){ pick.value=''; setRowKind(row,''); } }
   const map=parseJSON(hid.value,{});
   store.querySelectorAll('[data-type]').forEach(b=>{
     const rows=[...b.querySelectorAll('.prod-row')];
     if(!rows.length) return;
-    map[b.dataset.type]=rows.map(row=>{ const r={}; row.querySelectorAll('input[data-k]').forEach(i=>{ if(i.value.trim()) r[i.dataset.k]=i.value.trim(); }); if(row.querySelector('.stock-pick')?.value) r.stock=true; return r; });
+    map[b.dataset.type]=rows.map(row=>{ const r={}; row.querySelectorAll('input[data-k]').forEach(i=>{ if(i.value.trim()) r[i.dataset.k]=i.value.trim(); }); if(row.dataset.kind==='stock') r.stock=true; if(row.dataset.kind==='special') r.special=true; return r; });
   });
   hid.value=JSON.stringify(map);
 }
@@ -2741,6 +2823,11 @@ function toggleFinalType(btn){
 }
 // Step 6 can't be saved as approved until every flooring type has manufacturer, style and color
 function stepProblems(si){
+  const unanswered=[...document.querySelectorAll('#stepContent .prod-row')].filter(row=>{
+    const inputs=[...row.querySelectorAll('input[data-k]')];
+    return row.offsetParent&&!row.dataset.kind&&inputs.every(i=>i.value.trim());
+  }).map(row=>[...row.querySelectorAll('input[data-k]')].map(i=>i.value.trim()).join(' · '));
+  if(unanswered.length) return 'Is this a stock product or a special order?\n• '+unanswered.join('\n• ')+'\n\nPick one under each product.';
   if(si!==APPROVAL_STEP) return '';
   if(document.getElementById('f_estimate_approved')?.value!=='Yes') return '';
   const c=customers().find(x=>x.id===currentId); if(!c) return '';
@@ -2751,6 +2838,23 @@ function stepProblems(si){
   const missing=Object.entries(map).filter(([t,rows])=>!rows.length||!rows.every(isCompleteRow)).map(([t])=>t);
   if(missing.length) return 'Please enter manufacturer, style and color for:\n• '+missing.join('\n• ')+'\n\n(Remove any extra empty product lines.)';
   return '';
+}
+// New products typed on a job go into the product library
+async function saveProductsToLibrary(data){
+  const norm=v=>(v||'').trim().toLowerCase();
+  const same=(a,b,t)=>a.type===t&&PRODUCT_KEYS.every(k=>norm(a[k])===norm(b[k]));
+  const fresh=[];
+  ['flooring_products','selection_products','final_products'].forEach(key=>{
+    Object.entries(parseJSON(data[key],{})).forEach(([t,rows])=>(rows||[]).forEach(r=>{
+      if(!isCompleteRow(r)||!rowKind(r)||[..._stockProducts,...fresh].some(s=>same(s,r,t))) return;
+      fresh.push({id:Date.now().toString()+fresh.length, name:productText(r).replace(/ · /g,' '), type:t, manufacturer:r.manufacturer, style:r.style, color:r.color, kind:rowKind(r)});
+    }));
+  });
+  if(!fresh.length) return;
+  const { error } = await db.from('stock_products').insert(fresh);
+  if(error) { console.error('Supabase product library error:', error); alert('The job saved, but the new product did not save to the library.'); return; }
+  _stockProducts = [..._stockProducts, ...fresh].sort((a,b)=>a.name.localeCompare(b.name));
+  showToast('Added to the product library');
 }
 // "Rooms per material" text for the Measure step
 function roomsSummary(sd){
@@ -2887,6 +2991,7 @@ async function saveStep(){
   if(currentStep===SCHED_STEP) setSchedStepData(c, stepData); else c.stepData[currentStep]={...c.stepData[currentStep], ...stepData};
   Object.assign(c, customerProps);
   await upsertCustomer(c);
+  await saveProductsToLibrary(stepData);
   renderStep(c, currentStep); // re-render so multichip fields lock
   const n=document.getElementById('savedNote'); if(n){n.style.display='flex';setTimeout(()=>n.style.display='none',2000);}
   if(customerProps.name!==undefined) { const dn=document.getElementById('detailName'); if(dn) dn.textContent=c.name; }
@@ -2953,6 +3058,7 @@ async function restoreJob(){
 // ════════════════════════════════════════════
 function togglePrintMenu(e){ e.stopPropagation(); document.getElementById('printMenu').classList.toggle('open'); }
 document.addEventListener('click', ()=>document.getElementById('printMenu')?.classList.remove('open'));
+document.addEventListener('click', ()=>document.getElementById('stepFilterPanel').classList.remove('open'));
 function stepIdx(title){ return STEPS.findIndex(s=>s.title===title); }
 function fmtDate(v){
   if(!v) return '';
@@ -2975,7 +3081,7 @@ function jobProductRows(c){
     (prods.length?prods:[{}]).forEach(p=>{
       const product=productText(p), key=`${t}: ${product}`;
       const ord=orderLines.find(x=>x.product===key)||{}, rec=recvLines.find(x=>x.product===key)||{};
-      rows.push({type:t, product, rooms:r, supplier:p.stock?'In stock':ord.supplier||'', po:ord.po||'', arrived:p.stock?'✓ In stock':rec.arrived==='Yes'?'✓ Yes':rec.arrived==='No'?'Not yet':''});
+      rows.push({type:t, product, rooms:r, supplier:p.stock?'From stock':ord.supplier||'', po:ord.po||'', arrived:p.stock?'✓ From stock':rec.arrived==='Yes'?'✓ Yes':rec.arrived==='No'?'Not yet':''});
     });
   });
   return rows;
@@ -3069,7 +3175,7 @@ function printJobDetails(){
     const pairs=[];
     step.fields.forEach(f=>{
       if(skipTypes.includes(f.type)||f.customerField) return;
-      if(f.showIf && saved[f.showIf.field]!==f.showIf.value) return;
+      if(f.showIf && !showIfMatches(f,saved[f.showIf.field])) return;
       let v=saved[f.key]; if(!v) return;
       if(f.type==='date') v=fmtDate(v);
       else if(f.type==='multichip') v=v.split(',').join(', ');
@@ -3089,10 +3195,12 @@ async function saveAndAdvance(){
   Object.assign(c, customerProps);
   if(isLost(c)){ await upsertCustomer(c); openCustomer(c.id); showToast('Estimate not approved — job moved to the Archive'); return; }
   const prevStep=currentStep;
-  if(currentStep<STEPS.length-1){c.step=skipOrderSteps(c,currentStep+1); c.lastStepChange=new Date().toISOString(); currentStep=c.step;}
+  const noMeasure=currentStep+1===MEASURE_STEP&&measureSkipped(c);
+  if(currentStep<STEPS.length-1){c.step=skipOrderSteps(c,noMeasure?MEASURE_STEP+1:currentStep+1); c.lastStepChange=new Date().toISOString(); currentStep=c.step;}
   await upsertCustomer(c);
+  await saveProductsToLibrary(stepData);
   renderStepsNav(c); renderStep(c,currentStep);
-  showToast(`Moved to Step ${currentStep+1}: ${STEPS[currentStep].title}${currentStep>prevStep+1?' (in stock, no order needed)':''}`);
+  showToast(`Moved to Step ${currentStep+1}: ${STEPS[currentStep].title}${noMeasure?' (no measure)':currentStep>prevStep+1?' (from stock, no order needed)':''}`);
 }
 async function deleteCurrentCustomer(){
   const c=_customers.find(x=>x.id===currentId); if(!c)return;
@@ -4073,27 +4181,27 @@ function renderStockSettings() {
   document.getElementById('stockType').innerHTML = types.map(t=>`<option value="${esc(t)}">${esc(t)}</option>`).join('');
   document.getElementById('stockList').innerHTML = _stockProducts.length
     ? _stockProducts.map(s=>`<div class="user-settings-card">
-        <div class="us-info"><div class="us-name">${esc(s.name)}</div><div class="us-status" style="color:#777">${esc(s.type)} · ${esc(productText(s))}</div></div>
+        <div class="us-info"><div class="us-name">${esc(s.name)}</div><div class="us-status" style="color:#777">${esc(s.type)} · ${esc(productText(s))} · ${kindLabel(libKind(s))}</div></div>
         <button class="btn btn-danger btn-sm" onclick="removeStockProduct('${esc(s.id)}')">Remove</button>
       </div>`).join('')
-    : '<div style="color:#aaa;font-size:0.85rem">No stock products yet.</div>';
+    : '<div style="color:#aaa;font-size:0.85rem">No products yet.</div>';
 }
 async function addStockProduct() {
   const val = id => document.getElementById(id).value.trim();
-  const s = { id: Date.now().toString(), name: val('stockName'), type: val('stockType'), manufacturer: val('stockManufacturer'), style: val('stockStyle'), color: val('stockColor') };
+  const s = { id: Date.now().toString(), name: val('stockName'), type: val('stockType'), manufacturer: val('stockManufacturer'), style: val('stockStyle'), color: val('stockColor'), kind: val('stockKind') };
   if(!s.name||!s.manufacturer||!s.style||!s.color) { alert('Please fill in name, manufacturer, style and color.'); return; }
   const { error } = await db.from('stock_products').insert(s);
-  if(error) { console.error('Supabase stock product error:', error); alert('This stock product did not save. Please try again.'); return; }
+  if(error) { console.error('Supabase stock product error:', error); alert('This product did not save. Please try again.'); return; }
   _stockProducts = [..._stockProducts, s].sort((a,b)=>a.name.localeCompare(b.name));
   ['stockName','stockManufacturer','stockStyle','stockColor'].forEach(id=>document.getElementById(id).value='');
   renderStockSettings();
-  showToast(`"${s.name}" added to stock`);
+  showToast(`"${s.name}" added to the library`);
 }
 async function removeStockProduct(id) {
   const s = _stockProducts.find(x=>x.id===id); if(!s) return;
-  if(!confirm(`Remove "${s.name}" from stock products?`)) return;
+  if(!confirm(`Remove "${s.name}" from the product library?`)) return;
   const { error } = await db.from('stock_products').delete().eq('id', id);
-  if(error) { console.error('Supabase stock product error:', error); alert('This stock product was not removed. Please try again.'); return; }
+  if(error) { console.error('Supabase stock product error:', error); alert('This product was not removed. Please try again.'); return; }
   _stockProducts = _stockProducts.filter(x=>x.id!==id);
   renderStockSettings();
 }
