@@ -5,7 +5,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Harmony Flooring — Customer Tracker</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body { font-family: 'Segoe UI', Arial, sans-serif; background: #f0ede8; color: #2c2c2c; height: calc(100vh / var(--zoom,1)); display: flex; flex-direction: column; overflow: hidden; }
@@ -779,9 +778,6 @@ header::-webkit-scrollbar { display: none; }
   <h1>🌿 Harmony Flooring</h1>
   <p>Select your profile to get started</p>
   <div class="profile-grid" id="profileGrid"></div>
-  <div class="profile-admin">
-    <a onclick="openAsAdmin()">Open as Admin (view all)</a>
-  </div>
 </div>
 
 <!-- ═══════════════════════════════════ MAIN APP -->
@@ -1263,16 +1259,12 @@ header::-webkit-scrollbar { display: none; }
     <div class="pw-avatar" id="pwAvatar"></div>
     <div class="pw-name-label" id="pwNameLabel"></div>
 
-    <!-- Main login / first-time setup panel -->
+    <!-- Main login panel -->
     <div id="pwMainPanel">
       <div class="pw-subtitle" id="pwSubtitle"></div>
       <div class="form-group">
         <label id="pwFieldLabel">Password</label>
         <div class="pw-field-wrap"><input type="password" id="pwInput" onkeydown="if(event.key==='Enter')submitPassword()"><button class="pw-toggle" onclick="togglePwVis('pwInput',this)" type="button">👁</button></div>
-      </div>
-      <div class="form-group" id="pwConfirmGroup" style="display:none">
-        <label>Confirm Password</label>
-        <div class="pw-field-wrap"><input type="password" id="pwConfirm" onkeydown="if(event.key==='Enter')submitPassword()"><button class="pw-toggle" onclick="togglePwVis('pwConfirm',this)" type="button">👁</button></div>
       </div>
       <div class="pw-error" id="pwError"></div>
       <div class="pw-forgot-link" id="pwForgotLink" style="display:none">
@@ -1284,26 +1276,18 @@ header::-webkit-scrollbar { display: none; }
       </div>
     </div>
 
-    <!-- Reset code panel (shown after "Forgot password?" is clicked) -->
-    <div id="pwResetPanel" style="display:none">
-      <div class="pw-subtitle" id="pwResetSubtitle">A 6-digit code was sent to your email.</div>
-      <div class="form-group">
-        <label>Enter Code</label>
-        <input type="text" id="pwResetCode" maxlength="6" placeholder="000000" style="letter-spacing:4px;font-size:1.1rem;text-align:center" onkeydown="if(event.key==='Enter')verifyResetCode()">
-      </div>
-      <div class="form-group" id="pwNewPassGroup" style="display:none">
-        <label>New Password</label>
-        <div class="pw-field-wrap"><input type="password" id="pwNewPassReset" placeholder="New password (min 4 chars)" onkeydown="if(event.key==='Enter')verifyResetCode()"><button class="pw-toggle" onclick="togglePwVis('pwNewPassReset',this)" type="button">👁</button></div>
-      </div>
-      <div class="form-group" id="pwNewPass2Group" style="display:none">
-        <label>Confirm New Password</label>
-        <div class="pw-field-wrap"><input type="password" id="pwNewPassReset2" onkeydown="if(event.key==='Enter')verifyResetCode()"><button class="pw-toggle" onclick="togglePwVis('pwNewPassReset2',this)" type="button">👁</button></div>
-      </div>
-      <div class="pw-error" id="pwResetError"></div>
-      <div class="modal-actions">
-        <button class="btn btn-secondary" onclick="cancelResetCode()">Back</button>
-        <button class="btn btn-primary" id="pwResetBtn" onclick="verifyResetCode()">Verify Code</button>
-      </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════ PASSWORD LINK MODAL -->
+<div class="modal-overlay" id="linkModal">
+  <div class="modal pw-modal">
+    <h2 style="margin-bottom:4px;text-align:center">🔑 Password Link</h2>
+    <div class="pw-subtitle" id="linkFor" style="margin-bottom:16px"></div>
+    <div class="form-group"><input type="text" id="linkText" readonly onclick="this.select()"></div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeLinkModal()">Close</button>
+      <button class="btn btn-primary" onclick="copyTeamLink()">Copy Link</button>
     </div>
   </div>
 </div>
@@ -1311,7 +1295,7 @@ header::-webkit-scrollbar { display: none; }
 <!-- ═══════════════════════════════════ CHANGE PASSWORD MODAL -->
 <div class="modal-overlay" id="changePwModal">
   <div class="modal pw-modal">
-    <h2 style="margin-bottom:4px;text-align:center">🔑 Change Password</h2>
+    <h2 id="changePwTitle" style="margin-bottom:4px;text-align:center">🔑 Change Password</h2>
     <div class="pw-subtitle" id="changePwFor" style="margin-bottom:16px"></div>
     <div class="form-group" id="cpCurrentGroup">
       <label>Current Password</label>
@@ -1327,7 +1311,7 @@ header::-webkit-scrollbar { display: none; }
     </div>
     <div class="pw-error" id="cpError"></div>
     <div class="modal-actions">
-      <button class="btn btn-secondary" onclick="closeChangePw()">Cancel</button>
+      <button class="btn btn-secondary" id="cpCancel" onclick="closeChangePw()">Cancel</button>
       <button class="btn btn-primary" onclick="submitChangePassword()">Save Password</button>
     </div>
   </div>
@@ -1471,13 +1455,13 @@ let SALESMEN = [
   {name:'Yisroel', color:'#2c5f2e', initial:'Y'},
   {name:'Shuey',   color:'#1565c0', initial:'S'},
   {name:'Eli',     color:'#6a1b9a', initial:'E'},
-  {name:'Mendy',   color:'#c62828', initial:'M'},
-  {name:'Admin',   color:'#555',    initial:'A'}
+  {name:'Mendy',   color:'#c62828', initial:'M'}
 ];
 const SALESMAN_COLORS = ['#2c5f2e','#1565c0','#6a1b9a','#c62828','#e65100','#00695c','#880e4f','#4e342e','#1a237e','#37474f'];
 let _selectedNewColor = SALESMAN_COLORS[0];
 
 let activeProfile = null; // {name, color, initial}
+let isTeamAdmin = false;
 let activeLayout = 'grid';
 let activeStepFilter = null;
 let hiddenSteps = [];
@@ -1505,16 +1489,10 @@ function setLastProfile(name) {
 // ════════════════════════════════════════════
 const SUPABASE_URL  = 'https://hbgefoytekvokgdjxixa.supabase.co';
 const SUPABASE_KEY  = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhiZ2Vmb3l0ZWt2b2tnZGp4aXhhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIwMDM5MTgsImV4cCI6MjA5NzU3OTkxOH0.V35QASo-YbvC_RJWoZn_Rir7V8CkJlRLUZ6V1_ALxpM';
+// Invite and reset links arrive with a type in the URL; read it before the client clears it
+const _authLinkType = new URLSearchParams(location.hash.slice(1)).get('type');
+const _authLinkFailed = location.hash.includes('error_description');
 const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-
-// ── EMAILJS CONFIG (used for per-salesman password-reset codes) ──
-const EMAILJS_SERVICE_ID  = 'service_i5zbq2p';
-const EMAILJS_TEMPLATE_ID = 'template_21szz7i';
-const EMAILJS_PUBLIC_KEY  = 'QIA4h4-FsuydcdKky';
-// Template variables to use in EmailJS: {{salesman_name}}, {{reset_code}}, {{to_email}}, {{email}}
-
-// Admin email — receives fallback reset requests when a salesman has no email on file
-const ADMIN_EMAIL = 'sales@harmonyflooring.net';
 
 // ── IN-MEMORY CACHE ──────────────────────────
 let _customers = [];
@@ -1717,20 +1695,14 @@ document.addEventListener('visibilitychange', async () => {
 // PROFILE SCREEN
 // ════════════════════════════════════════════
 function renderProfileScreen() {
-  const data = customers();
-  const counts = {};
-  data.forEach(c => { counts[c.salesman] = (counts[c.salesman]||0)+1; });
-  document.getElementById('profileGrid').innerHTML = SALESMEN.filter(s=>s.name!=='Admin').map(s=>`
+  document.getElementById('profileGrid').innerHTML = SALESMEN.map(s=>`
     <div class="profile-card" onclick="selectProfile('${s.name}')">
       <div class="profile-avatar" style="background:${s.color}">${s.initial}</div>
       <div class="profile-name">${s.name}</div>
-      <div class="profile-jobs">${counts[s.name]||0} active job${counts[s.name]===1?'':'s'}</div>
     </div>`).join('');
 }
 
 function selectProfile(name) {
-  const session = getSession();
-  if(session && session.name === name) { doLogin(name); return; }
   showPasswordModal(name);
 }
 
@@ -1739,16 +1711,15 @@ function doLogin(name) {
   activeProfile = sm;
   setLastProfile(name);
   const savedLayout = getPref(name,'layout','grid');
-  // Yisroel and Admin default to seeing all jobs; others default to their own
-  const defaultMyJobs = (name !== 'Admin' && name !== 'Yisroel');
-  const savedMyJobs = getPref(name,'myJobs', defaultMyJobs);
+  // Everyone starts on all jobs; the toggle narrows to their own
+  const savedMyJobs = getPref(name,'onlyMyJobs', false);
   hiddenSteps = getPref(name,'hiddenSteps',[]);
   applyZoom(getPref(name,'zoom',100));
   document.getElementById('headerDot').style.background = sm.color;
   document.getElementById('headerDot').textContent = sm.initial;
   document.getElementById('headerName').textContent = sm.name;
   document.getElementById('myJobsToggle').checked = savedMyJobs;
-  document.getElementById('filterSalesman').value = savedMyJobs && name!=='Admin' ? name : '';
+  document.getElementById('filterSalesman').value = savedMyJobs ? name : '';
   document.getElementById('profileScreen').style.display = 'none';
   document.getElementById('app').style.display = 'flex';
   document.getElementById('detail').style.display = 'none';
@@ -1780,10 +1751,12 @@ function stepZoom(dir){
   if(activeProfile) setPref(activeProfile.name,'zoom',pageZoom);
 }
 
-function openAsAdmin() { selectProfile('Admin'); }
-
-function switchProfile() {
-  clearSession();
+async function switchProfile() {
+  activeProfile = null;
+  isTeamAdmin = false;
+  await db.removeAllChannels();
+  await db.auth.signOut({ scope: 'local' });
+  _customers = []; _messages = []; _scheduleEntries = []; _stockProducts = [];
   document.getElementById('app').style.display = 'none';
   document.getElementById('profileScreen').style.display = 'flex';
   renderProfileScreen();
@@ -1819,8 +1792,8 @@ function onMyJobsChange(box){
 function refreshAll() {
   if(activeProfile) {
     const myJobs = document.getElementById('myJobsToggle').checked;
-    setPref(activeProfile.name,'myJobs',myJobs);
-    if(myJobs && activeProfile.name!=='Admin') {
+    setPref(activeProfile.name,'onlyMyJobs',myJobs);
+    if(myJobs) {
       document.getElementById('filterSalesman').value = activeProfile.name;
     }
   }
@@ -2360,7 +2333,7 @@ function openNewModal(installDate, kind){
   if(_newJobKind==='pending') fromCal.textContent='⏳ This job will go in Pending Jobs until it has a day.';
   if(_newJobKind==='repair') fromCal.textContent='🔧 Repair: look up the old job by customer, then pick its address. If it is not from an old job, click New Customer.';
   ['newName','newPhone','newEmail','newAddress','newAddress2','newCompany','newContractor','newContractorPhone','newLockboxCode'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
-  document.getElementById('newSalesman').value = activeProfile&&activeProfile.name!=='Admin'?activeProfile.name:'';
+  document.getElementById('newSalesman').value = activeProfile?activeProfile.name:'';
   document.getElementById('newLockbox').value='';
   document.getElementById('newJobDate').value=localDateStr(new Date());
   document.getElementById('lockboxCodeGroup').style.display='none';
@@ -2623,7 +2596,7 @@ function renderFieldHtml(f, val, vals, si) {
     // Filled in automatically on save; not shown until it has a date (or never, if alwaysHidden)
     return {html:`<input type="hidden" id="f_${f.key}" value="${esc(val)}">`, compact:false};
   } else if(f.type==='salesman_select'){
-    const smOpts=SALESMEN.filter(s=>s.name!=='Admin').map(s=>`<option value="${esc(s.name)}"${val===s.name?' selected':''}>${esc(s.name)}</option>`).join('');
+    const smOpts=SALESMEN.map(s=>`<option value="${esc(s.name)}"${val===s.name?' selected':''}>${esc(s.name)}</option>`).join('');
     inner=`<label>${f.label}</label><select id="f_${f.key}"><option value="">— Select —</option>${smOpts}</select>`;
   } else if(f.type==='select'){
     const opts=f.options.map(o=>`<option value="${o}"${val===o?' selected':''}>${o}</option>`).join('');
@@ -3813,7 +3786,7 @@ function openCompose(replyTo) {
   document.getElementById('taskExtra').classList.remove('show');
 
   // Build recipient checkboxes
-  const others = SALESMEN.filter(s => s.name !== activeProfile?.name && s.name !== 'Admin');
+  const others = SALESMEN.filter(s => s.name !== activeProfile?.name);
   document.getElementById('recipientGrid').innerHTML = others.map(s => `
     <label class="recip-check ${replyTo&&replyTo.from===s.name?'selected':''}" style="--rc:${s.color}" onclick="toggleRecip(this,'${s.name}')">
       <input type="checkbox" value="${s.name}" ${replyTo&&replyTo.from===s.name?'checked':''}>
@@ -3904,7 +3877,7 @@ async function sendMessage() {
     .filter(v => v !== 'ALL');
   const allChecked = document.querySelector('[data-name="ALL"] input')?.checked;
   const finalTo = allChecked
-    ? SALESMEN.filter(s=>s.name!==activeProfile?.name&&s.name!=='Admin').map(s=>s.name)
+    ? SALESMEN.filter(s=>s.name!==activeProfile?.name).map(s=>s.name)
     : recipients;
   const subject = document.getElementById('msgSubject').value.trim();
   const body = document.getElementById('msgBody').value.trim();
@@ -3941,56 +3914,18 @@ async function sendMessage() {
 // ════════════════════════════════════════════
 // PASSWORD AUTH
 // ════════════════════════════════════════════
-const PW_SALT = 'harmony_flooring_crm';
 let _pendingProfile = null;
-let _pendingIsSetup = false;
-
-async function hashPw(pw) {
-  const data = new TextEncoder().encode(pw + PW_SALT);
-  const buf = await crypto.subtle.digest('SHA-256', data);
-  return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
-}
-async function getProfileHash(name) {
-  const { data } = await db.from('profiles').select('password_hash').eq('name', name).single();
-  return data?.password_hash || null;
-}
-async function saveProfileHash(name, hash) {
-  const { error } = await db.from('profiles').upsert({ name, password_hash: hash });
-  if(error) console.error('Failed to save profile hash:', error);
-}
-function getSession() {
-  try { return JSON.parse(sessionStorage.getItem('hf_session')); } catch { return null; }
-}
-function setSession(name) { sessionStorage.setItem('hf_session', JSON.stringify({name})); }
-function clearSession()   { sessionStorage.removeItem('hf_session'); }
 
 async function showPasswordModal(name) {
   const sm = SALESMEN.find(s=>s.name===name) || {name, color:'#555', initial:name[0].toUpperCase()};
   _pendingProfile = name;
-  const hash = await getProfileHash(name);
-  _pendingIsSetup = !hash;
   document.getElementById('pwAvatar').style.background = sm.color;
   document.getElementById('pwAvatar').textContent = sm.initial;
   document.getElementById('pwNameLabel').textContent = sm.name;
   document.getElementById('pwInput').value = '';
-  document.getElementById('pwConfirm').value = '';
   document.getElementById('pwError').style.display = 'none';
-  if(_pendingIsSetup) {
-    document.getElementById('pwSubtitle').textContent = 'Create a password for your profile';
-    document.getElementById('pwFieldLabel').textContent = 'New Password';
-    document.getElementById('pwConfirmGroup').style.display = 'block';
-    document.getElementById('pwSubmitBtn').textContent = 'Set Password';
-  } else {
-    document.getElementById('pwSubtitle').textContent = 'Enter your password to continue';
-    document.getElementById('pwFieldLabel').textContent = 'Password';
-    document.getElementById('pwConfirmGroup').style.display = 'none';
-    document.getElementById('pwSubmitBtn').textContent = 'Log In';
-  }
-  // Reset to main panel, hide reset flow
-  _resetVerified = false;
-  document.getElementById('pwMainPanel').style.display = 'block';
-  document.getElementById('pwResetPanel').style.display = 'none';
-  document.getElementById('pwForgotLink').style.display = _pendingIsSetup ? 'none' : 'block';
+  document.getElementById('pwSubtitle').textContent = 'Enter your password to continue';
+  document.getElementById('pwForgotLink').style.display = 'block';
   document.getElementById('pwModal').classList.add('open');
   setTimeout(()=>document.getElementById('pwInput').focus(), 100);
 }
@@ -4006,27 +3941,35 @@ async function submitPassword() {
   const errEl = document.getElementById('pwError');
   errEl.style.display = 'none';
   if(!pw) { errEl.textContent = 'Please enter a password.'; errEl.style.display='block'; return; }
-  if(_pendingIsSetup) {
-    const confirm = document.getElementById('pwConfirm').value;
-    if(pw.length < 4) { errEl.textContent = 'Password must be at least 4 characters.'; errEl.style.display='block'; return; }
-    if(pw !== confirm) { errEl.textContent = 'Passwords do not match.'; errEl.style.display='block'; return; }
-    await saveProfileHash(_pendingProfile, await hashPw(pw));
-    document.getElementById('pwModal').classList.remove('open');
-    setSession(_pendingProfile);
-    doLogin(_pendingProfile);
-  } else {
-    const hash = await getProfileHash(_pendingProfile);
-    if(await hashPw(pw) !== hash) {
-      errEl.textContent = 'Incorrect password. Try again.';
-      errEl.style.display = 'block';
-      document.getElementById('pwInput').value = '';
-      document.getElementById('pwInput').focus();
-      return;
-    }
-    document.getElementById('pwModal').classList.remove('open');
-    setSession(_pendingProfile);
-    doLogin(_pendingProfile);
+  const { data: email } = await db.rpc('login_email', { p_name: _pendingProfile });
+  if(!email) { errEl.textContent = 'This profile has no login yet. Ask Yisroel to set one up.'; errEl.style.display='block'; return; }
+  const { error } = await db.auth.signInWithPassword({ email, password: pw });
+  if(error) {
+    errEl.textContent = error.status === 400 ? 'Incorrect password. Try again.' : 'Could not log in: ' + error.message;
+    errEl.style.display = 'block';
+    document.getElementById('pwInput').value = '';
+    document.getElementById('pwInput').focus();
+    return;
   }
+  document.getElementById('pwModal').classList.remove('open');
+  await startSession();
+}
+
+// Who you are comes from the signed-in account, not from the profile that was clicked
+async function startSession() {
+  const { data: { user } } = await db.auth.getUser();
+  const { data: me } = user
+    ? await db.from('team_members').select('name,is_admin').eq('user_id', user.id).maybeSingle()
+    : { data: null };
+  if(!me) {
+    await db.auth.signOut({ scope: 'local' });
+    showToast('This login is not part of the team.');
+    return;
+  }
+  isTeamAdmin = me.is_admin;
+  await fetchAll();
+  subscribeRealtime();
+  doLogin(me.name);
 }
 
 function togglePwVis(inputId, btn) {
@@ -4044,14 +3987,13 @@ async function loadSalesmen() {
     const { data } = await db.from('salesmen').select('name,color').order('sort_order');
     if(data && data.length > 0) {
       SALESMEN = data.map(s => ({ name: s.name, color: s.color, initial: s.name[0].toUpperCase() }));
-      SALESMEN.push({name:'Admin', color:'#555', initial:'A'});
     }
   } catch(e) {}
   populateSalesmenDropdowns();
 }
 
 function populateSalesmenDropdowns() {
-  const opts = SALESMEN.filter(s=>s.name!=='Admin')
+  const opts = SALESMEN
     .map(s=>`<option value="${esc(s.name)}">${esc(s.name)}</option>`).join('');
   ['filterSalesman','newSalesman','editSalesman'].forEach(id => {
     const el = document.getElementById(id);
@@ -4074,17 +4016,17 @@ async function addSalesman() {
   if(SALESMEN.find(s => s.name.toLowerCase() === name.toLowerCase())) {
     showToast('A user with that name already exists.'); return;
   }
-  const sortOrder = SALESMEN.filter(s=>s.name!=='Admin').length + 1;
+  const sortOrder = SALESMEN.length + 1;
   const { error } = await db.from('salesmen').insert({ name, color: _selectedNewColor, sort_order: sortOrder });
   if(error) { showToast('Error adding user: ' + error.message); return; }
   document.getElementById('newUserName').value = '';
   await loadSalesmen();
   renderSettingsUsers();
-  showToast(`${name} added to the team ✓`);
+  showToast(`${name} added. They can sign in once their login is created.`);
 }
 
 async function removeSalesman(name) {
-  if(!confirm(`Remove ${name} from the team?\n\nTheir job history and password will be kept.`)) return;
+  if(!confirm(`Remove ${name} from the team?\n\nTheir job history will be kept, but they will no longer be able to log in.`)) return;
   await db.from('salesmen').delete().eq('name', name);
   await loadSalesmen();
   renderSettingsUsers();
@@ -4094,111 +4036,11 @@ async function removeSalesman(name) {
 // ════════════════════════════════════════════
 // EMAIL / PASSWORD RESET
 // ════════════════════════════════════════════
-async function getProfileEmail(name) {
-  const { data } = await db.from('profiles').select('email').eq('name', name).single();
-  return data?.email || null;
-}
-async function saveProfileEmail(name, email) {
-  await db.from('profiles').upsert({ name, email: email || null });
-}
-
-let _resetVerified = false;
-
-async function forgotProfilePw() {
-  const name = _pendingProfile;
-  if(!name) return;
+function forgotProfilePw() {
+  if(!_pendingProfile) return;
   const errEl = document.getElementById('pwError');
-  errEl.style.display = 'none';
-  const email = await getProfileEmail(name);
-  if(!email) {
-    errEl.textContent = 'No email on file. Contact the admin (' + ADMIN_EMAIL + ') to reset your password.';
-    errEl.style.display = 'block';
-    return;
-  }
-  await sendProfileResetCode(name, email);
-}
-
-async function sendProfileResetCode(name, email) {
-  const code = String(Math.floor(100000 + Math.random() * 900000));
-  const expiry = Date.now() + 15 * 60 * 1000;
-  await db.from('profiles').upsert({ name, reset_token: code, reset_token_expiry: expiry });
-  try {
-    await emailjs.send(
-      EMAILJS_SERVICE_ID,
-      EMAILJS_TEMPLATE_ID,
-      { to_email: email, email: email, salesman_name: name, reset_code: code },
-      EMAILJS_PUBLIC_KEY
-    );
-    _resetVerified = false;
-    document.getElementById('pwMainPanel').style.display = 'none';
-    document.getElementById('pwResetPanel').style.display = 'block';
-    const masked = email.replace(/(.{2})(.*)(@.*)/, (_, a, b, c) => a + b.replace(/./g, '*') + c);
-    document.getElementById('pwResetSubtitle').textContent = 'A 6-digit code was sent to ' + masked;
-    document.getElementById('pwResetCode').value = '';
-    document.getElementById('pwResetCode').disabled = false;
-    document.getElementById('pwResetError').style.display = 'none';
-    document.getElementById('pwNewPassGroup').style.display = 'none';
-    document.getElementById('pwNewPass2Group').style.display = 'none';
-    document.getElementById('pwResetBtn').textContent = 'Verify Code';
-    setTimeout(() => document.getElementById('pwResetCode').focus(), 100);
-  } catch(e) {
-    const errEl = document.getElementById('pwError');
-    errEl.textContent = 'Could not send email. Contact admin (' + ADMIN_EMAIL + ') to reset your password.';
-    errEl.style.display = 'block';
-  }
-}
-
-function cancelResetCode() {
-  document.getElementById('pwResetPanel').style.display = 'none';
-  document.getElementById('pwMainPanel').style.display = 'block';
-  document.getElementById('pwInput').value = '';
-  document.getElementById('pwError').style.display = 'none';
-  _resetVerified = false;
-  setTimeout(() => document.getElementById('pwInput').focus(), 100);
-}
-
-async function verifyResetCode() {
-  const errEl = document.getElementById('pwResetError');
-  errEl.style.display = 'none';
-
-  if(!_resetVerified) {
-    const code = document.getElementById('pwResetCode').value.trim();
-    if(!code || code.length !== 6) {
-      errEl.textContent = 'Please enter the 6-digit code.'; errEl.style.display = 'block'; return;
-    }
-    const { data } = await db.from('profiles')
-      .select('reset_token,reset_token_expiry').eq('name', _pendingProfile).single();
-    if(!data?.reset_token) {
-      errEl.textContent = 'No reset code found. Go back and try again.'; errEl.style.display = 'block'; return;
-    }
-    if(Date.now() > data.reset_token_expiry) {
-      errEl.textContent = 'Code expired. Go back and request a new one.'; errEl.style.display = 'block'; return;
-    }
-    if(code !== data.reset_token) {
-      errEl.textContent = 'Incorrect code. Please try again.'; errEl.style.display = 'block';
-      document.getElementById('pwResetCode').value = ''; document.getElementById('pwResetCode').focus(); return;
-    }
-    _resetVerified = true;
-    document.getElementById('pwResetCode').disabled = true;
-    document.getElementById('pwNewPassGroup').style.display = 'block';
-    document.getElementById('pwNewPass2Group').style.display = 'block';
-    document.getElementById('pwResetBtn').textContent = 'Save New Password';
-    document.getElementById('pwResetSubtitle').textContent = 'Code verified! Set your new password.';
-    setTimeout(() => document.getElementById('pwNewPassReset').focus(), 100);
-  } else {
-    const newPw  = document.getElementById('pwNewPassReset').value;
-    const newPw2 = document.getElementById('pwNewPassReset2').value;
-    if(!newPw) { errEl.textContent = 'Please enter a new password.'; errEl.style.display='block'; return; }
-    if(newPw.length < 4) { errEl.textContent = 'Password must be at least 4 characters.'; errEl.style.display='block'; return; }
-    if(newPw !== newPw2) { errEl.textContent = 'Passwords do not match.'; errEl.style.display='block'; return; }
-    const hash = await hashPw(newPw);
-    await db.from('profiles').upsert({ name: _pendingProfile, password_hash: hash, reset_token: null, reset_token_expiry: null });
-    _resetVerified = false;
-    document.getElementById('pwModal').classList.remove('open');
-    setSession(_pendingProfile);
-    doLogin(_pendingProfile);
-    showToast('Password updated successfully ✓');
-  }
+  errEl.textContent = 'Ask Yisroel for a new password link. He can get one in Settings and text it to you.';
+  errEl.style.display = 'block';
 }
 
 // ════════════════════════════════════════════
@@ -4244,42 +4086,30 @@ async function removeStockProduct(id) {
 async function renderSettingsUsers() {
   const el = document.getElementById('settingsUserList');
   el.innerHTML = '<div style="color:#aaa;font-size:0.85rem">Loading…</div>';
-  const { data: profiles } = await db.from('profiles').select('name,password_hash,email');
-  const pwMap = {}, emailMap = {};
-  (profiles || []).forEach(p => { pwMap[p.name] = !!p.password_hash; emailMap[p.name] = p.email || ''; });
-  const isAdmin = activeProfile?.name === 'Admin' || activeProfile?.name === 'Yisroel';
+  const { data: accounts } = isTeamAdmin ? await db.rpc('team_accounts') : { data: [] };
+  const emailMap = {};
+  (accounts || []).forEach(a => { emailMap[a.name] = a.email || ''; });
+  const isAdmin = isTeamAdmin;
   const me = activeProfile?.name;
-  const users = SALESMEN.filter(s=>s.name!=='Admin').concat([SALESMEN.find(s=>s.name==='Admin')]);
-  el.innerHTML = users.map(s => {
-    const hasPw = !!pwMap[s.name];
+  el.innerHTML = SALESMEN.map(s => {
     const isMe = s.name === me;
-    const canEdit = isMe || isAdmin;
-    const statusText = hasPw ? '✓ Password set' : '⚠️ No password set';
-    const statusColor = hasPw ? '#2c5f2e' : '#e65100';
-    const btnLabel = !hasPw ? 'Set Password' : (isAdmin && !isMe ? 'Reset Password' : 'Change Password');
     const emailVal = emailMap[s.name] || '';
-    const emailDisplay = emailVal
-      ? `<span style="color:#555">${esc(emailVal)}</span>`
-      : `<span style="color:#e65100">No email set</span>`;
-    const emailRow = isAdmin ? `
-      <div class="us-email-row">
-        Email: ${emailDisplay}
-        <a class="us-edit-email-link" onclick="toggleEditEmail('${esc(s.name)}')">edit</a>
-      </div>
-      <div class="us-email-edit" id="emailEdit_${esc(s.name)}" style="display:none">
-        <input type="email" id="emailInput_${esc(s.name)}" value="${esc(emailVal)}" placeholder="salesman@email.com" class="us-email-input">
-        <button class="btn btn-sm btn-green" onclick="submitEditEmail('${esc(s.name)}')">Save</button>
-        <button class="btn btn-sm btn-secondary" onclick="toggleEditEmail('${esc(s.name)}')">Cancel</button>
-      </div>` : '';
-    const actions = canEdit
-      ? `<button class="btn btn-secondary btn-sm" onclick="openChangePwModal('${s.name}',${isMe},${hasPw})">${btnLabel}</button>`
+    const status = !isAdmin ? ''
+      : emailVal ? '<div class="us-status" style="color:#2c5f2e">✓ Login ready</div>'
+      : '<div class="us-status" style="color:#e65100">⚠️ No login yet</div>';
+    const emailRow = isAdmin && emailVal ? `
+      <div class="us-email-row">Email: <span style="color:#555">${esc(emailVal)}</span></div>` : '';
+    const actions = isMe
+      ? `<button class="btn btn-secondary btn-sm" onclick="openChangePwModal()">Change Password</button>`
+      : isAdmin && emailVal
+      ? `<button class="btn btn-secondary btn-sm" onclick="getTeamLink('${esc(s.name)}')">Get Password Link</button>`
       : '';
-    const removeBtn = isAdmin && s.name !== 'Admin' ? `<button class="btn btn-danger btn-sm" style="margin-top:6px" onclick="removeSalesman('${esc(s.name)}')">Remove</button>` : '';
+    const removeBtn = isAdmin && !isMe ? `<button class="btn btn-danger btn-sm" style="margin-top:6px" onclick="removeSalesman('${esc(s.name)}')">Remove</button>` : '';
     return `<div class="user-settings-card">
       <div class="profile-avatar" style="background:${s.color};width:40px;height:40px;font-size:1rem;flex-shrink:0;margin-top:2px">${s.initial}</div>
       <div class="us-info">
         <div class="us-name">${s.name}${isMe?' <span style="font-size:0.72rem;color:#aaa;font-weight:400">(you)</span>':''}</div>
-        <div class="us-status" style="color:${statusColor}">${statusText}</div>
+        ${status}
         ${emailRow}
       </div>
       <div style="flex-shrink:0;display:flex;flex-direction:column;align-items:flex-end;gap:4px">${actions}${removeBtn}</div>
@@ -4308,33 +4138,37 @@ async function renderSettingsUsers() {
   }
 }
 
-function toggleEditEmail(name) {
-  const div = document.getElementById('emailEdit_' + name);
-  const showing = div.style.display !== 'none';
-  div.style.display = showing ? 'none' : 'block';
-  if(!showing) setTimeout(() => document.getElementById('emailInput_' + name).focus(), 50);
+async function getTeamLink(name) {
+  const { data, error } = await db.functions.invoke('team-reset-link', { body: { name, redirectTo: location.origin + location.pathname } });
+  if(error || !data?.link) {
+    let msg = error?.message || 'Please try again.';
+    try { msg = (await error.context.json()).error || msg; } catch(e) {}
+    showToast('Could not get a link: ' + msg); return;
+  }
+  document.getElementById('linkFor').textContent = `Text this link to ${name}. It opens the CRM and asks them to choose a password. It works one time; if it has expired, get a new one.`;
+  document.getElementById('linkText').value = data.link;
+  document.getElementById('linkModal').classList.add('open');
 }
-
-async function submitEditEmail(name) {
-  const email = document.getElementById('emailInput_' + name).value.trim();
-  if(email && !email.includes('@')) { showToast('Please enter a valid email address.'); return; }
-  await saveProfileEmail(name, email);
-  showToast(`Email ${email ? 'saved' : 'removed'} for ${name} ✓`);
-  renderSettingsUsers();
+async function copyTeamLink() {
+  const box = document.getElementById('linkText');
+  box.select();
+  try { await navigator.clipboard.writeText(box.value); } catch(e) { document.execCommand('copy'); }
+  showToast('Link copied. Paste it into a text message.');
 }
+function closeLinkModal() { document.getElementById('linkModal').classList.remove('open'); }
 
-let _cpTarget = null, _cpIsMe = false, _cpHasExisting = false;
+let _cpFromLink = false;
 
-function openChangePwModal(name, isMe, hasExisting) {
-  _cpTarget = name; _cpIsMe = isMe; _cpHasExisting = hasExisting;
+// fromLink: the person arrived from an invite or reset email and has no current password to type
+function openChangePwModal(fromLink = false) {
+  _cpFromLink = fromLink;
   ['cpCurrent','cpNew','cpConfirm'].forEach(id => document.getElementById(id).value = '');
   document.getElementById('cpError').style.display = 'none';
-  const showCurrent = isMe && hasExisting;
-  document.getElementById('cpCurrentGroup').style.display = showCurrent ? 'block' : 'none';
-  document.getElementById('changePwFor').textContent = isMe ? '' : `Setting password for ${name}`;
-  document.getElementById('cpNewLabel').textContent = hasExisting ? 'New Password' : 'Password';
+  document.getElementById('changePwTitle').textContent = fromLink ? '🔑 Set Your Password' : '🔑 Change Password';
+  document.getElementById('cpCurrentGroup').style.display = fromLink ? 'none' : 'block';
+  document.getElementById('cpCancel').style.display = fromLink ? 'none' : '';
   document.getElementById('changePwModal').classList.add('open');
-  setTimeout(() => document.getElementById(showCurrent ? 'cpCurrent' : 'cpNew').focus(), 100);
+  setTimeout(() => document.getElementById(fromLink ? 'cpNew' : 'cpCurrent').focus(), 100);
 }
 function closeChangePw() { document.getElementById('changePwModal').classList.remove('open'); }
 
@@ -4345,18 +4179,18 @@ async function submitChangePassword() {
   const errEl   = document.getElementById('cpError');
   errEl.style.display = 'none';
   if(!newPw || !confirm) { errEl.textContent = 'Please fill in all fields.'; errEl.style.display='block'; return; }
-  if(newPw.length < 4)   { errEl.textContent = 'Password must be at least 4 characters.'; errEl.style.display='block'; return; }
+  if(newPw.length < 8)   { errEl.textContent = 'Password must be at least 8 characters.'; errEl.style.display='block'; return; }
   if(newPw !== confirm)   { errEl.textContent = 'Passwords do not match.'; errEl.style.display='block'; return; }
-  if(_cpIsMe && _cpHasExisting) {
+  if(!_cpFromLink) {
     if(!current) { errEl.textContent = 'Please enter your current password.'; errEl.style.display='block'; return; }
-    if(await hashPw(current) !== await getProfileHash(_cpTarget)) {
-      errEl.textContent = 'Current password is incorrect.'; errEl.style.display='block'; return;
-    }
+    const { data: { user } } = await db.auth.getUser();
+    const { error: badPw } = await db.auth.signInWithPassword({ email: user.email, password: current });
+    if(badPw) { errEl.textContent = 'Current password is incorrect.'; errEl.style.display='block'; return; }
   }
-  await saveProfileHash(_cpTarget, await hashPw(newPw));
+  const { error } = await db.auth.updateUser({ password: newPw });
+  if(error) { errEl.textContent = error.message; errEl.style.display='block'; return; }
   closeChangePw();
-  showToast(`Password ${_cpHasExisting ? 'updated' : 'set'} for ${_cpTarget}! ✓`);
-  renderSettingsUsers();
+  showToast('Password saved ✓');
 }
 
 // ════════════════════════════════════════════
@@ -4380,16 +4214,23 @@ document.getElementById('newModal').addEventListener('click',function(e){if(e.ta
 document.getElementById('editModal').addEventListener('click',function(e){if(e.target===this)closeEditModal();});
 
 // ════════════════════════════════════════════
-// INIT — check for saved profile
+// INIT — no data loads until someone is signed in
 // ════════════════════════════════════════════
+db.auth.onAuthStateChange(event => {
+  if(event === 'SIGNED_OUT' && activeProfile) location.reload();
+});
+
 (async () => {
   try {
     await loadSalesmen();
-    await fetchAll();
-    subscribeRealtime();
     renderProfileScreen();
-    const s = getSession();
-    if(s) doLogin(s.name);
+    const { data: { session } } = await db.auth.getSession();
+    if(session) {
+      await startSession();
+      if(activeProfile && (_authLinkType === 'invite' || _authLinkType === 'recovery')) openChangePwModal(true);
+    } else if(_authLinkFailed) {
+      showToast('That link has expired. Ask Yisroel for a new one.', null, 8000);
+    }
   } catch(err) {
     console.error('Supabase load failed:', err);
     renderProfileScreen();
