@@ -815,6 +815,7 @@ header::-webkit-scrollbar { display: none; }
       <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2.5" y="3.5" width="19" height="5" rx="1.2"/><path d="M4.5 8.5v10a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2v-10"/><path d="M10 12.5h4"/></svg>
       <span>Archive</span>
     </button>
+    <button class="hdr-msg-btn" id="hdrBookBtn" onclick="window.open('bookkeeping.html','_blank')" title="Bookkeeping (admin only)" style="display:none">💲</button>
     <button class="hdr-msg-btn" onclick="openSettings()" title="Settings">⚙️</button>
     <button class="btn btn-ghost btn-sm" onclick="exportData()">⬇ Export</button>
   </header>
@@ -3967,6 +3968,7 @@ async function startSession() {
     return;
   }
   isTeamAdmin = me.is_admin;
+  document.getElementById('hdrBookBtn').style.display = isTeamAdmin ? '' : 'none';
   await fetchAll();
   subscribeRealtime();
   doLogin(me.name);

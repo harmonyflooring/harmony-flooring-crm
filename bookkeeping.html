@@ -1,0 +1,441 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Harmony Flooring — Bookkeeping</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/docx@8.5.0/build/index.umd.js"></script>
+<script src="billing/layout.js"></script>
+<script src="billing/engine.js"></script>
+<script src="billing/bill-docx.js"></script>
+<style>
+:root { --green:#2c5f2e; --cream:#f0ede8; --line:#e0ddd8; --orange:#e8a020; --mute:#888; --ink:#2c2c2c; --mint:#e8f5e9; }
+* { box-sizing:border-box; margin:0; padding:0; }
+body { font-family:'Segoe UI',Arial,sans-serif; background:var(--cream); color:var(--ink); }
+header { background:var(--green); color:#fff; padding:10px 18px; font-weight:800; box-shadow:0 2px 8px rgba(0,0,0,.2); display:flex; gap:14px; align-items:center; flex-wrap:wrap; }
+header span { flex:1; min-width:150px; }
+header a { color:#fff; font-size:.85rem; font-weight:600; text-decoration:none; opacity:.85; }
+header button { background:none; border:1.5px solid rgba(255,255,255,.5); color:#fff; font:inherit; font-size:.85rem; border-radius:7px; padding:5px 12px; cursor:pointer; }
+header button.on { background:#fff; color:var(--green); border-color:#fff; }
+.top { background:#fff; border-bottom:1px solid var(--line); padding:12px 18px; display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+.top h1 { font-size:1.1rem; flex:1; min-width:170px; }
+.weeknav { display:flex; align-items:center; gap:6px; }
+.weeknav b { min-width:170px; text-align:center; font-size:.92rem; }
+.saved { font-size:.75rem; color:var(--mute); min-width:60px; }
+.btn { background:#fff; color:var(--green); border:1.5px solid var(--green); border-radius:7px; padding:6px 11px; font:inherit; font-size:.82rem; font-weight:700; cursor:pointer; }
+.btn.main { background:var(--orange); border-color:var(--orange); color:#fff; }
+.btn.green { background:var(--green); color:#fff; }
+.btn.red { color:#c0392b; border-color:#c0392b; }
+.btn:disabled { opacity:.5; cursor:default; }
+.small { padding:3px 8px; font-size:.74rem; }
+.wrap { max-width:1040px; margin:0 auto; padding:18px 16px 50px; }
+.bh h2 { color:var(--green); font-size:1.25rem; }
+.sum { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:12px; margin-top:12px; }
+.tile { background:#fff; border-radius:10px; box-shadow:0 1px 4px rgba(0,0,0,.07); padding:12px 16px; }
+.tile span { font-size:.72rem; font-weight:700; text-transform:uppercase; letter-spacing:.5px; color:#aaa; }
+.tile b { display:block; font-size:1.3rem; color:var(--green); margin-top:2px; }
+.tile.warn b { color:#c0392b; }
+.dayband { background:var(--green); color:#fff; font-weight:800; padding:8px 14px; margin:18px 0 12px; border-radius:4px; }
+.bjob { background:#fff; box-shadow:0 1px 4px rgba(0,0,0,.07); margin-bottom:18px; border-radius:4px; overflow:hidden; }
+.bhead { background:#ecefe9; border-left:7px solid var(--green); padding:8px 14px; display:flex; gap:10px; align-items:flex-start; }
+.bhead > div { flex:1; min-width:0; }
+.bhead small { display:block; color:#666; font-size:.8rem; }
+.bnote { background:#fff6d6; color:#5c4a00; font-style:italic; font-size:.83rem; padding:6px 14px; display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+.status { font-style:normal; font-weight:700; font-size:.7rem; white-space:nowrap; background:var(--mint); color:var(--green); border-radius:20px; padding:3px 10px; }
+.flag { background:#fdecea; color:#a02a20; font-size:.82rem; padding:6px 14px; }
+.todo { background:#f4f6f3; color:#666; font-size:.82rem; padding:8px 14px; }
+.cols { display:grid; grid-template-columns:repeat(auto-fit,minmax(340px,1fr)); }
+.cols > div { min-width:0; overflow-x:auto; }
+.cols > div + div { border-left:1px solid var(--line); }
+.cols h4 { background:#dde5dc; font-size:.78rem; padding:6px 12px; text-transform:uppercase; letter-spacing:.4px; }
+table { width:100%; border-collapse:collapse; }
+th { text-align:left; font-size:.72rem; text-transform:uppercase; letter-spacing:.4px; color:#555; background:#f4f6f3; padding:6px 12px; border-bottom:1px solid var(--line); }
+td { font-size:.83rem; padding:6px 12px; border-bottom:1px solid #f0eeea; white-space:nowrap; }
+td:first-child { white-space:normal; font-weight:600; }
+td small { display:block; font-weight:400; color:var(--mute); }
+.amt { text-align:right; }
+tr.tot td { font-weight:800; background:#faf9f7; }
+.wtot { background:var(--green); color:#fff; font-weight:700; padding:10px 14px; border-radius:4px; font-size:.88rem; }
+.label { font-size:.72rem; font-weight:700; text-transform:uppercase; letter-spacing:.5px; color:#aaa; margin:22px 0 8px; }
+.empty { background:#fff; border-radius:10px; padding:30px; text-align:center; color:var(--mute); margin-top:16px; line-height:1.6; }
+.gate { max-width:420px; margin:80px auto; background:#fff; border-radius:12px; padding:30px; text-align:center; box-shadow:0 2px 12px rgba(0,0,0,.08); line-height:1.6; }
+.gate a { color:var(--green); font-weight:700; }
+/* manual */
+.tools { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:12px; }
+.tools input { flex:1; min-width:180px; font:inherit; font-size:.88rem; padding:8px 12px; border:1px solid var(--line); border-radius:7px; }
+.seg { display:flex; background:#1e4220; border-radius:8px; padding:3px; }
+.seg button { border:0; background:none; color:#d7e6d8; font:inherit; font-size:.82rem; padding:6px 11px; border-radius:6px; cursor:pointer; }
+.seg button.on { background:#fff; color:var(--green); font-weight:700; }
+.scroll { overflow-x:auto; background:#fff; border-radius:10px; box-shadow:0 1px 4px rgba(0,0,0,.07); }
+tr.grp td { background:var(--mint); color:var(--green); font-weight:800; font-size:.82rem; }
+tr.nt td { background:#fff6d6; color:#5c4a00; font-style:italic; font-size:.78rem; font-weight:400; white-space:normal; }
+td.pay, th.pay { background:#f4faf4; }
+input.rate { width:76px; text-align:right; font:inherit; font-size:.86rem; padding:4px 7px; border:1px solid var(--line); border-radius:6px; background:#faf9f7; }
+input.rate.changed { background:#fff6d6; border-color:var(--orange); }
+.fixed { color:var(--mute); font-size:.8rem; }
+.scroll.pay .chg, .scroll.chg .pay { display:none; }
+.card { background:#fff; border-radius:10px; box-shadow:0 1px 4px rgba(0,0,0,.07); padding:14px 16px; }
+.card ol { padding-left:20px; font-size:.86rem; line-height:1.6; }
+.addc { display:flex; gap:6px; flex-wrap:wrap; margin-top:10px; align-items:center; font-size:.85rem; }
+.addc input[type=text] { font:inherit; font-size:.85rem; padding:6px 9px; border:1px solid var(--line); border-radius:7px; }
+/* form */
+.modal { position:fixed; inset:0; background:rgba(0,0,0,.45); display:none; align-items:flex-start; justify-content:center; padding:20px 12px; overflow:auto; z-index:9; }
+.modal.open { display:flex; }
+.box { background:#fff; border-radius:12px; width:100%; max-width:760px; padding:18px; }
+.box h2 { color:var(--green); font-size:1.1rem; margin-bottom:10px; }
+.fg { display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:10px; }
+.fld { display:flex; flex-direction:column; gap:3px; font-size:.75rem; font-weight:600; color:#555; }
+.fld input, .fld select, .fld textarea { font:inherit; font-size:.86rem; font-weight:400; color:var(--ink); padding:6px 8px; border:1px solid var(--line); border-radius:6px; width:100%; }
+.fld.chk { flex-direction:row; align-items:center; gap:5px; padding-top:18px; }
+.fld.chk input { width:auto; }
+.full { grid-column:1 / -1; }
+.item { border:1px solid var(--line); border-radius:8px; padding:10px; margin-top:8px; background:#faf9f7; }
+.item .ih { display:flex; justify-content:space-between; font-weight:700; font-size:.82rem; color:var(--green); margin-bottom:6px; }
+.acts { display:flex; gap:8px; justify-content:flex-end; margin-top:14px; flex-wrap:wrap; }
+.addrow { display:flex; gap:8px; margin-top:10px; flex-wrap:wrap; align-items:center; }
+.addrow select { font:inherit; font-size:.85rem; padding:6px 8px; border:1px solid var(--line); border-radius:6px; }
+.toast { position:fixed; bottom:20px; left:50%; transform:translateX(-50%); background:var(--green); color:#fff; padding:10px 18px; border-radius:8px; font-size:.86rem; display:none; z-index:20; }
+</style>
+</head>
+<body>
+<header><span>🌿 Harmony Flooring — Bookkeeping</span>
+  <button id="tabBill" class="on">Weekly Bill</button>
+  <button id="tabManual">Pricing Manual</button>
+  <a href="./">← Back to the CRM</a>
+</header>
+<div id="gate" class="gate" style="display:none"></div>
+<div id="billView" style="display:none">
+  <div class="top"><h1>Weekly Bill</h1>
+    <div class="weeknav"><button class="btn small" id="btnPrev" title="Previous week">‹</button><b id="weekLabel"></b><button class="btn small" id="btnNext" title="Next week">›</button></div>
+    <span class="saved" id="saved"></span>
+    <button class="btn" id="btnCal">Add Jobs From Calendar</button>
+    <button class="btn green" id="btnAdd">+ Add Job</button>
+    <button class="btn main" id="btnWord">Download Word Bill</button>
+  </div>
+  <div class="wrap" id="bill"></div>
+</div>
+<div id="manualView" style="display:none">
+  <div class="top"><h1>Pricing Manual</h1>
+    <button class="btn" id="btnUndoRates" disabled>Undo Changes</button>
+    <button class="btn main" id="btnSaveRates" disabled>Save Changes</button>
+  </div>
+  <div class="wrap" id="manual"></div>
+</div>
+<div class="modal" id="modal"><div class="box" id="form"></div></div>
+<div class="toast" id="toast"></div>
+
+<script>
+(function () {
+  const SUPABASE_URL = 'https://hbgefoytekvokgdjxixa.supabase.co';
+  const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhiZ2Vmb3l0ZWt2b2tnZGp4aXhhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIwMDM5MTgsImV4cCI6MjA5NzU3OTkxOH0.V35QASo-YbvC_RJWoZn_Rir7V8CkJlRLUZ6V1_ALxpM';
+  const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+  const L = window.HarmonyLayout, B = window.HarmonyBilling;
+  const $ = (id) => document.getElementById(id);
+  const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;' }[c]));
+  const money = (n) => (n < 0 ? '-$' : '$') + Math.abs(n).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const STATUS = { estimate_on_file:'Estimate on file', create_invoice:'Create invoice', create_estimate:'Create estimate', hold:'Hold', bookkeeper_handles:'Israel handling', correction:'Correction' };
+  const DAYS = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday','Hold','Corrections'];
+  // Database step numbers: 1 = Customer Selection, 5/6 = Estimate Approved / order, 9 = Schedule Installation
+  const DB_SELECTION = '1', DB_SCHED = '9';
+
+  let me = '', manual = null, weekStart = null, jobs = [], saveTimer = null;
+  const toast = (msg) => { const t = $('toast'); t.textContent = msg; t.style.display = 'block'; clearTimeout(t._h); t._h = setTimeout(() => t.style.display = 'none', 2600); };
+
+  // ---------- weeks ----------
+  const ymd = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  const parseDay = (s) => new Date(s + 'T12:00:00');
+  function mondayOf(d) { const x = new Date(d); x.setHours(12, 0, 0, 0); x.setDate(x.getDate() - ((x.getDay() + 6) % 7)); return ymd(x); }
+  function addDays(s, n) { const d = parseDay(s); d.setDate(d.getDate() + n); return ymd(d); }
+  function weekLabel(s) {
+    const a = parseDay(s), b = parseDay(addDays(s, 4));
+    const m = (d) => d.toLocaleDateString('en-US', { month: 'long' });
+    return m(a) === m(b) ? `${m(a)} ${a.getDate()}–${b.getDate()}, ${b.getFullYear()}` : `${m(a)} ${a.getDate()} – ${m(b)} ${b.getDate()}, ${b.getFullYear()}`;
+  }
+
+  // ---------- data ----------
+  async function loadWeek(s) {
+    weekStart = s; $('weekLabel').textContent = weekLabel(s); $('saved').textContent = '';
+    const { data, error } = await db.from('weekly_bills').select('jobs').eq('week_start', s).maybeSingle();
+    if (error) { $('bill').innerHTML = '<div class="empty">Could not load this week: ' + esc(error.message) + '</div>'; return; }
+    jobs = data?.jobs || [];
+    renderBill();
+  }
+  function saveWeek() {
+    $('saved').textContent = 'Saving…';
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(async () => {
+      const { error } = await db.from('weekly_bills').upsert({ week_start: weekStart, label: weekLabel(weekStart), jobs, updated_at: new Date().toISOString(), updated_by: me });
+      $('saved').textContent = error ? '⚠ Not saved' : '✓ Saved';
+      if (error) alert('This bill did not save. Please try again.\n\n' + error.message);
+    }, 400);
+  }
+  async function saveManual(fields) {
+    const { error } = await db.from('billing_manual').update({ ...fields, updated_at: new Date().toISOString(), updated_by: me }).eq('id', 'current');
+    if (error) { alert('The price list did not save. Please try again.\n\n' + error.message); return false; }
+    Object.assign(manual, fields); B.setManual(manual); return true;
+  }
+
+  // ---------- weekly bill ----------
+  const qty = (l) => l.qty == null ? '—' : l.qty + ' ' + (l.unit || '').replace(/s$/, l.qty === 1 ? '' : 's');
+  const rate = (l) => l.rate == null ? (l.qty == null ? 'Flat rate' : '') : '$' + Number(l.rate).toFixed(2) + '/' + (l.unit || '').replace(/s$/, '');
+  const row = (l) => '<tr><td>' + esc(l.label) + (l.note ? '<small>' + esc(l.note) + '</small>' : '') + '</td><td>' + esc(qty(l)) + '</td><td>' + rate(l) + '</td><td class="amt">' + money(l.amount) + '</td></tr>';
+  const side = (title, lines, tot) => '<div><h4>' + title + '</h4><table><tr><th>Item</th><th>Qty</th><th>Rate</th><th class="amt">Amount</th></tr>' + lines.map(row).join('') +
+    '<tr class="tot"><td>Total</td><td></td><td></td><td class="amt">' + money(tot) + '</td></tr></table></div>';
+  const noWork = (j) => !(j.items || []).length && !j.flatRate && !['hold', 'bookkeeper_handles', 'correction'].includes(j.status);
+
+  function card(j) {
+    const label = STATUS[j.status] + (j.so ? ' #' + j.so : '');
+    const notes = j.notes.filter((n) => !/^(Estimate on file|Create invoice|Create estimate)/.test(n));
+    return '<div class="bjob"><div class="bhead"><div><b>' + esc(j.address) + '</b><small>' + esc([j.head, j.customer && !(j.head || '').includes(j.customer) ? j.customer : '', j.installer ? 'Installer: ' + j.installer : ''].filter(Boolean).join(' · ')) + '</small></div>' +
+      '<button class="btn small" data-edit="' + esc(j.id) + '">Edit</button><button class="btn small red" data-del="' + esc(j.id) + '">Delete</button></div>' +
+      '<div class="bnote"><span class="status">' + esc(label) + '</span><span>' + esc(notes.join(' ')) + '</span></div>' +
+      j.flags.map((f) => '<div class="flag">⚠ ' + esc(f) + '</div>').join('') +
+      (noWork(j) ? '<div class="todo">No work entered yet. Click Edit and add the installer\'s numbers.</div>' : '') +
+      (j.chargeLines.length || j.payLines.length ? '<div class="cols">' + (j.chargeLines.length ? side('Charge customer', j.chargeLines, j.chargeTotal) : '') + (j.payLines.length ? side('Pay installer', j.payLines, j.payTotal) : '') + '</div>' : '') + '</div>';
+  }
+
+  const currentWeek = () => B.computeWeek({ label: weekLabel(weekStart), jobs: JSON.parse(JSON.stringify(jobs)) });
+
+  function renderBill() {
+    const wk = currentWeek();
+    let h = '<div class="bh"><h2>HARMONY FLOORING LLC</h2><div>Weekly Installer Bill — ' + esc(weekLabel(weekStart)) + ' — DRAFT</div></div><div class="sum">' +
+      [['Installer pay', money(wk.totals.pay)], ['Customer charges', money(wk.totals.charge)], ['Jobs', wk.jobs.length]].map((t) => '<div class="tile"><span>' + t[0] + '</span><b>' + t[1] + '</b></div>').join('') +
+      '<div class="tile' + (wk.totals.flags ? ' warn' : '') + '"><span>Needs review</span><b>' + wk.totals.flags + '</b></div></div>';
+    if (!wk.jobs.length) { $('bill').innerHTML = h + '<div class="empty">No jobs on this week\'s bill yet.<br>Click <b>Add Jobs From Calendar</b> to bring in the jobs installed this week, or <b>+ Add Job</b>.</div>'; return; }
+    DAYS.concat('Other').forEach((d) => {
+      const js = wk.jobs.filter((j) => (DAYS.includes(j.day) ? j.day : 'Other') === d);
+      if (js.length) h += '<div class="dayband">' + d.toUpperCase() + '</div>' + js.map(card).join('');
+    });
+    h += '<div class="wtot">WEEK TOTALS — Customer charges written: ' + money(wk.totals.charge) + ' &nbsp;|&nbsp; Installer pay: ' + money(wk.totals.pay) + ' &nbsp;|&nbsp; Open flags: ' + wk.totals.flags + '</div>';
+    h += '<div class="label">Pay by installer</div><div class="scroll"><table><tr><th>Installer</th><th class="amt">Pay</th></tr>' +
+      Object.entries(wk.byInstaller).map(([k, v]) => '<tr><td>' + esc(k) + '</td><td class="amt">' + money(v) + '</td></tr>').join('') + '</table></div>';
+    $('bill').innerHTML = h;
+  }
+
+  // Jobs installed this week: CRM jobs with an install date, plus other calendar entries
+  async function addFromCalendar() {
+    const end = addDays(weekStart, 6);
+    const [{ data: custs, error: e1 }, { data: entries, error: e2 }] = await Promise.all([
+      db.from('customers').select('id,name,address,company,salesman,step_data'),
+      db.from('schedule_entries').select('id,type,scheduled_date,address,installer,notes').gte('scheduled_date', weekStart).lte('scheduled_date', end),
+    ]);
+    if (e1 || e2) { alert('Could not read the calendar: ' + (e1 || e2).message); return; }
+    const dayName = (s) => parseDay(s).toLocaleDateString('en-US', { weekday: 'long' });
+    const have = new Set(jobs.map((j) => j.source).filter(Boolean));
+    const found = [];
+    (custs || []).forEach((c) => {
+      const sd = c.step_data || {}, sched = sd[DB_SCHED] || {}, date = sched.confirmed_install_date;
+      if (!date || date < weekStart || date > end || have.has('crm:' + c.id)) return;
+      const so = sd['6']?.contract_number || sd['5']?.contract_number || '';
+      found.push({ id: 'j' + Date.now() + found.length, source: 'crm:' + c.id, day: dayName(date), address: c.address || '', customer: c.company || c.name || '',
+        head: [c.company && c.name ? c.name : '', c.salesman ? 'Salesman: ' + c.salesman : ''].filter(Boolean).join(' · '),
+        installer: sched.crew_assigned || '', so, status: so ? 'estimate_on_file' : 'create_invoice',
+        notes: [(sd[DB_SELECTION]?.project_overview || '').trim()].filter(Boolean), items: [] });
+    });
+    (entries || []).forEach((e) => {
+      if (have.has('cal:' + e.id)) return;
+      found.push({ id: 'j' + Date.now() + found.length, source: 'cal:' + e.id, day: dayName(e.scheduled_date), address: e.address || '', installer: e.installer || '',
+        status: 'create_invoice', notes: [(e.notes || '').trim()].filter(Boolean), items: [] });
+    });
+    if (!found.length) { toast('No new calendar jobs for this week.'); return; }
+    jobs = jobs.concat(found); saveWeek(); renderBill();
+    toast(`Added ${found.length} job${found.length === 1 ? '' : 's'} from the calendar.`);
+  }
+
+  // ---------- job form ----------
+  const n = (k, l) => ({ k, l, t:'number' });
+  const txt = (k, l) => ({ k, l, t:'text' });
+  const chk = (k, l) => ({ k, l, t:'check' });
+  const sel = (k, l, o) => ({ k, l, t:'select', o });
+  const OTHER = ['Grinding','Repair','Restretch','Trip charge','Rug cut & pad install','Extra rip up (machine)','Rip up VCT (machine)','Other'];
+  const ITEMS = () => ({
+    carpet:{ name:'Carpet', f:[sel('product','Product',[''].concat(Object.keys(B.getRates().carpet || {}))), n('qty','Office yards'), n('installerQty','Installer yards'), sel('padding','Padding',[['','Installer padding'],['ours','Our padding'],['none','No padding']]), chk('glueDown','Glue down'), chk('runner','Runner'), n('chargeRate','Charge rate override')] },
+    vinyl:{ name:'Vinyl', f:[txt('product','Product'), n('qty','Office sqf'), n('installerQty','Installer sqf'), chk('glueDown20mil','Glue-down 20 mil'), chk('specialDesign','Special design'), n('chargeRate','Charge rate override'), n('payRate','Pay rate override')] },
+    luan:{ name:'Luan', f:[n('count','Sheets'), n('chargeRate','Charge rate override')] },
+    ripup:{ name:'Rip up', f:[sel('material','Material',[['carpet','Carpet'],['vinyl','Vinyl / click / laminate'],['vct','VCT'],['carpetTile','Carpet tile']]), n('qty','Office quantity'), n('installerQty','Installer quantity'), chk('noHaul','No haul away'), chk('haulOnly','Haul away only'), chk('noPay','Do not pay installer')] },
+    steps:{ name:'Steps', f:[sel('style','Type',[['','Not stated (box)'],['box','Box'],['mixed','Mixed'],['cap','Full cap'],['floating','Floating'],['vinyl','Vinyl']]), n('flights','Flights'), n('steps','Number of steps'), n('birdcage','Birdcage'), n('chargeTotal','Charge total override'), chk('noPay','Do not pay installer')] },
+    stringers:{ name:'Stringers', f:[n('count','Count'), n('installerCount','Installer count')] },
+    shoe:{ name:'Shoe molding', f:[n('qty','Office lf'), n('installerQty','Installer lf'), n('chargeRate','Charge rate override')] },
+    transition:{ name:'Transition', f:[sel('kind','Kind',['metal','rubber','matching']), n('count','Count')] },
+    cove:{ name:'Cove base', f:[n('qty','Office ft'), n('installerQty','Installer ft'), chk('special','Special order'), n('chargeRate','Charge rate override')] },
+    patch:{ name:'Patch / prep', f:[n('bags','Bags'), n('chargePerBag','Charge per bag'), n('flatCharge','Flat charge')] },
+    appliance:{ name:'Toilet / appliance', f:[n('count','Count'), chk('payRequested','Installer asked for pay'), sel('reinstalled','Reinstalled?',[['','Yes'],['no','No']])] },
+    furniture:{ name:'Furniture', f:[n('charge','Customer charge'), chk('onEstimate','On estimate'), n('estimateAmount','Estimate amount'), n('installerAmount','Installer asked'), chk('confirmed','Israel confirmed')] },
+    gas:{ name:'Gas', f:[n('amount','Amount (blank = standard)')] },
+    repair:{ name:'Repair', f:[txt('label','What'), n('charge','Customer charge $'), n('pay','Installer pay $')] },
+    custom:{ name:'Other work', f:[sel('label','Work',OTHER), n('chargeAmount','Customer charge $'), n('payAmount','Installer pay $')] },
+  });
+
+  let editId = null, draft = [];
+
+  function fieldHTML(f, v, attr) {
+    if (f.t === 'check') return '<label class="fld chk"><input type="checkbox" ' + attr + (v ? ' checked' : '') + '>' + esc(f.l) + '</label>';
+    if (f.t === 'select') return '<label class="fld">' + esc(f.l) + '<select ' + attr + '>' + f.o.map((o) => { const [val, lab] = Array.isArray(o) ? o : [o, o]; return '<option value="' + esc(val) + '"' + (String(v ?? '') === String(val) ? ' selected' : '') + '>' + esc(lab) + '</option>'; }).join('') + '</select></label>';
+    return '<label class="fld">' + esc(f.l) + '<input type="' + f.t + '" step="any" ' + attr + ' value="' + esc(v ?? '') + '"></label>';
+  }
+
+  function renderItems() {
+    const defs = ITEMS();
+    $('items').innerHTML = draft.map((it, i) => {
+      const d = defs[it.type] || { name: it.type, f: [] };
+      const v = (f) => f.k === 'reinstalled' ? (it.reinstalled === false ? 'no' : '') : it[f.k];
+      return '<div class="item"><div class="ih"><span>' + esc(d.name) + '</span><button class="btn small red" type="button" data-rm="' + i + '">Remove</button></div><div class="fg">' +
+        d.f.map((f) => fieldHTML(f, v(f), 'data-i="' + i + '" data-k="' + f.k + '" data-t="' + f.t + '"')).join('') + '</div></div>';
+    }).join('');
+  }
+
+  function openForm(job) {
+    editId = job ? job.id : null;
+    const j = job || { day:'Monday', status:'create_invoice', notes:[], items:[] };
+    draft = JSON.parse(JSON.stringify((j.items || []).map((i) => { const c = { ...i }; delete c.extra; return c; })));
+    const cust = B.getCustomers().map((c) => '<option value="' + esc(c.name) + '">').join('');
+    $('form').innerHTML = '<h2>' + (job ? 'Edit Job' : 'Add Job') + '</h2><div class="fg">' +
+      fieldHTML(sel('day','Day',DAYS), j.day, 'id="fDay"') +
+      fieldHTML(sel('status','Status',Object.entries(STATUS)), j.status, 'id="fStatus"') +
+      '<label class="fld full">Address<input id="fAddress" value="' + esc(j.address) + '"></label>' +
+      '<label class="fld full">Details under the address<input id="fHead" value="' + esc(j.head) + '"></label>' +
+      '<label class="fld">Customer<input id="fCustomer" list="custList" value="' + esc(j.customer) + '"><datalist id="custList">' + cust + '</datalist></label>' +
+      '<label class="fld">Installer<input id="fInstaller" value="' + esc(j.installer) + '"></label>' +
+      fieldHTML(sel('rc','Rate type',[['','Automatic'],['investor','Investor'],['residential','Residential']]), j.rateClass, 'id="fClass"') +
+      '<label class="fld">Estimate / SO #<input id="fSo" value="' + esc(j.so) + '"></label>' +
+      '<label class="fld">Flat rate: charge $<input id="fFlatC" type="number" step="any" value="' + esc(j.flatRate?.charge) + '"></label>' +
+      '<label class="fld">Flat rate: pay $<input id="fFlatP" type="number" step="any" value="' + esc(j.flatRate?.pay) + '"></label>' +
+      '<label class="fld">Israel\'s pay figure $<input id="fOverride" type="number" step="any" value="' + esc(j.payOverride) + '"></label>' +
+      '<label class="fld chk"><input type="checkbox" id="fEmpty"' + (j.unitEmpty ? ' checked' : '') + '>Unit empty</label>' +
+      '<label class="fld full">Bookkeeper note<textarea id="fNote" rows="2">' + esc((j.notes || []).join(' ')) + '</textarea></label>' +
+      '<label class="fld full">Needs review (shows as a warning)<input id="fReview" value="' + esc(j.review) + '"></label>' +
+      '</div><div class="label">Work on this job</div><div id="items"></div><div class="addrow"><select id="newItem">' +
+      Object.entries(ITEMS()).map(([k, d]) => '<option value="' + k + '">' + esc(d.name) + '</option>').join('') +
+      '</select><button class="btn small" type="button" id="btnItem">+ Add Line</button></div>' +
+      '<div class="acts"><button class="btn" type="button" id="btnCancel">Cancel</button><button class="btn main" type="button" id="btnSaveJob">Save Job</button></div>';
+    renderItems();
+    $('modal').classList.add('open');
+    $('btnItem').onclick = () => { draft.push({ type:$('newItem').value, ...(($('newItem').value === 'custom') ? { label:OTHER[0] } : {}) }); renderItems(); };
+    $('btnCancel').onclick = () => $('modal').classList.remove('open');
+    $('btnSaveJob').onclick = saveJob;
+  }
+
+  $('form').addEventListener('input', (e) => {
+    const t = e.target, i = t.dataset.i; if (i === undefined) return;
+    const it = draft[i], k = t.dataset.k;
+    if (k === 'reinstalled') { if (t.value === 'no') it.reinstalled = false; else delete it.reinstalled; return; }
+    const v = t.dataset.t === 'check' ? t.checked : t.dataset.t === 'number' ? (t.value === '' ? undefined : Number(t.value)) : t.value;
+    if (v === undefined || v === '' || v === false) delete it[k]; else it[k] = v;
+  });
+  $('form').addEventListener('click', (e) => { const i = e.target.dataset.rm; if (i !== undefined) { draft.splice(i, 1); renderItems(); } });
+
+  function saveJob() {
+    const val = (id) => $(id).value.trim(), num = (id) => $(id).value === '' ? undefined : Number($(id).value);
+    if (!val('fAddress')) { alert('Please enter the address.'); return; }
+    const old = jobs.find((x) => x.id === editId) || {};
+    const job = { id:editId || 'j' + Date.now(), source:old.source, day:val('fDay'), status:val('fStatus'), address:val('fAddress'), head:val('fHead'),
+      customer:val('fCustomer'), installer:val('fInstaller'), so:val('fSo'), notes:val('fNote') ? [val('fNote')] : [], review:val('fReview'),
+      unitEmpty:$('fEmpty').checked, items:draft };
+    if (!job.source) delete job.source;
+    if (old.customerEmail && old.customer === job.customer) job.customerEmail = old.customerEmail;
+    if (val('fClass')) job.rateClass = val('fClass');
+    if (num('fOverride') !== undefined) job.payOverride = num('fOverride');
+    const fc = num('fFlatC'), fp = num('fFlatP');
+    if (fc !== undefined || fp !== undefined) { job.flatRate = { charge:fc, pay:fp }; job.items = draft.map((i) => ({ ...i, extra:true })); }
+    const at = jobs.findIndex((x) => x.id === editId);
+    if (at >= 0) jobs[at] = job; else jobs.push(job);
+    saveWeek(); $('modal').classList.remove('open'); renderBill();
+  }
+
+  // ---------- pricing manual (price sheet) ----------
+  const sectionsWithCarpet = () => {
+    const carpet = { title:'Carpet', rows: Object.keys(B.getRates().carpet || {}).map((p) => p === 'Carpet Tile'
+      ? ['Carpet tile (no padding)', '=Per job', '=Per job', 'carpet.Carpet Tile.pay']
+      : [p, `carpet.${p}.investor`, `carpet.${p}.residential`, `carpet.${p}.pay`])
+      .concat([['Padding — installer supplied', null, null, 'paddingPay'], ['Padding — our 8lb', null, null, '=Do not pay'], ['Carpet — product not listed', null, null, 'carpetDefaultPay']]) };
+    return [carpet].concat(L.sections);
+  };
+  function rateCell(c) {
+    if (c === null) return '<span class="fixed">—</span>';
+    if (c.startsWith('=')) return '<span class="fixed">' + esc(c.slice(1)) + '</span>';
+    return '<input class="rate" type="number" step="0.01" data-path="' + esc(c) + '" value="' + (B.getPath(B.getRates(), c) ?? '') + '">';
+  }
+  function renderManual() {
+    const notes = manual.notes || {};
+    const rows = sectionsWithCarpet().map((s) => '<tr class="grp"><td colspan="4">' + esc(s.title) + '</td></tr>' + (notes[s.title] ? '<tr class="nt"><td colspan="4">' + esc(notes[s.title]) + '</td></tr>' : '') +
+      s.rows.map((r) => { const v = r.slice(1), inv = v[0], res = v.length === 3 ? v[1] : v[0], pay = v[v.length - 1];
+        return '<tr class="it"><td>' + esc(r[0]) + '</td><td class="chg">' + rateCell(inv) + '</td><td class="chg">' + rateCell(res) + '</td><td class="pay">' + rateCell(pay) + '</td></tr>'; }).join('')).join('');
+    const custs = B.getCustomers().slice().sort((a, b) => a.name.localeCompare(b.name));
+    $('manual').innerHTML = '<div class="tools"><input id="mSearch" placeholder="Search: truffle, shoe, luan…"><div class="seg" id="mSeg"><button class="on" data-m="">All</button><button data-m="pay">Pay only</button><button data-m="chg">Charges only</button></div></div>' +
+      '<div class="scroll" id="sheet"><table><tr><th>Item</th><th class="chg">Investor</th><th class="chg">Residential</th><th class="pay">Pay</th></tr>' + rows + '</table></div>' +
+      '<div class="addc"><input type="text" id="pName" placeholder="New carpet product, e.g. Prime 193"><button class="btn small" id="pAdd">Add Carpet Product</button></div>' +
+      '<div class="label">General rules</div><div class="card"><ol>' + (manual.rules || []).map((r) => '<li>' + esc(r) + '</li>').join('') + '</ol></div>' +
+      '<div class="label">Buildings: standard yards per unit</div><div class="scroll"><table><tr><th>Building</th><th>1BR</th><th>2BR</th><th>3BR</th></tr>' +
+      Object.entries(B.getBuildings()).map(([b, u]) => '<tr><td>' + esc(b) + '</td>' + ['1BR','2BR','3BR'].map((k) => '<td>' + (u[k] ? u[k] + ' yds' : '—') + '</td>').join('') + '</tr>').join('') + '</table></div>' +
+      '<div class="label">Customers</div><div class="scroll"><table><tr><th>Name</th><th>Email</th><th>Type</th></tr>' +
+      custs.map((c) => '<tr><td>' + esc(c.name) + '</td><td>' + esc(c.email || '') + '</td><td>' + (c.investor ? 'Investor' : 'Residential') + '</td></tr>').join('') + '</table></div>' +
+      '<div class="addc"><input type="text" id="cName" placeholder="Customer name"><input type="text" id="cEmail" placeholder="Email"><label><input type="checkbox" id="cInv" checked> Investor</label><button class="btn small" id="cAdd">Add Customer</button></div>';
+    $('btnSaveRates').disabled = $('btnUndoRates').disabled = true;
+    $('mSearch').oninput = (e) => { const q = e.target.value.toLowerCase(); document.querySelectorAll('#sheet tr.it').forEach((tr) => { tr.style.display = tr.textContent.toLowerCase().includes(q) ? '' : 'none'; }); };
+    $('mSeg').onclick = (e) => { const m = e.target.dataset.m; if (m === undefined) return; $('sheet').className = 'scroll ' + m; $('mSeg').querySelectorAll('button').forEach((b) => b.classList.toggle('on', b === e.target)); };
+    $('cAdd').onclick = async () => {
+      const name = $('cName').value.trim(); if (!name) return;
+      const c = { name, email:$('cEmail').value.trim() || null, investor:$('cInv').checked, aliases:[] };
+      if (await saveManual({ customers: (manual.customers || []).concat([c]) })) { toast(name + ' added'); renderManual(); }
+    };
+    $('pAdd').onclick = async () => {
+      const name = $('pName').value.trim(); if (!name) return;
+      const rates = JSON.parse(JSON.stringify(manual.rates));
+      if (rates.carpet[name]) { toast(name + ' is already on the list'); return; }
+      rates.carpet[name] = { investor: null, residential: null, pay: rates.carpetDefaultPay ?? null };
+      if (await saveManual({ rates })) { toast(name + ' added — fill in its prices'); renderManual(); }
+    };
+  }
+  $('manual').addEventListener('input', (e) => {
+    const p = e.target.dataset.path; if (!p) return;
+    document.querySelectorAll('#manual input.rate').forEach((i) => { if (i.dataset.path === p && i !== e.target) i.value = e.target.value; });
+    const cur = B.getPath(B.getRates(), p), v = e.target.value === '' ? null : Number(e.target.value);
+    document.querySelectorAll('#manual input.rate').forEach((i) => { if (i.dataset.path === p) i.classList.toggle('changed', v !== (cur ?? null)); });
+    $('btnSaveRates').disabled = $('btnUndoRates').disabled = !document.querySelector('#manual input.changed');
+  });
+  $('btnUndoRates').onclick = renderManual;
+  $('btnSaveRates').onclick = async () => {
+    const rates = JSON.parse(JSON.stringify(manual.rates));
+    document.querySelectorAll('#manual input.changed').forEach((i) => B.setPath(rates, i.dataset.path, i.value === '' ? null : Number(i.value)));
+    if (await saveManual({ rates })) { toast('Prices saved'); renderManual(); }
+  };
+
+  // ---------- wiring ----------
+  $('bill').addEventListener('click', (e) => {
+    const ed = e.target.dataset.edit, del = e.target.dataset.del;
+    if (ed) openForm(jobs.find((j) => j.id === ed));
+    if (del && confirm('Delete this job from the bill?')) { jobs = jobs.filter((j) => j.id !== del); saveWeek(); renderBill(); }
+  });
+  $('btnPrev').onclick = () => loadWeek(addDays(weekStart, -7));
+  $('btnNext').onclick = () => loadWeek(addDays(weekStart, 7));
+  $('btnCal').onclick = addFromCalendar;
+  $('btnAdd').onclick = () => openForm(null);
+  $('btnWord').onclick = () => {
+    if (!jobs.length) { alert('Add a job first.'); return; }
+    if (!window.docx) { alert('The Word tool needs an internet connection.'); return; }
+    HarmonyBillDocx.downloadBill(currentWeek(), `Harmony_Flooring_Weekly_Bill_${weekLabel(weekStart).replace(/[^\w-]+/g, '_')}.docx`);
+  };
+  function tab(bill) { $('billView').style.display = bill ? '' : 'none'; $('manualView').style.display = bill ? 'none' : ''; $('tabBill').classList.toggle('on', bill); $('tabManual').classList.toggle('on', !bill); if (bill) renderBill(); else renderManual(); }
+  $('tabBill').onclick = () => tab(true);
+  $('tabManual').onclick = () => tab(false);
+
+  function gate(html) { $('gate').innerHTML = html; $('gate').style.display = ''; document.querySelectorAll('header button').forEach((b) => b.style.display = 'none'); }
+
+  // ---------- start: admins only ----------
+  (async () => {
+    const { data: { session } } = await db.auth.getSession();
+    if (!session) { gate('<h2>🔒 Bookkeeping</h2><p>Please log in to the CRM first, then come back.</p><p><a href="./">Go to the CRM</a></p>'); return; }
+    const { data: mem } = await db.from('team_members').select('name,is_admin').eq('user_id', session.user.id).maybeSingle();
+    if (!mem?.is_admin) { gate('<h2>🔒 Bookkeeping</h2><p>Only an admin can open Bookkeeping.</p><p><a href="./">Back to the CRM</a></p>'); return; }
+    me = mem.name;
+    const { data: m, error } = await db.from('billing_manual').select('*').eq('id', 'current').maybeSingle();
+    if (error || !m) { gate('<h2>Bookkeeping</h2><p>The price list could not be loaded' + (error ? ': ' + esc(error.message) : ' — it has not been set up yet.') + '</p>'); return; }
+    manual = m; B.setManual(manual);
+    $('billView').style.display = '';
+    const fromUrl = new URLSearchParams(location.search).get('week');
+    await loadWeek(mondayOf(fromUrl ? parseDay(fromUrl) : new Date(Date.now() - 7 * 864e5)));
+  })();
+})();
+</script>
+</body>
+</html>
