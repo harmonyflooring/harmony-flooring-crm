@@ -4012,7 +4012,9 @@ function selectNewColor(color) {
 
 async function addSalesman() {
   const name = document.getElementById('newUserName').value.trim();
+  const email = document.getElementById('newUserEmail').value.trim();
   if(!name) { showToast('Please enter a name.'); return; }
+  if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) { showToast('Please enter their email. It is used for their login.'); return; }
   if(SALESMEN.find(s => s.name.toLowerCase() === name.toLowerCase())) {
     showToast('A user with that name already exists.'); return;
   }
@@ -4020,9 +4022,27 @@ async function addSalesman() {
   const { error } = await db.from('salesmen').insert({ name, color: _selectedNewColor, sort_order: sortOrder });
   if(error) { showToast('Error adding user: ' + error.message); return; }
   document.getElementById('newUserName').value = '';
+  document.getElementById('newUserEmail').value = '';
   await loadSalesmen();
+  await createTeamLogin(name, email);
+}
+
+// Makes the login and shows their first password link to text them
+async function createTeamLogin(name, email) {
+  const { data, error } = await db.functions.invoke('team-add-login', { body: { name, email, redirectTo: location.origin + location.pathname } });
   renderSettingsUsers();
-  showToast(`${name} added. They can sign in once their login is created.`);
+  if(error || !data?.link) {
+    let msg = error?.message || 'Please try again.';
+    try { msg = (await error.context.json()).error || msg; } catch(e) {}
+    showToast(`${name} was added, but the login was not created: ${msg}`, null, 8000); return;
+  }
+  showTeamLink(name, data.link);
+}
+function askCreateLogin(name) {
+  const email = (prompt(`Email for ${name}'s login:`) || '').trim();
+  if(!email) return;
+  if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) { showToast('Please enter a valid email.'); return; }
+  createTeamLogin(name, email);
 }
 
 async function removeSalesman(name) {
@@ -4103,6 +4123,8 @@ async function renderSettingsUsers() {
       ? `<button class="btn btn-secondary btn-sm" onclick="openChangePwModal()">Change Password</button>`
       : isAdmin && emailVal
       ? `<button class="btn btn-secondary btn-sm" onclick="getTeamLink('${esc(s.name)}')">Get Password Link</button>`
+      : isAdmin
+      ? `<button class="btn btn-secondary btn-sm" onclick="askCreateLogin('${esc(s.name)}')">Create Login</button>`
       : '';
     const removeBtn = isAdmin && !isMe ? `<button class="btn btn-danger btn-sm" style="margin-top:6px" onclick="removeSalesman('${esc(s.name)}')">Remove</button>` : '';
     return `<div class="user-settings-card">
@@ -4128,6 +4150,10 @@ async function renderSettingsUsers() {
             <label>Name</label>
             <input type="text" id="newUserName" placeholder="e.g. David" class="us-email-input" style="width:100%">
           </div>
+          <div class="form-group" style="margin-bottom:0;flex:1.4;min-width:180px">
+            <label>Email (for their login)</label>
+            <input type="email" id="newUserEmail" placeholder="david@email.com" class="us-email-input" style="width:100%">
+          </div>
           <button class="btn btn-green btn-sm" onclick="addSalesman()" style="height:34px;white-space:nowrap">+ Add User</button>
         </div>
         <div style="margin-top:12px">
@@ -4145,8 +4171,11 @@ async function getTeamLink(name) {
     try { msg = (await error.context.json()).error || msg; } catch(e) {}
     showToast('Could not get a link: ' + msg); return;
   }
+  showTeamLink(name, data.link);
+}
+function showTeamLink(name, link) {
   document.getElementById('linkFor').textContent = `Text this link to ${name}. It opens the CRM and asks them to choose a password. It works one time; if it has expired, get a new one.`;
-  document.getElementById('linkText').value = data.link;
+  document.getElementById('linkText').value = link;
   document.getElementById('linkModal').classList.add('open');
 }
 async function copyTeamLink() {
