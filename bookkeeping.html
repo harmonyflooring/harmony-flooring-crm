@@ -330,7 +330,7 @@ input.rate.changed { background:#fff6d6; border-color:var(--orange); }
     const cust = B.getCustomers().map((c) => '<option value="' + esc(c.name) + '">').join('');
     $('form').innerHTML = '<h2>' + (job ? 'Edit Job' : 'Add Job') + '</h2><div class="fg">' +
       fieldHTML(sel('day','Day',DAYS), j.day, 'id="fDay"') +
-      fieldHTML(sel('status','Status',Object.entries(STATUS)), j.status, 'id="fStatus"') +
+      fieldHTML(sel('status','Status',Object.entries(STATUS)), j.status || 'create_invoice', 'id="fStatus"') +
       '<label class="fld full">Address<input id="fAddress" value="' + esc(j.address) + '"></label>' +
       '<label class="fld full">Details under the address<input id="fHead" value="' + esc(j.head) + '"></label>' +
       '<label class="fld">Customer<input id="fCustomer" list="custList" value="' + esc(j.customer) + '"><datalist id="custList">' + cust + '</datalist></label>' +
