@@ -8,7 +8,7 @@
    ============================================================ */
 (function (root) {
   'use strict';
-  const GREEN = '2C5F2E', GRAY = 'ECEFE9', BORDER = '2C5F2E', YELLOW = 'FFF6D6', FLAG = 'FDE2E1';
+  const GREEN = '2C5F2E', GRAY = 'ECEFE9', BORDER = '2C5F2E', YELLOW = 'FFF6D6', FLAG = 'FDE2E1', ANSWERED = 'E8F5E9';
   const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
   const money = (n) => (n < 0 ? '-$' : '$') + Math.abs(n).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   const rateStr = (l) => (l.rate === null || l.rate === undefined) ? (l.qty === null || l.qty === undefined ? 'Flat rate' : '') : `$${Number(l.rate).toFixed(2)}${l.unit ? '/' + l.unit.replace(/s$/, '') : ''}`;
@@ -74,7 +74,11 @@
         const sub = [job.head, job.customer, job.customerEmail ? `(${job.customerEmail})` : ''].filter(Boolean).join(' ');
         children.push(band([job.address, sub].filter(Boolean), GRAY, '000000', { leftBar: true }));
         if (job.notes.length) children.push(band(job.notes.map((n) => '📝 ' + n), YELLOW, '5C4A00', { bold: false, italics: true, size: 18 }));
-        if (job.flags.length) children.push(band(job.flags.map((f) => '⚠ ' + f), FLAG, '8A1C1C', { bold: false, size: 18 }));
+        const answers = job.answers || {};
+        const open = job.flags.filter((f) => !answers[f]);
+        const answered = Object.keys(answers).filter((f) => answers[f]);
+        if (open.length) children.push(band(open.map((f) => '⚠ ' + f), FLAG, '8A1C1C', { bold: false, size: 18 }));
+        if (answered.length) children.push(band(answered.map((f) => '✓ ' + f + ' — Answer: ' + answers[f]), ANSWERED, '1B5E20', { bold: false, size: 18 }));
         if (job.chargeLines.length || job.payLines.length) children.push(jobTable(job));
         children.push(spacer(280));
       });

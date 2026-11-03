@@ -42,7 +42,14 @@ header button.on { background:#fff; color:var(--green); border-color:#fff; }
 .bhead small { display:block; color:#666; font-size:.8rem; }
 .bnote { background:#fff6d6; color:#5c4a00; font-style:italic; font-size:.83rem; padding:6px 14px; display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
 .status { font-style:normal; font-weight:700; font-size:.7rem; white-space:nowrap; background:var(--mint); color:var(--green); border-radius:20px; padding:3px 10px; }
-.flag { background:#fdecea; color:#a02a20; font-size:.82rem; padding:6px 14px; }
+.flag { background:#fdecea; color:#a02a20; font-size:.82rem; padding:6px 14px; display:flex; gap:10px; align-items:flex-start; }
+.flag > span { flex:1; }
+.flag.answered { background:#e8f5e9; color:#1b5e20; }
+.flag .ans { display:block; font-weight:700; margin-top:2px; }
+.flag button { flex-shrink:0; background:#fff; border:1px solid currentColor; color:inherit; border-radius:6px; font:inherit; font-size:.74rem; font-weight:700; padding:2px 9px; cursor:pointer; }
+.answer-box { background:#fdecea; padding:0 14px 10px; }
+.answer-box textarea { width:100%; font:inherit; font-size:.85rem; padding:6px 8px; border:1px solid #e3b4b0; border-radius:6px; }
+.answer-box div { display:flex; gap:6px; justify-content:flex-end; margin-top:6px; }
 .todo { background:#f4f6f3; color:#666; font-size:.82rem; padding:8px 14px; }
 .cols { display:grid; grid-template-columns:repeat(auto-fit,minmax(340px,1fr)); }
 .cols > div { min-width:0; overflow-x:auto; }
@@ -184,20 +191,52 @@ input.rate.changed { background:#fff6d6; border-color:var(--orange); }
   const noWork = (j) => !(j.items || []).length && !j.flatRate && !['hold', 'bookkeeper_handles', 'correction'].includes(j.status);
 
   function card(j) {
-    const label = STATUS[j.status] + (j.so ? ' #' + j.so : '');
+    const label = STATUS[j.status || 'create_invoice'] + (j.so ? ' #' + j.so : '');
     const notes = j.notes.filter((n) => !/^(Estimate on file|Create invoice|Create estimate)/.test(n));
     return '<div class="bjob"><div class="bhead"><div><b>' + esc(j.address) + '</b><small>' + esc([j.head, j.customer && !(j.head || '').includes(j.customer) ? j.customer : '', j.installer ? 'Installer: ' + j.installer : ''].filter(Boolean).join(' · ')) + '</small></div>' +
       '<button class="btn small" data-edit="' + esc(j.id) + '">Edit</button><button class="btn small red" data-del="' + esc(j.id) + '">Delete</button></div>' +
       '<div class="bnote"><span class="status">' + esc(label) + '</span><span>' + esc(notes.join(' ')) + '</span></div>' +
-      j.flags.map((f) => '<div class="flag">⚠ ' + esc(f) + '</div>').join('') +
+      flagRows(j) +
       (noWork(j) ? '<div class="todo">No work entered yet. Click Edit and add the installer\'s numbers.</div>' : '') +
       (j.chargeLines.length || j.payLines.length ? '<div class="cols">' + (j.chargeLines.length ? side('Charge customer', j.chargeLines, j.chargeTotal) : '') + (j.payLines.length ? side('Pay installer', j.payLines, j.payTotal) : '') + '</div>' : '') + '</div>';
+  }
+
+  // Red questions get an Answer button; answered ones turn green and keep the answer
+  function flagRows(j) {
+    const answers = j.answers || {};
+    const qs = j.flags.concat(Object.keys(answers).filter((f) => answers[f] && !j.flags.includes(f)));
+    return qs.map((f, i) => answers[f]
+      ? '<div class="flag answered"><span>✓ ' + esc(f) + '<span class="ans">Answer: ' + esc(answers[f]) + '</span></span><button data-ans="' + esc(j.id) + '" data-q="' + i + '">Change</button></div>'
+      : '<div class="flag"><span>⚠ ' + esc(f) + '</span><button data-ans="' + esc(j.id) + '" data-q="' + i + '">Answer</button></div>').join('');
+  }
+  const openFlags = (j) => j.flags.filter((f) => !(j.answers || {})[f]).length;
+  function questionsOf(j) { const answers = j.answers || {}; return j.flags.concat(Object.keys(answers).filter((f) => answers[f] && !j.flags.includes(f))); }
+  function openAnswer(btn) {
+    document.querySelectorAll('.answer-box').forEach((b) => b.remove());
+    const jobId = btn.dataset.ans, wk = currentWeek(), cj = wk.jobs.find((x) => x.id === jobId), q = questionsOf(cj)[+btn.dataset.q];
+    const job = jobs.find((x) => x.id === jobId), cur = (job.answers || {})[q] || '';
+    const box = document.createElement('div'); box.className = 'answer-box';
+    box.innerHTML = '<textarea rows="2" placeholder="Type your answer…">' + esc(cur) + '</textarea><div>' + (cur ? '<button class="btn small red" data-act="clear">Remove answer</button>' : '') +
+      '<button class="btn small" data-act="cancel">Cancel</button><button class="btn small green" data-act="save">Save Answer</button></div>';
+    btn.closest('.flag').after(box);
+    const ta = box.querySelector('textarea'); ta.focus();
+    box.onclick = (e) => {
+      const act = e.target.dataset.act; if (!act) return;
+      if (act === 'cancel') { box.remove(); return; }
+      const text = act === 'clear' ? '' : ta.value.trim();
+      if (act === 'save' && !text) { ta.focus(); return; }
+      job.answers = { ...(job.answers || {}) };
+      if (text) job.answers[q] = text; else delete job.answers[q];
+      if (!Object.keys(job.answers).length) delete job.answers;
+      saveWeek(); renderBill();
+    };
   }
 
   const currentWeek = () => B.computeWeek({ label: weekLabel(weekStart), jobs: JSON.parse(JSON.stringify(jobs)) });
 
   function renderBill() {
     const wk = currentWeek();
+    wk.totals.flags = wk.jobs.reduce((s, j) => s + openFlags(j), 0);
     let h = '<div class="bh"><h2>HARMONY FLOORING LLC</h2><div>Weekly Installer Bill — ' + esc(weekLabel(weekStart)) + ' — DRAFT</div></div><div class="sum">' +
       [['Installer pay', money(wk.totals.pay)], ['Customer charges', money(wk.totals.charge)], ['Jobs', wk.jobs.length]].map((t) => '<div class="tile"><span>' + t[0] + '</span><b>' + t[1] + '</b></div>').join('') +
       '<div class="tile' + (wk.totals.flags ? ' warn' : '') + '"><span>Needs review</span><b>' + wk.totals.flags + '</b></div></div>';
@@ -332,6 +371,7 @@ input.rate.changed { background:#fff6d6; border-color:var(--orange); }
       customer:val('fCustomer'), installer:val('fInstaller'), so:val('fSo'), notes:val('fNote') ? [val('fNote')] : [], review:val('fReview'),
       unitEmpty:$('fEmpty').checked, items:draft };
     if (!job.source) delete job.source;
+    if (old.answers) job.answers = old.answers;
     if (old.customerEmail && old.customer === job.customer) job.customerEmail = old.customerEmail;
     if (val('fClass')) job.rateClass = val('fClass');
     if (num('fOverride') !== undefined) job.payOverride = num('fOverride');
@@ -402,6 +442,7 @@ input.rate.changed { background:#fff6d6; border-color:var(--orange); }
 
   // ---------- wiring ----------
   $('bill').addEventListener('click', (e) => {
+    if (e.target.dataset.ans) { openAnswer(e.target); return; }
     const ed = e.target.dataset.edit, del = e.target.dataset.del;
     if (ed) openForm(jobs.find((j) => j.id === ed));
     if (del && confirm('Delete this job from the bill?')) { jobs = jobs.filter((j) => j.id !== del); saveWeek(); renderBill(); }
@@ -413,7 +454,8 @@ input.rate.changed { background:#fff6d6; border-color:var(--orange); }
   $('btnWord').onclick = () => {
     if (!jobs.length) { alert('Add a job first.'); return; }
     if (!window.docx) { alert('The Word tool needs an internet connection.'); return; }
-    HarmonyBillDocx.downloadBill(currentWeek(), `Harmony_Flooring_Weekly_Bill_${weekLabel(weekStart).replace(/[^\w-]+/g, '_')}.docx`);
+    const wk = currentWeek(); wk.totals.flags = wk.jobs.reduce((s, j) => s + openFlags(j), 0);
+    HarmonyBillDocx.downloadBill(wk, `Harmony_Flooring_Weekly_Bill_${weekLabel(weekStart).replace(/[^\w-]+/g, '_')}.docx`);
   };
   function tab(bill) { $('billView').style.display = bill ? '' : 'none'; $('manualView').style.display = bill ? 'none' : ''; $('tabBill').classList.toggle('on', bill); $('tabManual').classList.toggle('on', !bill); if (bill) renderBill(); else renderManual(); }
   $('tabBill').onclick = () => tab(true);
