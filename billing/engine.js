@@ -492,8 +492,9 @@
           if (has(it.installerAmount) && has(it.estimateAmount) && it.installerAmount > it.estimateAmount)
             flags.push(`Furniture: installer asked $${it.installerAmount}, estimate has $${it.estimateAmount} — paid lower, confirm with Israel.`);
         } else if (has(it.installerAmount)) {
-          if (it.confirmed) P('Furniture moving', null, null, null, it.installerAmount);
-          else flags.push(`Furniture not on estimate but installer asked $${it.installerAmount} — confirm with Israel (not paid).`);
+          // asked for but not on the estimate: put in, flagged until Israel confirms
+          P('Furniture moving', null, null, null, it.installerAmount, it.confirmed ? undefined : 'Not on the estimate');
+          if (!it.confirmed) flags.push(`Furniture not on the estimate — installer asked $${it.installerAmount}, put in. Confirm with Israel (tick "Israel confirmed").`);
         }
         return;
       }
