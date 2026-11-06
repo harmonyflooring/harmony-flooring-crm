@@ -53,6 +53,26 @@
     ) || null;
   }
 
+  // words that show an item is on an estimate's lines
+  const EST_WORDS = {
+    carpet: /carpet|\bt2\b|\bm[12]\b|truffle|toffee|pad/, vinyl: /vinyl|lvt|lvp|plank|laminate|spc|click/, ripup: /rip|remov|haul|tear/,
+    steps: /step|stair|flight/, luan: /lu?an|lauan|underlay|plywood/, patch: /patch|prep|level|skim/, shoe: /shoe|quarter|mold/,
+    cove: /cove/, stringers: /stringer/, appliance: /toilet|appliance/, furniture: /furniture/, hallway: /hall/, transition: /transition|threshold|reducer/,
+  };
+  const itemName = (it) => it.name || it.label || ({ ripup: 'Rip up', luan: 'Luan', patch: 'Patch / prep', shoe: 'Shoe molding', cove: 'Cove base',
+    appliance: 'Toilet / appliance', hallway: 'Common hallway' }[it.type]) || it.type[0].toUpperCase() + it.type.slice(1);
+  // name words too common to mean a customer when they show up in a note
+  const GENERIC = /^(management|construction|contracting|builders|homes|realty|estates|equity|capital|holdings|property|flooring|group|services|development|street|avenue)$/;
+
+  // a customer whose saved addresses match the job's address ("33 Presidential" → Magenta Management)
+  const normAddr = (s) => String(s || '').toLowerCase().replace(/[^a-z0-9 ]/g, ' ').replace(/\s+/g, ' ').trim();
+  function customerAtAddress(address) {
+    const a = normAddr(address);
+    if (!a) return null;
+    // saved as one line, addresses separated by ";"
+    return CUSTOMERS.find((c) => [].concat(c.addresses || []).join(';').split(';').some((x) => { const n = normAddr(x); return n && (a === n || a.startsWith(n + ' ')); })) || null;
+  }
+
   // "Office 69 vs installer 64 — paid the lower" goes in the line's own Notes cell
   function lowNote(a, b, unit) {
     return has(a) && has(b) && Number(a) !== Number(b) ? `Office ${a} ${unit} vs installer ${b} ${unit} — paid the lower` : undefined;
@@ -78,7 +98,12 @@
   function findBuilding(job) {
     if (job.building && BUILDINGS[job.building]) return job.building;
     const a = String(job.address || '').toLowerCase();
-    return Object.keys(BUILDINGS).find((n) => a.includes(n.toLowerCase()) || (BUILDINGS[n].aliases || []).some((x) => x && a.includes(String(x).toLowerCase()))) || null;
+    // a building with a town ("Manor", Woodbury) only matches when the town is in the address too
+    return Object.keys(BUILDINGS).find((n) => {
+      const b = BUILDINGS[n];
+      if (b.town && !a.includes(String(b.town).toLowerCase())) return false;
+      return a.includes(n.toLowerCase().replace(/\s*\(.*\)$/, '')) || (b.aliases || []).some((x) => x && a.includes(String(x).toLowerCase()));
+    }) || null;
   }
 
   function computeJob(job) {
@@ -90,8 +115,15 @@
     const status = job.status || 'create_invoice';
     const onFile = status === 'estimate_on_file';
     const parked = status === 'hold' || status === 'bookkeeper_handles';
-    const cust = findCustomer(job.customerEmail) || findCustomer(job.customer);
-    const done = (opts) => { const r = finish(job, cls, charge, pay, flags, notes, opts); r.missing = missing; return r; };
+    const bName = findBuilding(job), bld = bName ? BUILDINGS[bName] : null;
+    // no customer written: the building's customer, or the customer who has this address on file
+    const named = findCustomer(job.customerEmail) || findCustomer(job.customer);
+    const cust = named || (!job.customer && (findCustomer(bld?.customer) || customerAtAddress(job.address))) || null;
+    if (cust && !named) notes.push(`Customer: ${cust.name} (${bld?.customer ? bName + ' is on file under them' : 'address on file'}).`);
+    if (cust?.note) notes.push(`${cust.name}: ${cust.note}`);
+    const chargeAsks = []; // { q, i }: "not on the estimate — added to the customer, confirm?" for item i
+    const notOnEst = new Set(); // items charged to the customer because they aren't on the estimate
+    const done = (opts) => { const r = finish(job, cls, charge, pay, flags, notes, opts); r.missing = missing; r.chargeAsks = chargeAsks; return r; };
 
     // investor vs residential
     let cls = job.rateClass;
@@ -108,6 +140,11 @@
     if (status === 'create_estimate') notes.unshift('Create estimate — full customer pricing below.');
     if (job.installer) notes.push(`${job.installer} job.`);
     if (job.review) flags.push(job.review);
+    if (bld?.note) notes.push(`${bName}: ${bld.note}`);
+    // return trip finishing a past job: installer's issue = no minimum, our mistake = minimum — someone has to say which
+    if (job.returnTrip === 'installer') notes.push('Return trip — installer\'s issue, no $100 minimum. Add to past bill.');
+    else if (job.returnTrip === 'ours') notes.push('Return trip — our mistake, $100 minimum applies.');
+    else if (job.returnTrip) flags.push('Return trip finishing a past job: was it the installer\'s issue (no $100 minimum) or our mistake ($100 minimum)? Pick it on the job — no minimum added until then.');
     // questions that come with a suggested line: answering "Yes" adds the line to the job
     (job.asks || []).forEach((a) => { if (a.q && !flags.includes(a.q)) flags.push(a.q); });
 
@@ -143,7 +180,6 @@
     const laidSqf = items.filter((i) => i.type === 'vinyl').reduce((s, i) => s + (Number(lower(i.qty, i.installerQty)) || 0), 0);
     const luans = items.filter((i) => i.type === 'luan').reduce((s, i) => s + Number(i.count || 0), 0);
     const bags = items.filter((i) => i.type === 'patch').reduce((s, i) => s + Number(i.bags || 0), 0);
-    const bName = findBuilding(job), bld = bName ? BUILDINGS[bName] : null;
 
     // ---- flat-rate job: whole job, no add-ons ----
     if (job.flatRate) {
@@ -155,7 +191,34 @@
       return done({ skipMin: true });
     }
 
+    // Work the installer did that isn't on the estimate: paid, and added to the customer's charge marked
+    // "Not on the estimate" — flagged until someone confirms it (or says don't charge)
+    const estLines = job.estimate?.lines;
+    if (onFile && estLines?.length) {
+      const est = estLines.map((l) => String(l.desc || '')).join(' | ').toLowerCase();
+      items.forEach((it, i) => {
+        if (it.addToCustomer || !EST_WORDS[it.type] && !['extra', 'custom'].includes(it.type)) return;
+        const own = [it.product, it.name, it.label].filter(Boolean).join(' ').toLowerCase().split(/[^a-z0-9]+/).filter((w) => w.length >= 4);
+        if ((EST_WORDS[it.type] && EST_WORDS[it.type].test(est)) || own.some((w) => est.includes(w))) return;
+        if (it.noCharge) { notes.push(`${itemName(it)} is not on the estimate — not charged to the customer.`); return; }
+        notOnEst.add(it);
+        if (it.chargeConfirmed) return;
+        const q = `${itemName(it)} is not on the estimate${job.so ? ` (SO ${job.so})` : ''} — added to the customer's charge. Confirm?`;
+        flags.push(q); chargeAsks.push({ q, i });
+      });
+    }
+
     items.forEach(applyItem);
+
+    // A customer's name in the job note where a material would go ("compton") — warn, it's not a product
+    const noteText = (job.notes || []).concat(items.map((i) => i.product || '')).join(' ').toLowerCase();
+    const addr = String(job.address || '').toLowerCase();
+    for (const c of CUSTOMERS) {
+      if (c === cust) continue;
+      const w = [c.name].concat(c.aliases || []).join(' ').toLowerCase().split(/[^a-z]+/)
+        .find((t) => t.length >= 5 && !GENERIC.test(t) && !addr.includes(t) && new RegExp('\\b' + t + '\\b').test(noteText));
+      if (w) { flags.push(`The note says "${w}" — that's a customer name (${c.name}), not a material. Check what was meant.`); break; }
+    }
 
     // cross-item sanity checks (the manual's luan and patch checks)
     if (luans) {
@@ -172,7 +235,8 @@
     // ------------------------------------------------------------
     function applyItem(it) {
       const t = it.type;
-      const add = it.addToCustomer ? 'ADD' : undefined; // forces a charge line even on estimate-on-file jobs
+      // forces a charge line even on estimate-on-file jobs
+      const add = it.addToCustomer ? 'ADD' : notOnEst.has(it) ? 'ADD Not on the estimate' : undefined;
 
       if (t === 'carpet') {
         const prod = it.product;
@@ -195,8 +259,12 @@
         const payNote = it.payInstallerQty ? 'Paid the installer\'s own quantity (per job note)' : (lowNote(offQ, instQ, 'yds') || ftNote);
         const chgNote = add ? (ftNote ? 'ADD ' + ftNote : add) : ftNote;
 
-        const own = cust?.carpetOverrides?.[prod];
+        // customer's own price for this product, else the customer's or the building's price for any carpet
+        const own = cust?.carpetOverrides?.[prod] ?? cust?.carpetRate ?? bld?.rate;
         let cRate = has(it.chargeRate) ? it.chargeRate : (own ?? rate?.[cls]);
+        // M2 put in because T2 ran out: the customer pays the T2 price
+        const forT2 = it.forT2 && RATES.carpet.T2 && !has(it.chargeRate);
+        if (forT2) { cRate = cust?.carpetOverrides?.T2 ?? cust?.carpetRate ?? bld?.rate ?? RATES.carpet.T2[cls]; notes.push(`${prod || 'Carpet'} used because T2 ran out — charged the T2 price.`); }
         if (unit) {
           // building unit: price per unit or per yard from the manual's Buildings list
           const label = `Unit — ${unit}${bName ? ' (' + bName + ')' : ''}`, price = bld && bld['price' + unit];
@@ -207,7 +275,7 @@
             else { T(label, custQty, 'yds', 'On file', chgNote); if (bld) missing.push({ kind: 'building', building: bName, unit }); }
           }
         } else if (!onFile || add) {
-          if (has(cRate)) C(`Carpet ${prod}`, custQty, 'yds', cRate, null, chgNote, has(it.chargeRate) || has(own) ? undefined : `carpet.${prod}.${cls}`);
+          if (has(cRate)) C(`Carpet ${prod}`, custQty, 'yds', cRate, null, chgNote, has(it.chargeRate) || has(own) || forT2 ? undefined : `carpet.${prod}.${cls}`);
           else if (prod) {
             flags.push(rate ? `No ${cls} customer rate for carpet ${prod} — look up the rate.` : `Carpet product "${prod}" not in manual — look up the rate.`);
             missing.push({ kind: 'carpet', product: prod, cls });
@@ -225,17 +293,30 @@
         if (!has(it.qty) && !has(it.installerQty)) { flags.push(`Vinyl${it.product ? ' ' + it.product : ''}: no quantity entered — not billed or paid.`); return; }
         const custQty = has(it.qty) ? it.qty : it.installerQty;
         const payQty = it.payInstallerQty ? it.installerQty : lower(it.qty, it.installerQty);
-        const cRate = has(it.chargeRate) ? it.chargeRate : it.glueDown20mil ? RATES.vinyl.glueDown20mil : RATES.vinyl.charge;
-        C(`Vinyl${it.product ? ' ' + it.product : ''}`, custQty, 'sqf', cRate, null, add, has(it.chargeRate) ? undefined : it.glueDown20mil ? 'vinyl.glueDown20mil' : 'vinyl.charge');
-        if (it.specialDesign && !has(it.payRate)) { flags.push('Special design vinyl — installer pay TBD, ask Israel.'); return; }
-        P(`Vinyl${it.product ? ' ' + it.product : ''}`, payQty, 'sqf', has(it.payRate) ? it.payRate : RATES.vinyl.pay, null,
+        const vOwn = cust?.vinylRate ?? bld?.vinylRate;
+        // standard price by kind: glue-down 20 mil, click 20 mil, or 12 mil (glue-down or click)
+        const vKey = it.glueDown20mil ? 'glueDown20mil' : it.click20mil && has(RATES.vinyl.click20mil) ? 'click20mil' : 'charge';
+        const std = RATES.vinyl[vKey];
+        const cRate = has(it.chargeRate) ? it.chargeRate : has(vOwn) ? vOwn : std;
+        const vName = (it.laminate ? 'Laminate' : 'Vinyl') + (it.product ? ' ' + it.product : '');
+        // laminate: customer price is per estimate, installer paid the same as vinyl
+        if (it.laminate && !has(it.chargeRate)) { if (!onFile) flags.push(`${vName}: customer price is per estimate — enter the charge rate.`); }
+        // (label unchanged: changes made on the bill are saved against it)
+        else C(vName, custQty, 'sqf', cRate, null, add, has(it.chargeRate) || has(vOwn) ? undefined : 'vinyl.' + vKey);        if (it.specialDesign && !has(it.payRate)) { flags.push('Special design vinyl — installer pay TBD, ask Israel.'); return; }
+        P(vName, payQty, 'sqf', has(it.payRate) ? it.payRate : RATES.vinyl.pay, null,
           it.payInstallerQty ? 'Paid the installer\'s own quantity (per job note)' : lowNote(it.qty, it.installerQty, 'sqf'), has(it.payRate) ? undefined : 'vinyl.pay');
-        // The estimate's vinyl price tells whether prep/luan is already in it (manual: above standard = bundled)
+        // The estimate's vinyl price tells whether prep/luan is already in it (manual):
+        // about $5 = luan is in it (wood subfloor); about $4–$4.25 = concrete, patch is in it (no luan on concrete)
         if (has(it.estimateRate)) {
-          const std = it.glueDown20mil ? RATES.vinyl.glueDown20mil : RATES.vinyl.charge;
-          const extra = items.some((i) => (i.type === 'patch' || i.type === 'luan') && !i.addToCustomer);
-          if (Number(it.estimateRate) > std) notes.push(`Estimate vinyl is $${Number(it.estimateRate).toFixed(2)}/sqf, above the standard $${std.toFixed(2)} — prep/luan is in the price, no extra charge to the customer.`);
-          else if (extra) flags.push(`Estimate vinyl is $${Number(it.estimateRate).toFixed(2)}/sqf (standard) — the patch/luan is not in the price. Add it to the customer as an estimate change?`);
+          const er = Number(it.estimateRate), $er = '$' + er.toFixed(2) + '/sqf';
+          const luanFrom = RATES.vinyl.estLuanFrom, patchFrom = RATES.vinyl.estPatchFrom;
+          const askLuan = items.some((i) => i.type === 'luan' && !i.addToCustomer), askPatch = items.some((i) => i.type === 'patch' && !i.addToCustomer);
+          if (er <= std) { if (askLuan || askPatch) flags.push(`Estimate vinyl is ${$er} (standard) — the patch/luan is not in the price. Add it to the customer as an estimate change?`); }
+          else if (has(luanFrom) && er >= luanFrom) notes.push(`Estimate vinyl is ${$er} (about $5) — luan is usually in that price${askLuan ? ', so the installer\'s luan makes sense' : ''}. No extra charge to the customer.`);
+          else if (has(patchFrom) && er >= patchFrom) {
+            notes.push(`Estimate vinyl is ${$er} (the $4–$4.25 range) — concrete floor, patch is in the price${askPatch ? ', so the installer\'s patch makes sense' : ''}. No extra charge to the customer.`);
+            if (askLuan) flags.push(`Estimate vinyl is ${$er} — that's the concrete/patch price, and we don't use luan on concrete. Check the installer's luan.`);
+          } else notes.push(`Estimate vinyl is ${$er}, above the standard $${std.toFixed(2)} — prep is in the price, no extra charge to the customer.`);
         }
         return;
       }
@@ -279,9 +360,10 @@
             C('Rip up carpet (leave onsite)', custQ, 'yds', RATES.ripup.carpetOnsite.charge, null, add, 'ripup.carpetOnsite.charge');
             if (!it.noPay) P('Rip up carpet (no haul)', payQ, 'yds', RATES.ripup.carpetOnsite.pay, null, ripNote, 'ripup.carpetOnsite.pay');
           } else {
-            const cr = has(it.chargeRate) ? it.chargeRate : RATES.ripup.carpetHaul[cls];
-            if (cls === 'residential' && !has(it.chargeRate)) flags.push(`Residential rip-up is a range — used $${RATES.ripup.carpetHaul.residential.toFixed(2)}/yd, confirm.`);
-            C('Rip up & haul away carpet', custQ, 'yds', cr, null, add, has(it.chargeRate) ? undefined : `ripup.carpetHaul.${cls}`);
+            const rOwn = cust?.ripupRate ?? bld?.ripupRate;
+            const cr = has(it.chargeRate) ? it.chargeRate : has(rOwn) ? rOwn : RATES.ripup.carpetHaul[cls];
+            if (cls === 'residential' && !has(it.chargeRate) && !has(rOwn)) flags.push(`Residential rip-up is a range — used $${RATES.ripup.carpetHaul.residential.toFixed(2)}/yd, confirm.`);
+            C('Rip up & haul away carpet', custQ, 'yds', cr, null, add, has(it.chargeRate) || has(rOwn) ? undefined : `ripup.carpetHaul.${cls}`);
             if (!it.noPay) P('Rip up & haul away carpet', payQ, 'yds', RATES.ripup.carpetHaul.pay, null, ripNote, 'ripup.carpetHaul.pay');
           }
           if (it.noPay) notes.push('Do not pay installer for rip up.');
@@ -360,9 +442,10 @@
       if (t === 'cove') {
         const q = has(it.qty) ? it.qty : it.installerQty;
         const ck = it.special ? 'special' : 'standard';
-        const cr = has(it.chargeRate) ? it.chargeRate : RATES.cove[ck];
-        C(`Cove base${it.color ? ' (' + it.color + ')' : ''}`, q, 'ft', cr, null, add, has(it.chargeRate) ? undefined : `cove.${ck}`);
-        if (!has(it.chargeRate)) notes.push('Cove base: check email history for a customer-specific rate before using standard.');
+        const cOwn = cust?.coveRate;
+        const cr = has(it.chargeRate) ? it.chargeRate : has(cOwn) ? cOwn : RATES.cove[ck];
+        C(`Cove base${it.color ? ' (' + it.color + ')' : ''}`, q, 'ft', cr, null, add, has(it.chargeRate) || has(cOwn) ? undefined : `cove.${ck}`);
+        if (!has(it.chargeRate) && !has(cOwn)) notes.push('Cove base: check email history for a customer-specific rate before using standard.');
         P('Cove base', lower(it.qty, it.installerQty), 'ft', RATES.cove.pay, null, lowNote(it.qty, it.installerQty, 'ft'), 'cove.pay');
         return;
       }
@@ -390,8 +473,11 @@
         const list = RATES.extras || [], i = list.findIndex((x) => x.name === it.name), x = list[i];
         if (!x) { flags.push(`"${it.name || 'Other work'}" is not in the manual's Other work list.`); return; }
         const q = has(it.qty) ? Number(it.qty) : 1;
-        if (has(x.charge)) C(x.name, q, x.unit, x.charge, null, add, `extras.${i}.charge`);
-        else if (!onFile) flags.push(`${x.name}: no customer price in the manual — ask Israel.`);
+        if (x.note) notes.push(`${x.name}: ${x.note}`);
+        if (has(it.chargeAmount)) C(x.name, null, null, null, it.chargeAmount, add);
+        else if (has(x.charge)) C(x.name, q, x.unit, x.charge, null, add, `extras.${i}.charge`);
+        else if (!onFile && !x.payOnly) flags.push(`${x.name}: no customer price in the manual — ask Israel.`);
+        if (x.noPay) return; // the manual says do not pay the installer for this
         if (has(it.payAmount)) P(x.name, null, null, null, it.payAmount);
         else if (has(x.pay)) P(x.name, q, x.unit, x.pay, null, undefined, `extras.${i}.pay`);
         else flags.push(`${x.name}: installer pay is set per job — enter it on the job.`);
@@ -412,6 +498,7 @@
         return;
       }
 
+      if (t === 'gas' && bld?.noGas && !has(it.amount)) { flags.push(`${bName}: no gas at this building — not paid. Enter an amount if Israel says to pay it.`); return; }
       if (t === 'gas') { P('Gas', null, null, null, has(it.amount) ? it.amount : RATES.gasDefault, has(it.amount) ? undefined : `Standard $${RATES.gasDefault}`); return; }
 
       if (t === 'trip') {
@@ -474,7 +561,7 @@
       const diff = r2(job.payOverride - payTotal);
       if (diff !== 0) pay.push({ label: 'Adjustment to agreed pay', amount: diff, note: `Pay set to $${job.payOverride} per Israel` });
       payTotal = r2(job.payOverride);
-    } else if (!opts.skipMin && !payEdited && job.status !== 'correction' && pay.some((l) => l.qty !== null && l.qty !== undefined)) {
+    } else if (!opts.skipMin && !payEdited && job.status !== 'correction' && (!job.returnTrip || job.returnTrip === 'ours') && pay.some((l) => l.qty !== null && l.qty !== undefined)) {
       // a pay line changed by hand means Israel set the pay, so no minimum top-up
       const base = RATES.minPayExcludesGas ? sum(pay.filter((l) => l.label !== 'Gas')) : payTotal;
       if (base < RATES.minInstallerPay) {
@@ -523,7 +610,7 @@
   }
 
   const api = {
-    computeJob, computeWeek, findCustomer, buildingYardage,
+    computeJob, computeWeek, findCustomer, customerAtAddress, buildingYardage,
     getRates: () => clone(RATES),
     // accepts nested objects or flat dotted keys, e.g. { 'carpet.T2.residential': 14 }
     setRates: (overrides) => {

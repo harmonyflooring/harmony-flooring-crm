@@ -10,7 +10,7 @@ window.HarmonyLayout = {
    ],
    "rows": [
     [
-     "Vinyl install (standard)",
+     "Vinyl install — glue-down or click, 12 mil",
      "vinyl.charge",
      "vinyl.pay"
     ],
@@ -18,6 +18,21 @@ window.HarmonyLayout = {
      "Glue-down 20 mil",
      "vinyl.glueDown20mil",
      "vinyl.pay"
+    ],
+    [
+     "Click 20 mil",
+     "vinyl.click20mil",
+     "vinyl.pay"
+    ],
+    [
+     "Estimate check: vinyl price from this = concrete, patch is in the price",
+     "vinyl.estPatchFrom",
+     "=—"
+    ],
+    [
+     "Estimate check: vinyl price from this (about $5) = luan is in the price",
+     "vinyl.estLuanFrom",
+     "=—"
     ],
     [
      "Special design",

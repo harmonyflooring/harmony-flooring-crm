@@ -180,7 +180,7 @@ input.rate.changed { background:#fff6d6; border-color:var(--orange); }
   const $ = (id) => document.getElementById(id);
   const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;' }[c]));
   const money = (n) => (n < 0 ? '-$' : '$') + Math.abs(n).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-  const STATUS = { estimate_on_file:'Estimate on file', create_invoice:'Create invoice', create_estimate:'Create estimate', hold:'Hold', bookkeeper_handles:'Israel handling', correction:'Correction' };
+  const STATUS = { estimate_on_file:'Estimate on file', create_invoice:'Create invoice', create_estimate:'Create estimate', hold:'Hold', bookkeeper_handles:'Israel handling', correction:'Correction / add to past bill' };
   const DAYS = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday','Hold','Corrections'];
   // Database step numbers: 1 = Customer Selection, 5/6 = Estimate Approved / order, 9 = Schedule Installation
   const DB_SELECTION = '1', DB_SCHED = '9';
@@ -330,7 +330,10 @@ input.rate.changed { background:#fff6d6; border-color:var(--orange); }
     // a question that comes with a suggested line: "Yes" adds it to the job and the bill prices it from the manual
     const ask = (job.asks || []).find((a) => a.q === q && a.item);
     const desc = ask ? (ITEMS()[ask.item.type]?.name || ask.item.type) + (ask.item.qty ? ' ' + ask.item.qty + (ask.item.type === 'cove' ? ' ft' : '') : '') : '';
+    // work not on the estimate is already on the customer's charge: confirm it, or take it off
+    const chg = (cj.chargeAsks || []).find((a) => a.q === q);
     box.innerHTML = (ask && !cur ? '<div style="justify-content:flex-start"><button class="btn small green" data-act="yes">Yes — add ' + esc(desc) + '</button><button class="btn small" data-act="no">No</button></div>' : '') +
+      (chg && !cur ? '<div style="justify-content:flex-start"><button class="btn small green" data-act="charge">Confirm — keep the charge</button><button class="btn small" data-act="nocharge">No — don\'t charge the customer</button></div>' : '') +
       '<textarea rows="2" placeholder="Type your answer…">' + esc(cur) + '</textarea>' +
       '<label><input type="checkbox" class="toRule"> This can come up again on other jobs — add it to the manual\'s rules</label><div>' +
       '<button class="btn small" data-act="line" style="margin-right:auto">+ Add a line to this job</button>' + (cur ? '<button class="btn small red" data-act="clear">Remove answer</button>' : '') +
@@ -341,6 +344,12 @@ input.rate.changed { background:#fff6d6; border-color:var(--orange); }
       const act = e.target.dataset.act; if (!act) return;
       if (act === 'cancel') { box.remove(); return; }
       if (act === 'line') { box.remove(); openForm(job); return; }
+      if (act === 'charge' || act === 'nocharge') {
+        const it = job.items[chg.i];
+        if (it) { delete it.chargeConfirmed; delete it.noCharge; it[act === 'charge' ? 'chargeConfirmed' : 'noCharge'] = true; }
+        job.answers = { ...(job.answers || {}), [q]: act === 'charge' ? 'Confirmed — charged the customer' : 'No — not charged to the customer' };
+        saveWeek(); renderBill(); return;
+      }
       if (act === 'yes' || act === 'no') {
         if (act === 'yes') job.items = (job.items || []).concat([JSON.parse(JSON.stringify(ask.item))]);
         job.answers = { ...(job.answers || {}), [q]: act === 'yes' ? 'Yes — added ' + desc : 'No' };
@@ -455,6 +464,7 @@ input.rate.changed { background:#fff6d6; border-color:var(--orange); }
         if ((have.items || []).length || have.flatRate) { skipped.push(n.address); return; }
         have.items = n.items || []; if (n.note) have.notes = (have.notes || []).concat([n.note]);
         if (n.autoRead) have.autoRead = true;
+        if (n.returnTrip && !have.returnTrip) have.returnTrip = n.returnTrip;
         if (qs.length) have.asks = (have.asks || []).concat(qs);
         if (!have.installer && n.installer) have.installer = n.installer;
         filled++; return;
@@ -463,6 +473,7 @@ input.rate.changed { background:#fff6d6; border-color:var(--orange); }
         status: n.status || 'create_invoice', so: n.so || '', notes: n.note ? [n.note] : [], items: n.items || [] };
       if (n.flatRate) j.flatRate = n.flatRate;
       if (n.autoRead) j.autoRead = true;
+      if (n.returnTrip) j.returnTrip = n.returnTrip;
       if (qs.length) j.asks = qs;
       jobs.push(j); added++;
     });
@@ -509,7 +520,9 @@ input.rate.changed { background:#fff6d6; border-color:var(--orange); }
       if (!cur && !startsJob(l) && !/\d/.test(l)) return; // greetings, "ty", sign-off
       cur = { day, note: l }; out.push(cur);
     });
-    return out.map((j) => ({ ...j, address: guessAddress(j.note), items: guessItems(j.note) }));
+    // going back to finish a past job: whose issue it was decides the $100 minimum, so it gets asked
+    const RETURN = /\b(return(ed)? (trip|to finish)|go(ing)? back|went back|came back|back to finish|finish(ed)? (the )?(job|up))\b/i;
+    return out.map((j) => ({ ...j, address: guessAddress(j.note), items: guessItems(j.note), ...(RETURN.test(j.note) ? { returnTrip: 'ask' } : {}) }));
   }
   // the address is the start of the line, before the work ("t2", "52 yrds", "rip up"...)
   function guessAddress(note) {
@@ -554,7 +567,9 @@ input.rate.changed { background:#fff6d6; border-color:var(--orange); }
     }
     const sq = (s) => { const m = s.match(/(\d+(?:\.\d+)?)\s*(?:sqf|sq\.? ?f(?:ee)?t|sf)\b/); return m ? Number(m[1]) : undefined; };
     const vq = sq(before) ?? (/vinyl/.test(n) ? num(/(\d+(?:\.\d+)?)\s*ft\s*(?:of\s*)?vinyl/) : undefined);
-    if (vq != null) items.push({ type: 'vinyl', installerQty: vq, ...(/20\s*mil|glue/.test(n) ? { glueDown20mil: true } : {}) });
+    // 20 mil: click or glue-down (different prices); 12 mil glue or click is the standard price
+    const mil20 = /20\s*mil|\b8[56]0\b/.test(n);
+    if (vq != null) items.push({ type: 'vinyl', installerQty: vq, ...(/laminate/.test(n) ? { laminate: true } : {}), ...(mil20 ? (/click/.test(n) ? { click20mil: true } : { glueDown20mil: true }) : {}) });
     if (ripAt >= 0) {
       const r = { type: 'ripup' }, rs = sq(after.slice(0, 40)), ry = yds(after.slice(0, 40));
       if (rs != null) { r.material = /vct|tile/.test(n) ? 'vct' : 'vinyl'; r.installerQty = rs; } else { r.material = 'carpet'; if (ry != null) r.installerQty = ry; }
@@ -646,8 +661,8 @@ input.rate.changed { background:#fff6d6; border-color:var(--orange); }
   const sel = (k, l, o) => ({ k, l, t:'select', o });
   const OTHER = ['Grinding','Repair','Restretch','Trip charge','Rug cut & pad install','Extra rip up (machine)','Rip up VCT (machine)','Other'];
   const ITEMS = () => ({
-    carpet:{ name:'Carpet', f:[sel('product','Product',[''].concat(Object.keys(B.getRates().carpet || {}))), n('qty','Office yards'), n('installerQty','Installer yards'), n('feet','Installer feet (× 12 ÷ 9 = yards)'), sel('padding','Padding',[['','Installer padding'],['ours','Our padding'],['none','No padding']]), chk('glueDown','Glue down'), chk('runner','Runner'), n('chargeRate','Charge rate override'), txt('unitLabel','Building unit, e.g. 2BR (charge on file)')] },
-    vinyl:{ name:'Vinyl', f:[txt('product','Product'), n('qty','Office sqf'), n('installerQty','Installer sqf'), chk('glueDown20mil','Glue-down 20 mil'), chk('specialDesign','Special design'), n('chargeRate','Charge rate override'), n('payRate','Pay rate override'), n('estimateRate','Vinyl price on the estimate $/sqf (checks if prep is included)')] },
+    carpet:{ name:'Carpet', f:[sel('product','Product',[''].concat(Object.keys(B.getRates().carpet || {}))), n('qty','Office yards'), n('installerQty','Installer yards'), n('feet','Installer feet (× 12 ÷ 9 = yards)'), sel('padding','Padding',[['','Installer padding'],['ours','Our padding'],['none','No padding']]), chk('glueDown','Glue down'), chk('runner','Runner'), chk('forT2','Used because T2 ran out (charge T2 price)'), n('chargeRate','Charge rate override'), txt('unitLabel','Building unit, e.g. 2BR (charge on file)')] },
+    vinyl:{ name:'Vinyl', f:[txt('product','Product'), n('qty','Office sqf'), n('installerQty','Installer sqf'), chk('glueDown20mil','Glue-down 20 mil'), chk('click20mil','Click 20 mil'), chk('laminate','Laminate (customer price per estimate)'),chk('specialDesign','Special design'), n('chargeRate','Charge rate override'), n('payRate','Pay rate override'), n('estimateRate','Vinyl price on the estimate $/sqf (checks if prep is included)')] },
     hallway:{ name:'Common hallway (building)', f:[n('qty','Yards (blank = building\'s hallway on file)'), chk('noPadding','No padding')] },
     luan:{ name:'Luan', f:[n('count','Sheets'), n('chargeRate','Charge rate override')] },
     ripup:{ name:'Rip up', f:[sel('material','Material',[['carpet','Carpet'],['vinyl','Vinyl / click / laminate'],['vct','VCT'],['carpetTile','Carpet tile']]), n('qty','Office quantity'), n('installerQty','Installer quantity'), chk('noHaul','No haul away'), chk('haulOnly','Haul away only'), chk('noPay','Do not pay installer')] },
@@ -661,7 +676,7 @@ input.rate.changed { background:#fff6d6; border-color:var(--orange); }
     furniture:{ name:'Furniture', f:[n('charge','Customer charge'), chk('onEstimate','On estimate'), n('estimateAmount','Estimate amount'), n('installerAmount','Installer asked'), chk('confirmed','Israel confirmed')] },
     gas:{ name:'Gas', f:[n('amount','Amount (blank = standard)')] },
     repair:{ name:'Repair', f:[txt('label','What'), n('charge','Customer charge $'), n('pay','Installer pay $')] },
-    extra:{ name:'Priced work (from the manual)', f:[sel('name','Work',((B.getRates().extras || []).map((x) => x.name))), n('qty','Quantity'), n('payAmount','Installer pay $ (if not in the manual)')] },
+    extra:{ name:'Priced work (from the manual)', f:[sel('name','Work',((B.getRates().extras || []).map((x) => x.name))), n('qty','Quantity'), n('chargeAmount','Customer charge $ (if set per job)'), n('payAmount','Installer pay $ (if set per job)')] },
     custom:{ name:'Other work', f:[{ k:'label', l:'Work', t:'text', list:'otherList' }, n('qty','Quantity'), txt('unit','Unit, e.g. sqf'), n('chargeAmount','Customer charge $'), n('payAmount','Installer pay $'), txt('rateText','No price yet? Text for the Rate column, e.g. Same as past job')] },
   });
   // every line can be put on an estimate-on-file job as a change to the estimate
@@ -703,6 +718,7 @@ input.rate.changed { background:#fff6d6; border-color:var(--orange); }
       '<label class="fld">Flat rate: charge $<input id="fFlatC" type="number" step="any" value="' + esc(j.flatRate?.charge) + '"></label>' +
       '<label class="fld">Flat rate: pay $<input id="fFlatP" type="number" step="any" value="' + esc(j.flatRate?.pay) + '"></label>' +
       '<label class="fld">Israel\'s pay figure $<input id="fOverride" type="number" step="any" value="' + esc(j.payOverride) + '"></label>' +
+      fieldHTML(sel('returnTrip','Return trip finishing a past job?',[['','No'],['ask','Yes — not sure whose issue yet'],['installer','Yes — installer\'s issue (no minimum)'],['ours','Yes — our mistake ($100 minimum)']]), j.returnTrip, 'id="fReturn"') +
       '<label class="fld chk"><input type="checkbox" id="fEmpty"' + (j.unitEmpty ? ' checked' : '') + '>Unit empty</label>' +
       '<label class="fld full">Bookkeeper note<textarea id="fNote" rows="2">' + esc((j.notes || []).join(' ')) + '</textarea></label>' +
       '<label class="fld full">Needs review (shows as a warning)<input id="fReview" value="' + esc(j.review) + '"></label>' +
@@ -745,6 +761,7 @@ input.rate.changed { background:#fff6d6; border-color:var(--orange); }
     if (val('fBuilding')) job.building = val('fBuilding');
     if (old.customerEmail && old.customer === job.customer) job.customerEmail = old.customerEmail;
     if (val('fClass')) job.rateClass = val('fClass');
+    if (val('fReturn')) job.returnTrip = val('fReturn');
     if (num('fOverride') !== undefined) job.payOverride = num('fOverride');
     const fc = num('fFlatC'), fp = num('fFlatP');
     if (fc !== undefined || fp !== undefined) { job.flatRate = { charge:fc, pay:fp }; job.items = draft.map((i) => ({ ...i, extra:true })); }
@@ -805,11 +822,13 @@ input.rate.changed { background:#fff6d6; border-color:var(--orange); }
       hint: 'A unit on the bill is priced at the unit price, or yards × the price per yard. Blank = "On file" and it goes on the Missing Info list.',
       cols: [['name', 'Building', 'text'], ['1BR', '1BR yds', 'number'], ['2BR', '2BR yds', 'number'], ['3BR', '3BR yds', 'number'],
         ['price1BR', '1BR price $', 'number'], ['price2BR', '2BR price $', 'number'], ['price3BR', '3BR price $', 'number'],
-        ['rate', 'Or price per yd $', 'number'], ['hallYds', 'Hallway yds', 'number'], ['hallPrice', 'Hallway price $', 'number']],
+        ['rate', 'Or price per yd $', 'number'], ['hallYds', 'Hallway yds', 'number'], ['hallPrice', 'Hallway price $', 'number'],
+        ['customer', 'Customer', 'text'], ['note', 'Note on the bill', 'text']],
       get: () => Object.entries(manual.buildings || {}).map(([name, u]) => ({ ...u, name })),
       fields: (v) => ({ buildings: Object.fromEntries(v.map(({ name, ...u }) => [name, u])) }) },
     customers: { title: 'Customers', add: '+ Add Customer',
-      cols: [['name', 'Name', 'text'], ['email', 'Email', 'text'], ['investor', 'Investor', 'check']],
+      hint: 'Addresses: the customer\'s properties, separated by ; — a job at one of them is billed to this customer when no customer is written.',
+      cols: [['name', 'Name', 'text'], ['email', 'Email', 'text'], ['investor', 'Investor', 'check'], ['addresses', 'Addresses (separate with ;)', 'text'], ['note', 'Note on the bill', 'text']],
       get: () => manual.customers || [],
       fields: (v) => ({ customers: v }) },
   };
