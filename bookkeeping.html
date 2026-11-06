@@ -62,7 +62,24 @@ td:first-child { white-space:normal; font-weight:600; }
 td small { display:block; font-weight:400; color:var(--mute); }
 .amt { text-align:right; }
 tr.tot td { font-weight:800; background:#faf9f7; }
-.wtot { background:var(--green); color:#fff; font-weight:700; padding:10px 14px; border-radius:4px; font-size:.88rem; }
+td.nt { white-space:normal; font-size:.76rem; color:#666; min-width:120px; }
+.chg-btn { float:right; margin-left:6px; background:none; border:1px solid var(--line); border-radius:5px; color:var(--green); cursor:pointer; font-size:.78rem; padding:0 6px; }
+.chg-btn:hover { border-color:var(--green); }
+tr.edited td { background:#fffbe9; }
+.final-tag { display:inline-block; background:var(--green); color:#fff; border-radius:20px; font-size:.72rem; font-weight:800; padding:2px 10px; margin-left:6px; vertical-align:middle; }
+.draft-tag { display:inline-block; background:#fff6d6; color:#5c4a00; border-radius:20px; font-size:.72rem; font-weight:800; padding:2px 10px; margin-left:6px; vertical-align:middle; }
+.hint { font-size:.8rem; color:#666; margin:-4px 0 10px; }
+.opt { display:flex; gap:8px; align-items:flex-start; font-size:.86rem; padding:8px 10px; border:1px solid var(--line); border-radius:8px; margin-top:6px; cursor:pointer; }
+.answer-box label { font-size:.8rem; display:flex; gap:6px; align-items:center; margin-top:6px; }
+.ed td { white-space:normal; }
+.ed input[type=text], .ed input[type=number] { width:100%; min-width:60px; font:inherit; font-size:.84rem; padding:4px 6px; border:1px solid var(--line); border-radius:6px; }
+.ed textarea { width:100%; font:inherit; font-size:.84rem; padding:4px 6px; border:1px solid var(--line); border-radius:6px; }
+.ed .x { background:none; border:0; color:#c0392b; font-size:1rem; cursor:pointer; }
+.ed .acts { margin:8px 10px 10px; }
+.mf { display:flex; flex-wrap:wrap; gap:6px; align-items:center; min-width:280px; }
+.ed .mf input[type=text], .ed .mf input[type=number] { width:130px; }
+.mf select { font:inherit; font-size:.84rem; padding:4px 6px; border:1px solid var(--line); border-radius:6px; max-width:200px; }
+.undo-link { background:none; border:0; color:var(--green); font:inherit; font-size:.78rem; font-weight:700; text-decoration:underline; cursor:pointer; }
 .label { font-size:.72rem; font-weight:700; text-transform:uppercase; letter-spacing:.5px; color:#aaa; margin:22px 0 8px; }
 .empty { background:#fff; border-radius:10px; padding:30px; text-align:center; color:var(--mute); margin-top:16px; line-height:1.6; }
 .gate { max-width:420px; margin:80px auto; background:#fff; border-radius:12px; padding:30px; text-align:center; box-shadow:0 2px 12px rgba(0,0,0,.08); line-height:1.6; }
@@ -107,6 +124,7 @@ input.rate.changed { background:#fff6d6; border-color:var(--orange); }
 <body>
 <header><span>🌿 Harmony Flooring — Bookkeeping</span>
   <button id="tabBill" class="on">Weekly Bill</button>
+  <button id="tabMissing">Missing Info</button>
   <button id="tabManual">Pricing Manual</button>
   <a href="./">← Back to the CRM</a>
 </header>
@@ -117,9 +135,18 @@ input.rate.changed { background:#fff6d6; border-color:var(--orange); }
     <span class="saved" id="saved"></span>
     <button class="btn" id="btnCal">Add Jobs From Calendar</button>
     <button class="btn green" id="btnAdd">+ Add Job</button>
+    <button class="btn green" id="btnFinal">✓ Mark Final</button>
+    <button class="btn" id="btnReopen" style="display:none">Reopen as Draft</button>
     <button class="btn main" id="btnWord">Download Word Bill</button>
   </div>
   <div class="wrap" id="bill"></div>
+</div>
+<div id="missingView" style="display:none">
+  <div class="top"><h1>Missing Info</h1>
+    <b id="missWeek" style="font-size:.9rem"></b>
+    <button class="btn main" id="btnMissDoc">Download Request List</button>
+  </div>
+  <div class="wrap" id="missing"></div>
 </div>
 <div id="manualView" style="display:none">
   <div class="top"><h1>Pricing Manual</h1>
@@ -145,7 +172,7 @@ input.rate.changed { background:#fff6d6; border-color:var(--orange); }
   // Database step numbers: 1 = Customer Selection, 5/6 = Estimate Approved / order, 9 = Schedule Installation
   const DB_SELECTION = '1', DB_SCHED = '9';
 
-  let me = '', manual = null, weekStart = null, jobs = [], saveTimer = null;
+  let me = '', manual = null, weekStart = null, jobs = [], saveTimer = null, weekFinal = null, weekFinalBy = null;
   const toast = (msg) => { const t = $('toast'); t.textContent = msg; t.style.display = 'block'; clearTimeout(t._h); t._h = setTimeout(() => t.style.display = 'none', 2600); };
 
   // ---------- weeks ----------
@@ -162,44 +189,114 @@ input.rate.changed { background:#fff6d6; border-color:var(--orange); }
   // ---------- data ----------
   async function loadWeek(s) {
     weekStart = s; $('weekLabel').textContent = weekLabel(s); $('saved').textContent = '';
-    const { data, error } = await db.from('weekly_bills').select('jobs').eq('week_start', s).maybeSingle();
+    const { data, error } = await db.from('weekly_bills').select('jobs,final_at,final_by').eq('week_start', s).maybeSingle();
     if (error) { $('bill').innerHTML = '<div class="empty">Could not load this week: ' + esc(error.message) + '</div>'; return; }
-    jobs = data?.jobs || [];
+    jobs = data?.jobs || []; weekFinal = data?.final_at || null; weekFinalBy = data?.final_by || null;
     renderBill();
   }
   function saveWeek() {
     $('saved').textContent = 'Saving…';
     clearTimeout(saveTimer);
     saveTimer = setTimeout(async () => {
-      const { error } = await db.from('weekly_bills').upsert({ week_start: weekStart, label: weekLabel(weekStart), jobs, updated_at: new Date().toISOString(), updated_by: me });
+      const { error } = await db.from('weekly_bills').upsert({ week_start: weekStart, label: weekLabel(weekStart), jobs, final_at: weekFinal, final_by: weekFinalBy, updated_at: new Date().toISOString(), updated_by: me });
       $('saved').textContent = error ? '⚠ Not saved' : '✓ Saved';
       if (error) alert('This bill did not save. Please try again.\n\n' + error.message);
     }, 400);
   }
-  async function saveManual(fields) {
-    const { error } = await db.from('billing_manual').update({ ...fields, updated_at: new Date().toISOString(), updated_by: me }).eq('id', 'current');
+  // Every manual change is written to its history: what changed, old and new value, who and when
+  async function saveManual(fields, changes) {
+    const now = new Date().toISOString();
+    const history = (changes || []).map((c) => ({ at: now, by: me, ...c })).concat(manual.history || []).slice(0, 500);
+    const { error } = await db.from('billing_manual').update({ ...fields, history, updated_at: now, updated_by: me }).eq('id', 'current');
     if (error) { alert('The price list did not save. Please try again.\n\n' + error.message); return false; }
-    Object.assign(manual, fields); B.setManual(manual); return true;
+    Object.assign(manual, fields, { history, updated_at: now }); B.setManual(manual); return true;
+  }
+  // pairs: [[rate path, new value], …]
+  async function changeRates(pairs, why) {
+    const rates = JSON.parse(JSON.stringify(manual.rates));
+    const changes = pairs.map(([p, v]) => { const from = B.getPath(rates, p) ?? null; B.setPath(rates, p, v); return { what: rateName(p), path: p, from, to: v, why }; });
+    return saveManual({ rates }, changes);
+  }
+  // A readable name for a rate path, taken from the price sheet
+  function rateName(p) {
+    for (const s of sectionsWithCarpet()) for (const r of s.rows) {
+      const i = r.indexOf(p);
+      if (i > 0) { const v = r.slice(1); return s.title + ' — ' + r[0] + ' — ' + (v.length === 3 ? ['investor charge', 'residential charge', 'installer pay'][i - 1] : (i === v.length ? 'installer pay' : 'customer charge')); }
+    }
+    const x = p.match(/^extras\.(\d+)\.(charge|pay)$/);
+    if (x) return 'Other work — ' + ((manual.rates.extras || [])[x[1]]?.name || '') + ' — ' + (x[2] === 'pay' ? 'installer pay' : 'customer charge');
+    return p;
   }
 
   // ---------- weekly bill ----------
   const qty = (l) => l.qty == null ? '—' : l.qty + ' ' + (l.unit || '').replace(/s$/, l.qty === 1 ? '' : 's');
-  const rate = (l) => l.rate == null ? (l.qty == null ? 'Flat rate' : '') : '$' + Number(l.rate).toFixed(2) + '/' + (l.unit || '').replace(/s$/, '');
-  const row = (l) => '<tr><td>' + esc(l.label) + (l.note ? '<small>' + esc(l.note) + '</small>' : '') + '</td><td>' + esc(qty(l)) + '</td><td>' + rate(l) + '</td><td class="amt">' + money(l.amount) + '</td></tr>';
-  const side = (title, lines, tot) => '<div><h4>' + title + '</h4><table><tr><th>Item</th><th>Qty</th><th>Rate</th><th class="amt">Amount</th></tr>' + lines.map(row).join('') +
-    '<tr class="tot"><td>Total</td><td></td><td></td><td class="amt">' + money(tot) + '</td></tr></table></div>';
+  const rate = (l) => l.rateText ? esc(l.rateText) : l.rate == null ? (l.qty == null ? 'Flat rate' : '') : '$' + Number(l.rate).toFixed(2) + '/' + (l.unit || '').replace(/s$/, '');
+  const row = (j) => (l) => '<tr' + (l.edited ? ' class="edited"' : '') + '><td>' + esc(l.label) + '</td><td>' + esc(qty(l)) + '</td><td>' + rate(l) + '</td><td class="amt">' + (l.amount == null ? '' : money(l.amount)) +
+    '</td><td class="nt">' + esc(l.note || '') + (l.key && !weekFinal ? '<button class="chg-btn" data-line="' + esc(j.id) + '" data-key="' + esc(l.key) + '" title="Change this line">✎</button>' : '') + '</td></tr>';
+  const side = (j, title, lines, tot) => '<div><h4>' + title + '</h4><table><tr><th>Item</th><th>Qty</th><th>Rate</th><th class="amt">Amount</th><th>Notes</th></tr>' + lines.map(row(j)).join('') +
+    '<tr class="tot"><td>Total</td><td></td><td></td><td class="amt">' + money(tot) + '</td><td></td></tr></table></div>';
   const noWork = (j) => !(j.items || []).length && !j.flatRate && !['hold', 'bookkeeper_handles', 'correction'].includes(j.status);
 
   function card(j) {
     const label = STATUS[j.status || 'create_invoice'] + (j.so ? ' #' + j.so : '');
     const notes = j.notes.filter((n) => !/^(Estimate on file|Create invoice|Create estimate)/.test(n));
     return '<div class="bjob"><div class="bhead"><div><b>' + esc(j.address) + '</b><small>' + esc([j.head, j.customer && !(j.head || '').includes(j.customer) ? j.customer : '', j.installer ? 'Installer: ' + j.installer : ''].filter(Boolean).join(' · ')) + '</small></div>' +
-      '<button class="btn small" data-edit="' + esc(j.id) + '">Edit</button><button class="btn small red" data-del="' + esc(j.id) + '">Delete</button></div>' +
+      (weekFinal ? '' : '<button class="btn small" data-edit="' + esc(j.id) + '">Edit</button><button class="btn small red" data-del="' + esc(j.id) + '">Delete</button>') + '</div>' +
       '<div class="bnote"><span class="status">' + esc(label) + '</span><span>' + esc(notes.join(' ')) + '</span></div>' +
-      flagRows(j) +
+      (weekFinal ? '' : flagRows(j)) +
       (noWork(j) ? '<div class="todo">No work entered yet. Click Edit and add the installer\'s numbers.</div>' : '') +
-      (j.chargeLines.length || j.payLines.length ? '<div class="cols">' + (j.chargeLines.length ? side('Charge customer', j.chargeLines, j.chargeTotal) : '') + (j.payLines.length ? side('Pay installer', j.payLines, j.payTotal) : '') + '</div>' : '') + '</div>';
+      (j.chargeLines.length || j.payLines.length ? '<div class="cols">' + (j.chargeLines.length ? side(j, 'Charge customer', j.chargeLines, j.chargeTotal) : '') + (j.payLines.length ? side(j, 'Pay installer', j.payLines, j.payTotal) : '') + '</div>' : '') + '</div>';
   }
+
+  // ---------- change one line: just this job, or make it the rule in the manual ----------
+  function openLine(jobId, key) {
+    const cj = currentWeek().jobs.find((x) => x.id === jobId), l = cj && cj.chargeLines.concat(cj.payLines).find((x) => x.key === key);
+    if (!l) return;
+    const job = jobs.find((x) => x.id === jobId), e = (job.edits || {})[key] || {};
+    const side = key.startsWith('pay|') ? 'Pay installer' : 'Charge customer';
+    const rulePossible = !!l.path;
+    $('form').innerHTML = '<h2>Change line</h2><p class="hint">' + esc(side + ' — ' + l.label) + ' · ' + esc(cj.address) + '</p><div class="fg">' +
+      '<label class="fld">Quantity<input id="lQty" type="number" step="any" value="' + esc(l.qty ?? '') + '"></label>' +
+      '<label class="fld">Rate $<input id="lRate" type="number" step="any" value="' + esc(l.rate ?? '') + '"></label>' +
+      '<label class="fld">Amount $ (blank = quantity × rate)<input id="lAmt" type="number" step="any" value="' + (e.amount ?? '') + '"></label>' +
+      '<label class="fld full">Note<input id="lNote" value="' + esc(has(e.note) ? e.note : (l.note || '').replace(/ — Per .*$/, '').replace(/^Per .*$/, '')) + '"></label></div>' +
+      '<div class="label">Who does this change apply to?</div>' +
+      '<label class="opt"><input type="radio" name="lScope" value="job" checked> <b>Just this job</b> — marked "Per ' + esc(me) + '" on the bill</label>' +
+      (rulePossible ? '<label class="opt"><input type="radio" name="lScope" value="rule"> <b>Make it the rule</b> — change the rate in the Pricing Manual for every job from now on</label>' :
+        '<p class="hint">This line\'s price is not a rate in the manual, so it can only be changed for this job.</p>') +
+      '<div class="acts">' + (job.edits?.[key] ? '<button class="btn" type="button" id="lUndo">Undo My Change</button>' : '') +
+      '<button class="btn red" type="button" id="lRemove">Remove Line</button><span style="flex:1"></span>' +
+      '<button class="btn" type="button" id="lCancel">Cancel</button><button class="btn main" type="button" id="lSave">Save</button></div>';
+    $('modal').classList.add('open');
+    const setEdit = (v) => { job.edits = { ...(job.edits || {}) }; if (v) job.edits[key] = v; else delete job.edits[key]; if (!Object.keys(job.edits).length) delete job.edits; };
+    const done = () => { $('modal').classList.remove('open'); saveWeek(); renderBill(); };
+    $('lCancel').onclick = () => $('modal').classList.remove('open');
+    if ($('lUndo')) $('lUndo').onclick = () => { setEdit(null); done(); };
+    $('lRemove').onclick = () => { if (confirm('Take this line off the bill?')) { setEdit({ remove: true, by: me }); done(); } };
+    $('lSave').onclick = async () => {
+      const num = (id) => $(id).value === '' ? undefined : Number($(id).value);
+      const q = num('lQty'), r = num('lRate'), a = num('lAmt'), note = $('lNote').value.trim();
+      const scope = document.querySelector('input[name=lScope]:checked').value;
+      if (scope === 'rule') {
+        if (r === undefined) { alert('Enter the rate to save in the manual.'); return; }
+        if (r !== l.rate && !(await changeRates([[l.path, r]], 'Changed from the bill: ' + side.toLowerCase() + ' — ' + l.label + ' (' + cj.address + ')'))) return;
+        // the rule gives the new rate; keep only a different quantity or note for this job
+        const v = {};
+        if (q !== l.qty && q !== undefined) v.qty = q;
+        if (note && note !== (l.note || '')) v.note = note;
+        setEdit(Object.keys(v).length ? { ...v, by: me } : null); done(); return;
+      }
+      const v = { by: me };
+      if (q !== undefined && q !== l.qty) v.qty = q;
+      if (r !== undefined && r !== l.rate) v.rate = r;
+      if (a !== undefined) v.amount = a;
+      if (note !== ((l.note || '').replace(/ — Per .*$/, '').replace(/^Per .*$/, ''))) v.note = note;
+      const merged = { ...e, ...v };
+      if (a === undefined) delete merged.amount;
+      setEdit(Object.keys(merged).length > 1 ? merged : null); done();
+    };
+  }
+  const has = (v) => v !== undefined && v !== null && v !== '';
 
   // Red questions get an Answer button; answered ones turn green and keep the answer
   function flagRows(j) {
@@ -216,15 +313,33 @@ input.rate.changed { background:#fff6d6; border-color:var(--orange); }
     const jobId = btn.dataset.ans, wk = currentWeek(), cj = wk.jobs.find((x) => x.id === jobId), q = questionsOf(cj)[+btn.dataset.q];
     const job = jobs.find((x) => x.id === jobId), cur = (job.answers || {})[q] || '';
     const box = document.createElement('div'); box.className = 'answer-box';
-    box.innerHTML = '<textarea rows="2" placeholder="Type your answer…">' + esc(cur) + '</textarea><div>' + (cur ? '<button class="btn small red" data-act="clear">Remove answer</button>' : '') +
+    // a question that comes with a suggested line: "Yes" adds it to the job and the bill prices it from the manual
+    const ask = (job.asks || []).find((a) => a.q === q && a.item);
+    const desc = ask ? (ITEMS()[ask.item.type]?.name || ask.item.type) + (ask.item.qty ? ' ' + ask.item.qty + (ask.item.type === 'cove' ? ' ft' : '') : '') : '';
+    box.innerHTML = (ask && !cur ? '<div style="justify-content:flex-start"><button class="btn small green" data-act="yes">Yes — add ' + esc(desc) + '</button><button class="btn small" data-act="no">No</button></div>' : '') +
+      '<textarea rows="2" placeholder="Type your answer…">' + esc(cur) + '</textarea>' +
+      '<label><input type="checkbox" class="toRule"> This can come up again on other jobs — add it to the manual\'s rules</label><div>' +
+      '<button class="btn small" data-act="line" style="margin-right:auto">+ Add a line to this job</button>' + (cur ? '<button class="btn small red" data-act="clear">Remove answer</button>' : '') +
       '<button class="btn small" data-act="cancel">Cancel</button><button class="btn small green" data-act="save">Save Answer</button></div>';
     btn.closest('.flag').after(box);
     const ta = box.querySelector('textarea'); ta.focus();
-    box.onclick = (e) => {
+    box.onclick = async (e) => {
       const act = e.target.dataset.act; if (!act) return;
       if (act === 'cancel') { box.remove(); return; }
+      if (act === 'line') { box.remove(); openForm(job); return; }
+      if (act === 'yes' || act === 'no') {
+        if (act === 'yes') job.items = (job.items || []).concat([JSON.parse(JSON.stringify(ask.item))]);
+        job.answers = { ...(job.answers || {}), [q]: act === 'yes' ? 'Yes — added ' + desc : 'No' };
+        saveWeek(); renderBill(); return;
+      }
       const text = act === 'clear' ? '' : ta.value.trim();
       if (act === 'save' && !text) { ta.focus(); return; }
+      if (act === 'save' && box.querySelector('.toRule').checked) {
+        const rule = text + ' (from the question: "' + q + '" — ' + cj.address + ')';
+        const before = (manual.rules || []).map((t) => ({ text: t }));
+        if (!(await saveManual({ rules: (manual.rules || []).concat([rule]) }, [{ what: 'General rules — added from a question', section: 'rules', from: before, to: before.concat([{ text: rule }]) }]))) return;
+        toast('Added to the manual\'s rules');
+      }
       job.answers = { ...(job.answers || {}) };
       if (text) job.answers[q] = text; else delete job.answers[q];
       if (!Object.keys(job.answers).length) delete job.answers;
@@ -236,8 +351,13 @@ input.rate.changed { background:#fff6d6; border-color:var(--orange); }
 
   function renderBill() {
     const wk = currentWeek();
+    updateMissingTab();
     wk.totals.flags = wk.jobs.reduce((s, j) => s + openFlags(j), 0);
-    let h = '<div class="bh"><h2>HARMONY FLOORING LLC</h2><div>Weekly Installer Bill — ' + esc(weekLabel(weekStart)) + ' — DRAFT</div></div><div class="sum">' +
+    $('btnFinal').style.display = weekFinal || !jobs.length ? 'none' : '';
+    $('btnReopen').style.display = weekFinal ? '' : 'none';
+    $('btnCal').style.display = $('btnAdd').style.display = weekFinal ? 'none' : '';
+    const tag = weekFinal ? '<span class="final-tag">FINAL</span> <small>marked final ' + esc(new Date(weekFinal).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })) + (weekFinalBy ? ' by ' + esc(weekFinalBy) : '') + '</small>' : '<span class="draft-tag">DRAFT</span>';
+    let h = '<div class="bh"><h2>HARMONY FLOORING LLC</h2><div>Weekly Installer Bill — ' + esc(weekLabel(weekStart)) + ' ' + tag + '</div></div><div class="sum">' +
       [['Installer pay', money(wk.totals.pay)], ['Customer charges', money(wk.totals.charge)], ['Jobs', wk.jobs.length]].map((t) => '<div class="tile"><span>' + t[0] + '</span><b>' + t[1] + '</b></div>').join('') +
       '<div class="tile' + (wk.totals.flags ? ' warn' : '') + '"><span>Needs review</span><b>' + wk.totals.flags + '</b></div></div>';
     if (!wk.jobs.length) { $('bill').innerHTML = h + '<div class="empty">No jobs on this week\'s bill yet.<br>Click <b>Add Jobs From Calendar</b> to bring in the jobs installed this week, or <b>+ Add Job</b>.</div>'; return; }
@@ -245,7 +365,6 @@ input.rate.changed { background:#fff6d6; border-color:var(--orange); }
       const js = wk.jobs.filter((j) => (DAYS.includes(j.day) ? j.day : 'Other') === d);
       if (js.length) h += '<div class="dayband">' + d.toUpperCase() + '</div>' + js.map(card).join('');
     });
-    h += '<div class="wtot">WEEK TOTALS — Customer charges written: ' + money(wk.totals.charge) + ' &nbsp;|&nbsp; Installer pay: ' + money(wk.totals.pay) + ' &nbsp;|&nbsp; Open flags: ' + wk.totals.flags + '</div>';
     h += '<div class="label">Pay by installer</div><div class="scroll"><table><tr><th>Installer</th><th class="amt">Pay</th></tr>' +
       Object.entries(wk.byInstaller).map(([k, v]) => '<tr><td>' + esc(k) + '</td><td class="amt">' + money(v) + '</td></tr>').join('') + '</table></div>';
     $('bill').innerHTML = h;
@@ -288,8 +407,9 @@ input.rate.changed { background:#fff6d6; border-color:var(--orange); }
   const sel = (k, l, o) => ({ k, l, t:'select', o });
   const OTHER = ['Grinding','Repair','Restretch','Trip charge','Rug cut & pad install','Extra rip up (machine)','Rip up VCT (machine)','Other'];
   const ITEMS = () => ({
-    carpet:{ name:'Carpet', f:[sel('product','Product',[''].concat(Object.keys(B.getRates().carpet || {}))), n('qty','Office yards'), n('installerQty','Installer yards'), sel('padding','Padding',[['','Installer padding'],['ours','Our padding'],['none','No padding']]), chk('glueDown','Glue down'), chk('runner','Runner'), n('chargeRate','Charge rate override')] },
-    vinyl:{ name:'Vinyl', f:[txt('product','Product'), n('qty','Office sqf'), n('installerQty','Installer sqf'), chk('glueDown20mil','Glue-down 20 mil'), chk('specialDesign','Special design'), n('chargeRate','Charge rate override'), n('payRate','Pay rate override')] },
+    carpet:{ name:'Carpet', f:[sel('product','Product',[''].concat(Object.keys(B.getRates().carpet || {}))), n('qty','Office yards'), n('installerQty','Installer yards'), n('feet','Installer feet (× 12 ÷ 9 = yards)'), sel('padding','Padding',[['','Installer padding'],['ours','Our padding'],['none','No padding']]), chk('glueDown','Glue down'), chk('runner','Runner'), n('chargeRate','Charge rate override'), txt('unitLabel','Building unit, e.g. 2BR (charge on file)')] },
+    vinyl:{ name:'Vinyl', f:[txt('product','Product'), n('qty','Office sqf'), n('installerQty','Installer sqf'), chk('glueDown20mil','Glue-down 20 mil'), chk('specialDesign','Special design'), n('chargeRate','Charge rate override'), n('payRate','Pay rate override'), n('estimateRate','Vinyl price on the estimate $/sqf (checks if prep is included)')] },
+    hallway:{ name:'Common hallway (building)', f:[n('qty','Yards (blank = building\'s hallway on file)'), chk('noPadding','No padding')] },
     luan:{ name:'Luan', f:[n('count','Sheets'), n('chargeRate','Charge rate override')] },
     ripup:{ name:'Rip up', f:[sel('material','Material',[['carpet','Carpet'],['vinyl','Vinyl / click / laminate'],['vct','VCT'],['carpetTile','Carpet tile']]), n('qty','Office quantity'), n('installerQty','Installer quantity'), chk('noHaul','No haul away'), chk('haulOnly','Haul away only'), chk('noPay','Do not pay installer')] },
     steps:{ name:'Steps', f:[sel('style','Type',[['','Not stated (box)'],['box','Box'],['mixed','Mixed'],['cap','Full cap'],['floating','Floating'],['vinyl','Vinyl']]), n('flights','Flights'), n('steps','Number of steps'), n('birdcage','Birdcage'), n('chargeTotal','Charge total override'), chk('noPay','Do not pay installer')] },
@@ -302,15 +422,18 @@ input.rate.changed { background:#fff6d6; border-color:var(--orange); }
     furniture:{ name:'Furniture', f:[n('charge','Customer charge'), chk('onEstimate','On estimate'), n('estimateAmount','Estimate amount'), n('installerAmount','Installer asked'), chk('confirmed','Israel confirmed')] },
     gas:{ name:'Gas', f:[n('amount','Amount (blank = standard)')] },
     repair:{ name:'Repair', f:[txt('label','What'), n('charge','Customer charge $'), n('pay','Installer pay $')] },
-    custom:{ name:'Other work', f:[sel('label','Work',OTHER), n('chargeAmount','Customer charge $'), n('payAmount','Installer pay $')] },
+    extra:{ name:'Priced work (from the manual)', f:[sel('name','Work',((B.getRates().extras || []).map((x) => x.name))), n('qty','Quantity'), n('payAmount','Installer pay $ (if not in the manual)')] },
+    custom:{ name:'Other work', f:[{ k:'label', l:'Work', t:'text', list:'otherList' }, n('qty','Quantity'), txt('unit','Unit, e.g. sqf'), n('chargeAmount','Customer charge $'), n('payAmount','Installer pay $'), txt('rateText','No price yet? Text for the Rate column, e.g. Same as past job')] },
   });
+  // every line can be put on an estimate-on-file job as a change to the estimate
+  const ADD_FIELD = chk('addToCustomer', 'Estimate change — charge the customer for this');
 
   let editId = null, draft = [];
 
   function fieldHTML(f, v, attr) {
     if (f.t === 'check') return '<label class="fld chk"><input type="checkbox" ' + attr + (v ? ' checked' : '') + '>' + esc(f.l) + '</label>';
     if (f.t === 'select') return '<label class="fld">' + esc(f.l) + '<select ' + attr + '>' + f.o.map((o) => { const [val, lab] = Array.isArray(o) ? o : [o, o]; return '<option value="' + esc(val) + '"' + (String(v ?? '') === String(val) ? ' selected' : '') + '>' + esc(lab) + '</option>'; }).join('') + '</select></label>';
-    return '<label class="fld">' + esc(f.l) + '<input type="' + f.t + '" step="any" ' + attr + ' value="' + esc(v ?? '') + '"></label>';
+    return '<label class="fld">' + esc(f.l) + '<input type="' + f.t + '" step="any" ' + attr + (f.list ? ' list="' + f.list + '"' : '') + ' value="' + esc(v ?? '') + '"></label>';
   }
 
   function renderItems() {
@@ -319,7 +442,7 @@ input.rate.changed { background:#fff6d6; border-color:var(--orange); }
       const d = defs[it.type] || { name: it.type, f: [] };
       const v = (f) => f.k === 'reinstalled' ? (it.reinstalled === false ? 'no' : '') : it[f.k];
       return '<div class="item"><div class="ih"><span>' + esc(d.name) + '</span><button class="btn small red" type="button" data-rm="' + i + '">Remove</button></div><div class="fg">' +
-        d.f.map((f) => fieldHTML(f, v(f), 'data-i="' + i + '" data-k="' + f.k + '" data-t="' + f.t + '"')).join('') + '</div></div>';
+        d.f.concat(it.type === 'gas' ? [] : [ADD_FIELD]).map((f) => fieldHTML(f, v(f), 'data-i="' + i + '" data-k="' + f.k + '" data-t="' + f.t + '"')).join('') + '</div></div>';
     }).join('');
   }
 
@@ -337,6 +460,7 @@ input.rate.changed { background:#fff6d6; border-color:var(--orange); }
       '<label class="fld">Installer<input id="fInstaller" value="' + esc(j.installer) + '"></label>' +
       fieldHTML(sel('rc','Rate type',[['','Automatic'],['investor','Investor'],['residential','Residential']]), j.rateClass, 'id="fClass"') +
       '<label class="fld">Estimate / SO #<input id="fSo" value="' + esc(j.so) + '"></label>' +
+      fieldHTML(sel('building','Building',[['','Found from the address']].concat(Object.keys(B.getBuildings()))), j.building, 'id="fBuilding"') +
       '<label class="fld">Flat rate: charge $<input id="fFlatC" type="number" step="any" value="' + esc(j.flatRate?.charge) + '"></label>' +
       '<label class="fld">Flat rate: pay $<input id="fFlatP" type="number" step="any" value="' + esc(j.flatRate?.pay) + '"></label>' +
       '<label class="fld">Israel\'s pay figure $<input id="fOverride" type="number" step="any" value="' + esc(j.payOverride) + '"></label>' +
@@ -346,10 +470,14 @@ input.rate.changed { background:#fff6d6; border-color:var(--orange); }
       '</div><div class="label">Work on this job</div><div id="items"></div><div class="addrow"><select id="newItem">' +
       Object.entries(ITEMS()).map(([k, d]) => '<option value="' + k + '">' + esc(d.name) + '</option>').join('') +
       '</select><button class="btn small" type="button" id="btnItem">+ Add Line</button></div>' +
+      '<datalist id="otherList">' + OTHER.map((o) => '<option value="' + esc(o) + '">').join('') + '</datalist>' +
       '<div class="acts"><button class="btn" type="button" id="btnCancel">Cancel</button><button class="btn main" type="button" id="btnSaveJob">Save Job</button></div>';
     renderItems();
     $('modal').classList.add('open');
-    $('btnItem').onclick = () => { draft.push({ type:$('newItem').value, ...(($('newItem').value === 'custom') ? { label:OTHER[0] } : {}) }); renderItems(); };
+    $('btnItem').onclick = () => {
+      const type = $('newItem').value, first = (B.getRates().extras || [])[0];
+      draft.push({ type, ...(type === 'custom' ? { label:OTHER[0] } : type === 'extra' && first ? { name:first.name } : {}) }); renderItems();
+    };
     $('btnCancel').onclick = () => $('modal').classList.remove('open');
     $('btnSaveJob').onclick = saveJob;
   }
@@ -372,6 +500,9 @@ input.rate.changed { background:#fff6d6; border-color:var(--orange); }
       unitEmpty:$('fEmpty').checked, items:draft };
     if (!job.source) delete job.source;
     if (old.answers) job.answers = old.answers;
+    if (old.edits) job.edits = old.edits;
+    if (old.asks) job.asks = old.asks;
+    if (val('fBuilding')) job.building = val('fBuilding');
     if (old.customerEmail && old.customer === job.customer) job.customerEmail = old.customerEmail;
     if (val('fClass')) job.rateClass = val('fClass');
     if (num('fOverride') !== undefined) job.payOverride = num('fOverride');
@@ -396,35 +527,121 @@ input.rate.changed { background:#fff6d6; border-color:var(--orange); }
     return '<input class="rate" type="number" step="0.01" data-path="' + esc(c) + '" value="' + (B.getPath(B.getRates(), c) ?? '') + '">';
   }
   function renderManual() {
+    Object.keys(working).forEach((k) => delete working[k]);
     const notes = manual.notes || {};
     const rows = sectionsWithCarpet().map((s) => '<tr class="grp"><td colspan="4">' + esc(s.title) + '</td></tr>' + (notes[s.title] ? '<tr class="nt"><td colspan="4">' + esc(notes[s.title]) + '</td></tr>' : '') +
       s.rows.map((r) => { const v = r.slice(1), inv = v[0], res = v.length === 3 ? v[1] : v[0], pay = v[v.length - 1];
         return '<tr class="it"><td>' + esc(r[0]) + '</td><td class="chg">' + rateCell(inv) + '</td><td class="chg">' + rateCell(res) + '</td><td class="pay">' + rateCell(pay) + '</td></tr>'; }).join('')).join('');
-    const custs = B.getCustomers().slice().sort((a, b) => a.name.localeCompare(b.name));
     $('manual').innerHTML = '<div class="tools"><input id="mSearch" placeholder="Search: truffle, shoe, luan…"><div class="seg" id="mSeg"><button class="on" data-m="">All</button><button data-m="pay">Pay only</button><button data-m="chg">Charges only</button></div></div>' +
       '<div class="scroll" id="sheet"><table><tr><th>Item</th><th class="chg">Investor</th><th class="chg">Residential</th><th class="pay">Pay</th></tr>' + rows + '</table></div>' +
       '<div class="addc"><input type="text" id="pName" placeholder="New carpet product, e.g. Prime 193"><button class="btn small" id="pAdd">Add Carpet Product</button></div>' +
-      '<div class="label">General rules</div><div class="card"><ol>' + (manual.rules || []).map((r) => '<li>' + esc(r) + '</li>').join('') + '</ol></div>' +
-      '<div class="label">Buildings: standard yards per unit</div><div class="scroll"><table><tr><th>Building</th><th>1BR</th><th>2BR</th><th>3BR</th></tr>' +
-      Object.entries(B.getBuildings()).map(([b, u]) => '<tr><td>' + esc(b) + '</td>' + ['1BR','2BR','3BR'].map((k) => '<td>' + (u[k] ? u[k] + ' yds' : '—') + '</td>').join('') + '</tr>').join('') + '</table></div>' +
-      '<div class="label">Customers</div><div class="scroll"><table><tr><th>Name</th><th>Email</th><th>Type</th></tr>' +
-      custs.map((c) => '<tr><td>' + esc(c.name) + '</td><td>' + esc(c.email || '') + '</td><td>' + (c.investor ? 'Investor' : 'Residential') + '</td></tr>').join('') + '</table></div>' +
-      '<div class="addc"><input type="text" id="cName" placeholder="Customer name"><input type="text" id="cEmail" placeholder="Email"><label><input type="checkbox" id="cInv" checked> Investor</label><button class="btn small" id="cAdd">Add Customer</button></div>';
+      Object.keys(LISTS).map(listHTML).join('') + historyHTML();
     $('btnSaveRates').disabled = $('btnUndoRates').disabled = true;
     $('mSearch').oninput = (e) => { const q = e.target.value.toLowerCase(); document.querySelectorAll('#sheet tr.it').forEach((tr) => { tr.style.display = tr.textContent.toLowerCase().includes(q) ? '' : 'none'; }); };
     $('mSeg').onclick = (e) => { const m = e.target.dataset.m; if (m === undefined) return; $('sheet').className = 'scroll ' + m; $('mSeg').querySelectorAll('button').forEach((b) => b.classList.toggle('on', b === e.target)); };
-    $('cAdd').onclick = async () => {
-      const name = $('cName').value.trim(); if (!name) return;
-      const c = { name, email:$('cEmail').value.trim() || null, investor:$('cInv').checked, aliases:[] };
-      if (await saveManual({ customers: (manual.customers || []).concat([c]) })) { toast(name + ' added'); renderManual(); }
-    };
     $('pAdd').onclick = async () => {
       const name = $('pName').value.trim(); if (!name) return;
       const rates = JSON.parse(JSON.stringify(manual.rates));
       if (rates.carpet[name]) { toast(name + ' is already on the list'); return; }
       rates.carpet[name] = { investor: null, residential: null, pay: rates.carpetDefaultPay ?? null };
-      if (await saveManual({ rates })) { toast(name + ' added — fill in its prices'); renderManual(); }
+      if (await saveManual({ rates }, [{ what: 'Carpet — new product', from: null, to: name }])) { toast(name + ' added — fill in its prices'); renderManual(); }
     };
+  }
+
+  // ---------- editable lists in the manual: other work, rules, buildings, customers ----------
+  const clone = (o) => JSON.parse(JSON.stringify(o ?? null));
+  const LISTS = {
+    extras: { title: 'Other work (priced per unit)', add: '+ Add Work',
+      hint: 'Work with a set price, like restretch per room. Leave the installer pay blank if it is set per job.',
+      cols: [['name', 'Work', 'text'], ['unit', 'Unit, e.g. rooms', 'text'], ['charge', 'Charge customer $', 'number'], ['pay', 'Pay installer $', 'number']],
+      get: () => manual.rates.extras || [],
+      fields: (v) => { const rates = clone(manual.rates); rates.extras = v; return { rates }; } },
+    rules: { title: 'General rules', add: '+ Add Rule',
+      hint: 'Written rules for whoever prepares the bill. The math above does not read these — a price belongs in the price sheet.',
+      cols: [['text', 'Rule', 'area']],
+      get: () => (manual.rules || []).map((text) => ({ text })),
+      fields: (v) => ({ rules: v.map((r) => r.text) }) },
+    buildings: { title: 'Buildings: yards and customer prices', add: '+ Add Building',
+      hint: 'A unit on the bill is priced at the unit price, or yards × the price per yard. Blank = "On file" and it goes on the Missing Info list.',
+      cols: [['name', 'Building', 'text'], ['1BR', '1BR yds', 'number'], ['2BR', '2BR yds', 'number'], ['3BR', '3BR yds', 'number'],
+        ['price1BR', '1BR price $', 'number'], ['price2BR', '2BR price $', 'number'], ['price3BR', '3BR price $', 'number'],
+        ['rate', 'Or price per yd $', 'number'], ['hallYds', 'Hallway yds', 'number'], ['hallPrice', 'Hallway price $', 'number']],
+      get: () => Object.entries(manual.buildings || {}).map(([name, u]) => ({ ...u, name })),
+      fields: (v) => ({ buildings: Object.fromEntries(v.map(({ name, ...u }) => [name, u])) }) },
+    customers: { title: 'Customers', add: '+ Add Customer',
+      cols: [['name', 'Name', 'text'], ['email', 'Email', 'text'], ['investor', 'Investor', 'check']],
+      get: () => manual.customers || [],
+      fields: (v) => ({ customers: v }) },
+  };
+  function listHTML(id) {
+    const L = LISTS[id], rows = L.get();
+    const cell = (c, r, i) => {
+      const [k, , t] = c, v = r[k];
+      if (t === 'check') return '<td><input type="checkbox" data-r="' + i + '" data-k="' + k + '"' + (v ? ' checked' : '') + '></td>';
+      if (t === 'area') return '<td><textarea rows="2" data-r="' + i + '" data-k="' + k + '">' + esc(v ?? '') + '</textarea></td>';
+      return '<td><input type="' + t + '" step="any" data-r="' + i + '" data-k="' + k + '" value="' + esc(v ?? '') + '"></td>';
+    };
+    return '<div class="label">' + esc(L.title) + '</div>' + (L.hint ? '<p class="hint" style="margin:0 0 8px">' + esc(L.hint) + '</p>' : '') +
+      '<div class="scroll ed" data-list="' + id + '"><table><tr>' + L.cols.map((c) => '<th>' + esc(c[1]) + '</th>').join('') + '<th></th></tr>' +
+      rows.map((r, i) => '<tr>' + L.cols.map((c) => cell(c, r, i)).join('') + '<td><button class="x" title="Remove" data-rm="' + i + '">✕</button></td></tr>').join('') +
+      '</table><div class="acts"><button class="btn small" data-addrow>' + L.add + '</button><span style="flex:1"></span>' +
+      '<button class="btn small" data-undo disabled>Undo Changes</button><button class="btn small main" data-save disabled>Save ' + esc(L.title.split(':')[0].split(' (')[0]) + '</button></div></div>';
+  }
+  // each list keeps a working copy until Save
+  const working = {};
+  function listOf(box) { const id = box.dataset.list; return (working[id] = working[id] || clone(LISTS[id].get())); }
+  function dirty(box) { box.querySelectorAll('[data-save],[data-undo]').forEach((b) => b.disabled = false); }
+  $('manual').addEventListener('input', (e) => {
+    const box = e.target.closest('[data-list]'); if (!box || e.target.dataset.r === undefined) return;
+    const rows = listOf(box), r = rows[+e.target.dataset.r], k = e.target.dataset.k;
+    const v = e.target.type === 'checkbox' ? e.target.checked : e.target.type === 'number' ? (e.target.value === '' ? null : Number(e.target.value)) : e.target.value;
+    r[k] = v; dirty(box);
+  });
+  $('manual').addEventListener('change', (e) => { if (e.target.type === 'checkbox' && e.target.closest('[data-list]')) e.target.dispatchEvent(new Event('input', { bubbles: true })); });
+  $('manual').addEventListener('click', async (e) => {
+    const box = e.target.closest('[data-list]');
+    if (e.target.dataset.histundo !== undefined) { undoHistory(+e.target.dataset.histundo); return; }
+    if (!box) return;
+    const id = box.dataset.list, L = LISTS[id];
+    const redraw = () => { drawRows(box, listOf(box)); dirty(document.querySelector('[data-list="' + id + '"]')); };
+    if (e.target.dataset.rm !== undefined) { listOf(box).splice(+e.target.dataset.rm, 1); redraw(); return; }
+    if (e.target.dataset.addrow !== undefined) { listOf(box).push(id === 'customers' ? { name: '', email: '', investor: true, aliases: [] } : {}); redraw(); return; }
+    if (e.target.dataset.undo !== undefined) { delete working[id]; box.outerHTML = listHTML(id); return; }
+    if (e.target.dataset.save !== undefined) {
+      const rows = listOf(box).filter((r) => String(r[L.cols[0][0]] ?? '').trim());
+      const before = clone(L.get());
+      if (await saveManual(L.fields(rows), [{ what: L.title.split(':')[0] + ' — edited', section: id, from: before, to: rows }])) { delete working[id]; toast('Saved'); renderManual(); }
+    }
+  });
+  // redraw a list from its working copy (after add / remove)
+  function drawRows(box, rows) {
+    const saved = LISTS[box.dataset.list].get; LISTS[box.dataset.list].get = () => rows;
+    box.outerHTML = listHTML(box.dataset.list); LISTS[box.dataset.list].get = saved;
+  }
+
+  // ---------- history of manual changes ----------
+  const show = (v) => v == null || v === '' ? '—' : typeof v === 'number' ? '$' + v.toFixed(2).replace(/\.00$/, '') : String(v);
+  function describe(h) {
+    if (!h.section) return [show(h.from), show(h.to)];
+    const key = (x) => JSON.stringify(x), label = (x) => x.name || x.text || '';
+    const a = new Map(h.from.map((x) => [key(x), x])), b = new Map(h.to.map((x) => [key(x), x]));
+    const gone = h.from.filter((x) => !b.has(key(x))).map(label), added = h.to.filter((x) => !a.has(key(x))).map(label);
+    return [gone.length ? gone.join('; ') : '—', added.length ? added.join('; ') : '—'];
+  }
+  function historyHTML() {
+    const hs = manual.history || [];
+    return '<div class="label">Change history</div><div class="scroll"><table><tr><th>When</th><th>Who</th><th>What changed</th><th>Before</th><th>After</th><th></th></tr>' +
+      (hs.length ? hs.slice(0, 100).map((h, i) => { const [f, t] = describe(h); return '<tr class="ed"><td>' + esc(new Date(h.at).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })) + '</td><td>' + esc(h.by || '') + '</td><td>' + esc(h.what) + (h.why ? '<small>' + esc(h.why) + '</small>' : '') +
+        '</td><td>' + esc(f) + '</td><td>' + esc(t) + '</td><td>' + (h.path || h.section ? '<button class="undo-link" data-histundo="' + i + '">Undo</button>' : '') + '</td></tr>'; }).join('')
+        : '<tr><td colspan="6" class="fixed">No changes yet. Every change to the manual will be listed here.</td></tr>') + '</table></div>';
+  }
+  async function undoHistory(i) {
+    const h = (manual.history || [])[i]; if (!h) return;
+    if (!confirm('Undo this change?\n\n' + h.what + '\n\nThe undo is saved as a new change in the history.')) return;
+    const why = 'Undo of the change made ' + new Date(h.at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + (h.by ? ' by ' + h.by : '');
+    if (h.path) { if (await changeRates([[h.path, h.from]], why)) { toast('Undone'); renderManual(); } return; }
+    const L = LISTS[h.section];
+    if (await saveManual(L.fields(h.from), [{ what: L.title.split(':')[0] + ' — undo', section: h.section, from: clone(L.get()), to: h.from, why }])) { toast('Undone'); renderManual(); }
   }
   $('manual').addEventListener('input', (e) => {
     const p = e.target.dataset.path; if (!p) return;
@@ -435,14 +652,15 @@ input.rate.changed { background:#fff6d6; border-color:var(--orange); }
   });
   $('btnUndoRates').onclick = renderManual;
   $('btnSaveRates').onclick = async () => {
-    const rates = JSON.parse(JSON.stringify(manual.rates));
-    document.querySelectorAll('#manual input.changed').forEach((i) => B.setPath(rates, i.dataset.path, i.value === '' ? null : Number(i.value)));
-    if (await saveManual({ rates })) { toast('Prices saved'); renderManual(); }
+    const pairs = {};
+    document.querySelectorAll('#manual input.changed').forEach((i) => { pairs[i.dataset.path] = i.value === '' ? null : Number(i.value); });
+    if (await changeRates(Object.entries(pairs), 'Changed in the Pricing Manual')) { toast('Prices saved'); renderManual(); }
   };
 
   // ---------- wiring ----------
   $('bill').addEventListener('click', (e) => {
     if (e.target.dataset.ans) { openAnswer(e.target); return; }
+    if (e.target.dataset.line) { openLine(e.target.dataset.line, e.target.dataset.key); return; }
     const ed = e.target.dataset.edit, del = e.target.dataset.del;
     if (ed) openForm(jobs.find((j) => j.id === ed));
     if (del && confirm('Delete this job from the bill?')) { jobs = jobs.filter((j) => j.id !== del); saveWeek(); renderBill(); }
@@ -455,11 +673,119 @@ input.rate.changed { background:#fff6d6; border-color:var(--orange); }
     if (!jobs.length) { alert('Add a job first.'); return; }
     if (!window.docx) { alert('The Word tool needs an internet connection.'); return; }
     const wk = currentWeek(); wk.totals.flags = wk.jobs.reduce((s, j) => s + openFlags(j), 0);
-    HarmonyBillDocx.downloadBill(wk, `Harmony_Flooring_Weekly_Bill_${weekLabel(weekStart).replace(/[^\w-]+/g, '_')}.docx`);
+    wk.final = weekFinal; wk.manualDate = manual.updated_at;
+    HarmonyBillDocx.downloadBill(wk, `Harmony_Flooring_Weekly_Bill_${weekLabel(weekStart).replace(/[^\w-]+/g, '_')}${weekFinal ? '' : '_DRAFT'}.docx`);
   };
-  function tab(bill) { $('billView').style.display = bill ? '' : 'none'; $('manualView').style.display = bill ? 'none' : ''; $('tabBill').classList.toggle('on', bill); $('tabManual').classList.toggle('on', !bill); if (bill) renderBill(); else renderManual(); }
-  $('tabBill').onclick = () => tab(true);
-  $('tabManual').onclick = () => tab(false);
+  $('btnFinal').onclick = () => {
+    const open = currentWeek().jobs.reduce((s, j) => s + openFlags(j), 0);
+    if (!confirm(open ? `There ${open === 1 ? 'is 1 open question' : 'are ' + open + ' open questions'} on this bill.\n\nMark it final anyway? The final Word bill leaves the questions out.` : 'Mark this week\'s bill final?\n\nIt locks the bill. You can reopen it as a draft later.')) return;
+    weekFinal = new Date().toISOString(); weekFinalBy = me; saveWeek(); renderBill(); toast('Marked final');
+  };
+  $('btnReopen').onclick = () => {
+    if (!confirm('Reopen this bill as a draft so it can be changed?')) return;
+    weekFinal = null; weekFinalBy = null; saveWeek(); renderBill();
+  };
+  function tab(name) {
+    [['bill', 'billView', 'tabBill'], ['missing', 'missingView', 'tabMissing'], ['manual', 'manualView', 'tabManual']].forEach(([n, v, t]) => { $(v).style.display = n === name ? '' : 'none'; $(t).classList.toggle('on', n === name); });
+    if (name === 'bill') renderBill(); else if (name === 'missing') renderMissing(); else renderManual();
+  }
+  $('tabBill').onclick = () => tab('bill');
+  $('tabMissing').onclick = () => tab('missing');
+  $('tabManual').onclick = () => tab('manual');
+
+  // ---------- Missing Info: everything the bill doesn't know yet, filled in once and saved everywhere ----------
+  // Same thing on several jobs (one carpet product, one customer) is asked once.
+  function missingList() {
+    const groups = new Map();
+    currentWeek().jobs.forEach((j) => (j.missing || []).forEach((m) => {
+      const key = m.kind === 'carpet' ? 'carpet|' + m.product + '|' + m.cls : m.kind === 'customer' ? 'customer|' + (m.name || '#' + j.id).toLowerCase()
+        : m.kind === 'building' ? 'building|' + m.building + '|' + m.unit : m.kind === 'hall' ? 'hall|' + m.building : m.kind + '|' + j.id;
+      if (!groups.has(key)) groups.set(key, { key, ...m, jobs: [] });
+      groups.get(key).jobs.push(j);
+    }));
+    return [...groups.values()];
+  }
+  const KIND = { carpet: 'Carpet price', customer: 'Customer', building: 'Building price', hall: 'Building hallway', buildingName: 'Which building', so: 'Estimate number' };
+  function askText(m) {
+    if (m.kind === 'carpet') return `Customer price per yard for carpet "${m.product}" (${m.cls})`;
+    if (m.kind === 'customer') return m.name ? `"${m.name}" is not on the customer list — email, and investor or homeowner?` : 'Who is the customer? Name, email, investor or homeowner';
+    if (m.kind === 'building') return `${m.building}: customer price for a ${m.unit} (per unit, or per yard)`;
+    if (m.kind === 'hall') return `${m.building}: common hallway yards and customer price`;
+    if (m.kind === 'buildingName') return `Unit ${m.unit}: which building is it?`;
+    return 'Estimate / SO number';
+  }
+  function missFields(m, i) {
+    const inp = (k, ph, type = 'number', v = '') => '<input type="' + type + '" step="any" data-m="' + i + '" data-f="' + k + '" placeholder="' + esc(ph) + '" value="' + esc(v) + '">';
+    if (m.kind === 'carpet') return inp('investor', 'Investor $/yd') + inp('residential', 'Homeowner $/yd') + inp('pay', 'Installer pay $/yd', 'number', B.getRates().carpetDefaultPay ?? '');
+    if (m.kind === 'customer') return '<select data-m="' + i + '" data-f="existing"><option value="">New customer…</option>' + B.getCustomers().map((c) => '<option>' + esc(c.name) + '</option>').join('') + '</select>' +
+      inp('name', 'Name', 'text', m.name) + inp('email', 'Email', 'text') + '<label><input type="checkbox" data-m="' + i + '" data-f="investor" checked> Investor</label>';
+    if (m.kind === 'building') return inp('price', m.unit + ' price $') + inp('rate', 'or price per yd $');
+    if (m.kind === 'hall') return inp('hallYds', 'Hallway yds') + inp('hallPrice', 'Hallway price $');
+    if (m.kind === 'buildingName') return '<select data-m="' + i + '" data-f="building">' + Object.keys(B.getBuildings()).map((b) => '<option>' + esc(b) + '</option>').join('') + '</select>';
+    return inp('so', 'SO number', 'text');
+  }
+  let missing = [];
+  function renderMissing() {
+    missing = missingList();
+    $('missWeek').textContent = weekLabel(weekStart);
+    $('missing').innerHTML = '<p class="hint">Fill in what you know and click Save. It goes into the Pricing Manual or the job, so the bill prices it, and it never has to be asked again. ' +
+      'To ask someone else, click <b>Download Request List</b> and send it.</p>' +
+      (missing.length ? '<div class="scroll ed"><table><tr><th>What we need</th><th>Jobs</th><th>Answer</th><th></th></tr>' + missing.map((m, i) =>
+        '<tr><td><b>' + esc(KIND[m.kind]) + '</b><small>' + esc(askText(m)) + '</small></td><td>' + m.jobs.map((j) => esc(j.address)).join('<br>') + '</td>' +
+        '<td class="mf">' + missFields(m, i) + '</td><td><button class="btn small main" data-msave="' + i + '">Save</button></td></tr>').join('') + '</table></div>'
+        : '<div class="empty">Nothing missing on this week\'s bill. 👍</div>');
+    updateMissingTab();
+  }
+  function updateMissingTab() { const n = missingList().length; $('tabMissing').textContent = 'Missing Info' + (n ? ' (' + n + ')' : ''); }
+  $('missing').addEventListener('click', async (e) => {
+    const i = e.target.dataset.msave; if (i === undefined) return;
+    const m = missing[+i], f = (k) => { const el = document.querySelector('[data-m="' + i + '"][data-f="' + k + '"]'); return !el ? undefined : el.type === 'checkbox' ? el.checked : el.value.trim(); };
+    const num = (k) => f(k) === '' || f(k) === undefined ? null : Number(f(k));
+    const setJobs = (fn) => { m.jobs.forEach((cj) => { const j = jobs.find((x) => x.id === cj.id); if (j) fn(j); }); saveWeek(); };
+    let ok = true;
+    if (m.kind === 'carpet') {
+      if (num(m.cls) === null) { alert('Enter the ' + (m.cls === 'investor' ? 'investor' : 'homeowner') + ' price per yard.'); return; }
+      const rates = clone(manual.rates), had = rates.carpet[m.product];
+      rates.carpet[m.product] = { ...(had || {}), investor: num('investor'), residential: num('residential'), pay: num('pay') ?? rates.carpetDefaultPay };
+      ok = await saveManual({ rates }, [{ what: 'Carpet — ' + m.product + (had ? ' — prices filled in' : ' — new product'), from: had ? JSON.stringify(had) : null, to: `$${num('investor') ?? '—'} investor / $${num('residential') ?? '—'} homeowner / $${num('pay')} pay`, why: 'From Missing Info' }]);
+    } else if (m.kind === 'customer') {
+      const pick = f('existing');
+      if (pick) {
+        // the job's name becomes another name for a customer already on the list
+        if (m.name) { const list = clone(manual.customers), c = list.find((x) => x.name === pick); c.aliases = (c.aliases || []).concat([m.name]);
+          ok = await saveManual({ customers: list }, [{ what: 'Customers — edited', section: 'customers', from: clone(manual.customers), to: list, why: '"' + m.name + '" is ' + pick }]); }
+        if (ok) setJobs((j) => { j.customer = pick; });
+      } else {
+        const name = f('name'); if (!name) { alert('Enter the customer name.'); return; }
+        const c = { name, email: f('email') || null, investor: f('investor'), aliases: m.name && m.name !== name ? [m.name] : [] };
+        const list = clone(manual.customers).concat([c]);
+        ok = await saveManual({ customers: list }, [{ what: 'Customers — edited', section: 'customers', from: clone(manual.customers), to: list, why: 'From Missing Info' }]);
+        if (ok) setJobs((j) => { if (!j.customer) j.customer = name; });
+      }
+    } else if (m.kind === 'building' || m.kind === 'hall') {
+      const bl = clone(manual.buildings || {}), b = bl[m.building] = bl[m.building] || {};
+      if (m.kind === 'building') { if (num('price') === null && num('rate') === null) { alert('Enter a unit price or a price per yard.'); return; } if (num('price') !== null) b['price' + m.unit] = num('price'); if (num('rate') !== null) b.rate = num('rate'); }
+      else { if (num('hallYds') === null && num('hallPrice') === null) { alert('Enter the hallway yards or price.'); return; } if (num('hallYds') !== null) b.hallYds = num('hallYds'); if (num('hallPrice') !== null) b.hallPrice = num('hallPrice'); }
+      const rows = (o) => Object.entries(o).map(([name, u]) => ({ ...u, name }));
+      ok = await saveManual({ buildings: bl }, [{ what: 'Buildings — edited', section: 'buildings', from: rows(manual.buildings || {}), to: rows(bl), why: 'From Missing Info' }]);
+    } else if (m.kind === 'buildingName') setJobs((j) => { j.building = f('building'); });
+    else { if (!f('so')) { alert('Enter the SO number.'); return; } setJobs((j) => { j.so = f('so'); }); }
+    if (ok) { toast('Saved — the bill is updated'); renderMissing(); }
+  });
+  // A Word list of what's missing, to send to whoever has the answers (no installer pay on it)
+  $('btnMissDoc').onclick = async () => {
+    const list = missingList(); if (!list.length) { alert('Nothing is missing on this week\'s bill.'); return; }
+    const D = window.docx; if (!D) { alert('The Word tool needs an internet connection.'); return; }
+    const cell = (t, w, bold) => new D.TableCell({ width: { size: w, type: D.WidthType.DXA }, margins: { top: 80, bottom: 80, left: 100, right: 100 }, children: [new D.Paragraph({ children: [new D.TextRun({ text: t, bold, size: 19, font: 'Arial' })] })] });
+    const rows = [new D.TableRow({ tableHeader: true, children: [cell('Job', 2600, true), cell('What we need', 4200, true), cell('Answer', 3280, true)] })]
+      .concat(list.map((m) => new D.TableRow({ children: [cell(m.jobs.map((j) => j.address).join(', '), 2600), cell(askText(m), 4200), cell('', 3280)] })));
+    const doc = new D.Document({ sections: [{ properties: { page: { margin: { top: 864, bottom: 864, left: 864, right: 1296 } } }, children: [
+      new D.Paragraph({ children: [new D.TextRun({ text: 'HARMONY FLOORING LLC', bold: true, size: 30, font: 'Arial', color: '2C5F2E' })] }),
+      new D.Paragraph({ spacing: { after: 200 }, children: [new D.TextRun({ text: 'Information needed for the bill — week of ' + weekLabel(weekStart), size: 22, font: 'Arial' })] }),
+      new D.Table({ width: { size: 10080, type: D.WidthType.DXA }, columnWidths: [2600, 4200, 3280], rows })] }] });
+    const a = document.createElement('a'); a.href = URL.createObjectURL(await D.Packer.toBlob(doc));
+    a.download = 'Harmony_Info_Needed_' + weekLabel(weekStart).replace(/[^\w-]+/g, '_') + '.docx'; a.click();
+  };
 
   function gate(html) { $('gate').innerHTML = html; $('gate').style.display = ''; document.querySelectorAll('header button').forEach((b) => b.style.display = 'none'); }
 

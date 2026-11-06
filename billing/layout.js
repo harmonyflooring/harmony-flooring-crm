@@ -111,8 +111,13 @@ window.HarmonyLayout = {
     ],
     [
      "Floating steps (per step)",
-     "=Per job",
+     "steps.floatingChargePerStep",
      "steps.floatingPerStep"
+    ],
+    [
+     "Short box flight: this many steps or fewer — customer pays a full flight, installer half (number of steps)",
+     "steps.halfFlightMaxSteps",
+     "=Half a flight"
     ],
     [
      "Vinyl steps (per step)",

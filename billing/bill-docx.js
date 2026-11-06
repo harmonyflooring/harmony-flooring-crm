@@ -11,12 +11,13 @@
   const GREEN = '2C5F2E', GRAY = 'ECEFE9', BORDER = '2C5F2E', YELLOW = 'FFF6D6', FLAG = 'FDE2E1', ANSWERED = 'E8F5E9';
   const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
   const money = (n) => (n < 0 ? '-$' : '$') + Math.abs(n).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-  const rateStr = (l) => (l.rate === null || l.rate === undefined) ? (l.qty === null || l.qty === undefined ? 'Flat rate' : '') : `$${Number(l.rate).toFixed(2)}${l.unit ? '/' + l.unit.replace(/s$/, '') : ''}`;
+  const rateStr = (l) => l.rateText ? l.rateText : (l.rate === null || l.rate === undefined) ? (l.qty === null || l.qty === undefined ? 'Flat rate' : '') : `$${Number(l.rate).toFixed(2)}${l.unit ? '/' + l.unit.replace(/s$/, '') : ''}`;
   const qtyStr = (l) => (l.qty === null || l.qty === undefined) ? '—' : `${l.qty}${l.unit ? ' ' + (l.qty === 1 ? l.unit.replace(/s$/, '') : l.unit) : ''}`;
 
   function buildBillDocument(week, D) {
     const { Document, Paragraph, TextRun, Table, TableRow, TableCell, WidthType, ShadingType, BorderStyle, AlignmentType } = D;
-    const W = 9360; // content width (twips) on US Letter, 1" margins
+    const W = 10080; // content width (twips) on US Letter with the narrow margins below
+    const SZ = 17;
     const none = { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' };
     const noBorders = { top: none, bottom: none, left: none, right: none };
     const thin = { style: BorderStyle.SINGLE, size: 4, color: 'D9D9D9' };
@@ -30,22 +31,22 @@
         borders: opts.leftBar ? { ...noBorders, left: { style: BorderStyle.SINGLE, size: 36, color: BORDER } } : noBorders,
         margins: { top: 100, bottom: 100, left: 160, right: 160 },
         children: (Array.isArray(text) ? text : [text]).map((t, i) => new Paragraph({ children: [
-          new TextRun({ text: t, bold: opts.bold !== false && i === 0, color, size: opts.size || (i === 0 ? 22 : 18), font: 'Arial', italics: !!opts.italics }),
+          new TextRun({ text: t, bold: opts.bold !== false && i === 0, color, size: opts.size || (i === 0 ? 22 : SZ), font: 'Arial', italics: !!opts.italics }),
         ] })),
       })] })],
     });
 
-    const cols = [3000, 1500, 1500, 1360, 2000];
+    const cols = [3400, 1250, 1450, 1300, 2680];
     const cell = (text, w, o = {}) => new TableCell({
       width: { size: w, type: WidthType.DXA }, borders: thinBorders,
       shading: o.fill ? { fill: o.fill, type: ShadingType.CLEAR, color: 'auto' } : undefined,
       margins: { top: 60, bottom: 60, left: 100, right: 100 },
       children: [new Paragraph({ alignment: o.right ? AlignmentType.RIGHT : AlignmentType.LEFT,
-        children: [new TextRun({ text: String(text ?? ''), bold: !!o.bold, size: 18, font: 'Arial' })] })],
+        children: [new TextRun({ text: String(text ?? ''), bold: !!o.bold, size: SZ, font: 'Arial' })] })],
     });
     const lineRow = (prefix, l) => new TableRow({ children: [
       cell(`${prefix} — ${l.label}`, cols[0], { bold: true }), cell(qtyStr(l), cols[1]), cell(rateStr(l), cols[2]),
-      cell(money(l.amount), cols[3], { right: true }), cell(l.note || '', cols[4]),
+      cell(l.amount == null ? '' : money(l.amount), cols[3], { right: true }), cell(l.note || '', cols[4]),
     ] });
 
     function jobTable(job) {
@@ -58,10 +59,18 @@
     }
 
     const spacer = (after = 120) => new Paragraph({ spacing: { after }, children: [] });
+    const longDate = (d) => new Date(d).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
+    const manualDate = week.manualDate ? ' updated ' + new Date(week.manualDate).toLocaleDateString('en-US', { month: 'numeric', day: 'numeric', year: '2-digit' }) : ' on file';
+    const sub = week.final
+      ? `Final — prepared ${longDate(week.final)} — per pricing manual${manualDate}`
+      : `DRAFT — prepared ${week.preparedDate || longDate(Date.now())} — using the pricing manual${manualDate}`;
+    const t = week.totals || {};
     const children = [
       new Paragraph({ children: [new TextRun({ text: 'HARMONY FLOORING LLC', bold: true, size: 32, font: 'Arial', color: GREEN })] }),
       new Paragraph({ children: [new TextRun({ text: `Weekly Installer Bill — ${week.label || ''}`, size: 24, font: 'Arial' })] }),
-      new Paragraph({ spacing: { after: 240 }, children: [new TextRun({ text: `Prepared: ${week.preparedDate || new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })} — using the pricing manual on file`, italics: true, size: 18, font: 'Arial', color: '666666' })] }),
+      new Paragraph({ spacing: { after: 160 }, children: [new TextRun({ text: sub, italics: true, size: SZ, font: 'Arial', color: '666666' })] }),
+      band([`Installer pay: ${money(t.pay || 0)}   |   Customer charges written: ${money(t.charge || 0)}   |   Jobs: ${week.jobs.length}` + (week.final ? '' : `   |   Open questions: ${t.flags || 0}`)], GREEN, 'FFFFFF', { size: 20 }),
+      spacer(200),
     ];
 
     const byDay = {};
@@ -73,23 +82,21 @@
       byDay[day].forEach((job) => {
         const sub = [job.head, job.customer, job.customerEmail ? `(${job.customerEmail})` : ''].filter(Boolean).join(' ');
         children.push(band([job.address, sub].filter(Boolean), GRAY, '000000', { leftBar: true }));
-        if (job.notes.length) children.push(band(job.notes.map((n) => '📝 ' + n), YELLOW, '5C4A00', { bold: false, italics: true, size: 18 }));
+        if (job.notes.length) children.push(band(job.notes.map((n) => '📝 ' + n), YELLOW, '5C4A00', { bold: false, italics: true, size: SZ }));
+        // questions belong to the draft; the final bill leaves them out
         const answers = job.answers || {};
-        const open = job.flags.filter((f) => !answers[f]);
-        const answered = Object.keys(answers).filter((f) => answers[f]);
-        if (open.length) children.push(band(open.map((f) => '⚠ ' + f), FLAG, '8A1C1C', { bold: false, size: 18 }));
-        if (answered.length) children.push(band(answered.map((f) => '✓ ' + f + ' — Answer: ' + answers[f]), ANSWERED, '1B5E20', { bold: false, size: 18 }));
+        const open = week.final ? [] : job.flags.filter((f) => !answers[f]);
+        const answered = week.final ? [] : Object.keys(answers).filter((f) => answers[f]);
+        if (open.length) children.push(band(open.map((f) => '⚠ ' + f), FLAG, '8A1C1C', { bold: false, size: SZ }));
+        if (answered.length) children.push(band(answered.map((f) => '✓ ' + f + ' — Answer: ' + answers[f]), ANSWERED, '1B5E20', { bold: false, size: SZ }));
         if (job.chargeLines.length || job.payLines.length) children.push(jobTable(job));
         children.push(spacer(280));
       });
     });
 
-    const t = week.totals || {};
-    children.push(band([`WEEK TOTALS — Customer charges written: ${money(t.charge || 0)}   |   Installer pay: ${money(t.pay || 0)}   |   Open flags: ${t.flags || 0}`], GREEN, 'FFFFFF', { size: 20 }));
-
     return new Document({
       styles: { default: { document: { run: { font: 'Arial', size: 20 } } } },
-      sections: [{ properties: { page: { size: { width: 12240, height: 15840 }, margin: { top: 1080, bottom: 1080, left: 1440, right: 1440 } } }, children }],
+      sections: [{ properties: { page: { size: { width: 12240, height: 15840 }, margin: { top: 864, bottom: 864, left: 864, right: 1296 } } }, children }],
     });
   }
 
