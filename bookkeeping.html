@@ -76,6 +76,17 @@ tr.edited td { background:#fffbe9; }
 .ed textarea { width:100%; font:inherit; font-size:.84rem; padding:4px 6px; border:1px solid var(--line); border-radius:6px; }
 .ed .x { background:none; border:0; color:#c0392b; font-size:1rem; cursor:pointer; }
 .ed .acts { margin:8px 10px 10px; }
+.autoread { background:#eef5fb; color:#1d4466; font-size:.78rem; padding:5px 14px; }
+.mailline { font-size:.8rem; color:#557; margin-bottom:10px; }
+.mailline.busy { color:#1d4466; font-weight:700; }
+.mailline.bad { color:#c0392b; font-weight:700; }
+.helper { background:#eef5fb; border:1px solid #c9dcec; border-radius:10px; margin-bottom:16px; overflow:hidden; }
+.hhead { background:#dbe9f5; color:#1d4466; font-weight:700; font-size:.85rem; padding:8px 14px; }
+.hrow { display:flex; gap:8px; align-items:flex-start; padding:9px 14px; border-top:1px solid #d6e4f0; flex-wrap:wrap; }
+.hrow > div { flex:1; min-width:220px; font-size:.86rem; }
+.hrow small { display:block; color:#557; font-size:.76rem; }
+.hjobs { font-size:.76rem; color:#444; margin-top:3px; }
+.hrow .bad { color:#c0392b; font-weight:700; }
 .mf { display:flex; flex-wrap:wrap; gap:6px; align-items:center; min-width:280px; }
 .ed .mf input[type=text], .ed .mf input[type=number] { width:130px; }
 .mf select { font:inherit; font-size:.84rem; padding:4px 6px; border:1px solid var(--line); border-radius:6px; max-width:200px; }
@@ -133,6 +144,8 @@ input.rate.changed { background:#fff6d6; border-color:var(--orange); }
   <div class="top"><h1>Weekly Bill</h1>
     <div class="weeknav"><button class="btn small" id="btnPrev" title="Previous week">‹</button><b id="weekLabel"></b><button class="btn small" id="btnNext" title="Next week">›</button></div>
     <span class="saved" id="saved"></span>
+    <button class="btn" id="btnNotes" title="Paste the installer's weekly job email">📋 Load Installer Notes</button>
+    <button class="btn" id="btnMail" title="The office computer reads sales@ email for estimates">📬 Check Email Now</button>
     <button class="btn" id="btnCal">Add Jobs From Calendar</button>
     <button class="btn green" id="btnAdd">+ Add Job</button>
     <button class="btn green" id="btnFinal">✓ Mark Final</button>
@@ -243,6 +256,7 @@ input.rate.changed { background:#fff6d6; border-color:var(--orange); }
     return '<div class="bjob"><div class="bhead"><div><b>' + esc(j.address) + '</b><small>' + esc([j.head, j.customer && !(j.head || '').includes(j.customer) ? j.customer : '', j.installer ? 'Installer: ' + j.installer : ''].filter(Boolean).join(' · ')) + '</small></div>' +
       (weekFinal ? '' : '<button class="btn small" data-edit="' + esc(j.id) + '">Edit</button><button class="btn small red" data-del="' + esc(j.id) + '">Delete</button>') + '</div>' +
       '<div class="bnote"><span class="status">' + esc(label) + '</span><span>' + esc(notes.join(' ')) + '</span></div>' +
+      (j.autoRead ? '<div class="autoread">📋 Read automatically from the installer\'s email — check the numbers with Edit (this mark goes away when you save).</div>' : '') +
       (weekFinal ? '' : flagRows(j)) +
       (noWork(j) ? '<div class="todo">No work entered yet. Click Edit and add the installer\'s numbers.</div>' : '') +
       (j.chargeLines.length || j.payLines.length ? '<div class="cols">' + (j.chargeLines.length ? side(j, 'Charge customer', j.chargeLines, j.chargeTotal) : '') + (j.payLines.length ? side(j, 'Pay installer', j.payLines, j.payTotal) : '') + '</div>' : '') + '</div>';
@@ -360,6 +374,7 @@ input.rate.changed { background:#fff6d6; border-color:var(--orange); }
     let h = '<div class="bh"><h2>HARMONY FLOORING LLC</h2><div>Weekly Installer Bill — ' + esc(weekLabel(weekStart)) + ' ' + tag + '</div></div><div class="sum">' +
       [['Installer pay', money(wk.totals.pay)], ['Customer charges', money(wk.totals.charge)], ['Jobs', wk.jobs.length]].map((t) => '<div class="tile"><span>' + t[0] + '</span><b>' + t[1] + '</b></div>').join('') +
       '<div class="tile' + (wk.totals.flags ? ' warn' : '') + '"><span>Needs review</span><b>' + wk.totals.flags + '</b></div></div>';
+    h = helperPanel() + h;
     if (!wk.jobs.length) { $('bill').innerHTML = h + '<div class="empty">No jobs on this week\'s bill yet.<br>Click <b>Add Jobs From Calendar</b> to bring in the jobs installed this week, or <b>+ Add Job</b>.</div>'; return; }
     DAYS.concat('Other').forEach((d) => {
       const js = wk.jobs.filter((j) => (DAYS.includes(j.day) ? j.day : 'Other') === d);
@@ -369,6 +384,230 @@ input.rate.changed { background:#fff6d6; border-color:var(--orange); }
       Object.entries(wk.byInstaller).map(([k, v]) => '<tr><td>' + esc(k) + '</td><td class="amt">' + money(v) + '</td></tr>').join('') + '</table></div>';
     $('bill').innerHTML = h;
   }
+
+  // ---------- Helper found: job notes and estimates the email helper read, waiting to be added or ignored ----------
+  let helperRows = [];
+  async function loadHelper() {
+    const { data, error } = await db.from('helper_inbox').select('*').eq('status', 'pending').order('created_at', { ascending: false }).limit(100);
+    helperRows = error ? [] : data || [];
+  }
+  // "111 Mantoloking Dr, Jackson" and "111 Mantoloking" match: house number + first word of the street
+  // plus the unit, so "325 7th St unit 301" and "unit 501" stay two jobs
+  const addrKey = (a) => { const s = String(a || '').toLowerCase().replace(/[^a-z0-9 ]+/g, ' ').trim(), u = (s.match(/\b(?:unit|apt)\s+([a-z0-9]+)/) || [])[1];
+    return s.split(/\s+/).slice(0, 2).join(' ') + (u ? ' #' + u : ''); };
+  const findJob = (address, list = jobs) => list.find((j) => addrKey(j.address) === addrKey(address));
+  // the latest email check (weekly or from the button), shown above the bill
+  let lastReq = null, reqTimer = null;
+  async function loadRequest() {
+    const { data } = await db.from('helper_requests').select('*').order('id', { ascending: false }).limit(1);
+    lastReq = (data || [])[0] || null;
+    const busy = lastReq && (lastReq.status === 'pending' || lastReq.status === 'running');
+    $('btnMail').disabled = !!busy;
+    clearTimeout(reqTimer);
+    if (busy) reqTimer = setTimeout(async () => { const was = lastReq.status; await loadRequest(); if (lastReq.status !== was && lastReq.status === 'done') await loadHelper(); renderBill(); }, 30000);
+  }
+  function requestLine() {
+    if (!lastReq) return '<div class="mailline">📬 The helper hasn\'t checked email for estimates yet. It checks every Monday morning, or click <b>Check Email Now</b>.</div>';
+    const when = (t) => new Date(t).toLocaleString('en-US', { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+    const r = lastReq;
+    if (r.status === 'pending') return '<div class="mailline busy">📬 Waiting for the office computer to check email (asked ' + esc(when(r.requested_at)) + ' by ' + esc(r.requested_by || '') + '). It starts at the next check: 8 AM or 2 PM, Monday to Thursday, when the computer is on.</div>';
+    if (r.status === 'running') return '<div class="mailline busy">📬 Checking email now… (a few minutes)</div>';
+    if (r.status === 'failed') return '<div class="mailline bad">📬 The last email check didn\'t finish (' + esc(when(r.finished_at || r.requested_at)) + '): ' + esc(r.message || '') + ' Try Check Email Now again, or tell Claude.</div>';
+    return '<div class="mailline">📬 Email last checked ' + esc(when(r.finished_at)) + ' — ' + esc(r.message || '') + '</div>';
+  }
+  $('btnMail').onclick = async () => {
+    const { error } = await db.from('helper_requests').insert({ requested_by: me });
+    if (error) { alert('Could not ask for an email check: ' + error.message); return; }
+    await loadRequest(); renderBill(); toast('The office computer will check email at its next check (8 AM or 2 PM, Mon–Thu)');
+  };
+  function helperPanel() {
+    if (!helperRows.length || weekFinal) return requestLine();
+    const rows = helperRows.map((r) => {
+      const d = r.data || {};
+      if (r.kind === 'notes') {
+        const n = (d.jobs || []).length;
+        return '<div class="hrow"><div><b>📝 Installer job notes — week of ' + esc(r.week_start ? weekLabel(r.week_start) : '?') + '</b><small>' + n + ' job' + (n === 1 ? '' : 's') + ' · ' + esc(d.subject || '') + ' · received ' + esc(new Date(d.received || r.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })) + '</small>' +
+          '<div class="hjobs">' + (d.jobs || []).map((j) => esc((j.day || '').slice(0, 3) + ' ' + j.address)).join(' · ') + '</div></div>' +
+          '<button class="btn small green" data-hadd="' + r.id + '">' + (r.week_start && r.week_start !== weekStart ? 'Open That Week & Add' : 'Add to This Bill') + '</button><button class="btn small" data-hign="' + r.id + '">Ignore</button></div>';
+      }
+      const m = findJob(r.address || d.address);
+      const sum = d.linesAddUp === false ? '<span class="bad">⚠ lines don\'t add up to the total — check the PDF</span>' : d.linesAddUp ? 'lines add up ✓' : '';
+      return '<div class="hrow"><div><b>📄 Estimate' + (d.so ? ' SO ' + esc(d.so) : '') + (d.updated ? ' (updated)' : '') + ' — ' + esc(r.address || d.address || '?') + '</b><small>' + esc([d.customer, d.total != null ? 'total ' + money(Number(d.total)) + (d.tax ? ' incl. tax ' + money(Number(d.tax)) : '') : '', sum && sum.replace(/<[^>]+>/g, ''), d.date].filter(Boolean).join(' · ')) + '</small>' +
+        '<div class="hjobs">' + (d.lines || []).map((l) => esc(l.desc + (l.qty != null ? ' ' + l.qty + (l.unit ? ' ' + l.unit : '') : '') + (l.rate != null ? ' × $' + l.rate : ''))).join(' · ') + '</div></div>' +
+        (m ? '<button class="btn small green" data-hatt="' + r.id + '">Attach to ' + esc(m.address) + '</button>' : '<small class="fixed" style="align-self:center">Not on this week\'s bill yet</small>') +
+        '<button class="btn small" data-hign="' + r.id + '">Ignore</button></div>';
+    }).join('');
+    return requestLine() + '<div class="helper"><div class="hhead">🤖 Helper found ' + helperRows.length + ' thing' + (helperRows.length === 1 ? '' : 's') + ' in email — nothing goes on the bill until you add it</div>' + rows + '</div>';
+  }
+  async function markHelper(id, status) {
+    const { error } = await db.from('helper_inbox').update({ status, handled_by: me, handled_at: new Date().toISOString() }).eq('id', id);
+    if (error) { alert('Could not update the helper list: ' + error.message); return false; }
+    helperRows = helperRows.filter((r) => r.id !== id); return true;
+  }
+  // put one notes email on the bill: new jobs are added, a job already on the bill with no work gets the installer's numbers
+  function addNotes(r) {
+    let added = 0, filled = 0, skipped = [];
+    const before = jobs.slice(); // only jobs already on the bill; two jobs at one address in the same email both go on
+    (r.data.jobs || []).forEach((n, i) => {
+      const qs = (n.questions || []).map((q) => ({ q })).concat(n.asks || []);
+      const have = findJob(n.address, before);
+      if (have) {
+        if ((have.items || []).length || have.flatRate) { skipped.push(n.address); return; }
+        have.items = n.items || []; if (n.note) have.notes = (have.notes || []).concat([n.note]);
+        if (n.autoRead) have.autoRead = true;
+        if (qs.length) have.asks = (have.asks || []).concat(qs);
+        if (!have.installer && n.installer) have.installer = n.installer;
+        filled++; return;
+      }
+      const j = { id: 'm' + r.id + '_' + i, source: 'mail:' + r.id + ':' + i, day: n.day || 'Monday', address: n.address, customer: n.customer || '', installer: n.installer || '',
+        status: n.status || 'create_invoice', so: n.so || '', notes: n.note ? [n.note] : [], items: n.items || [] };
+      if (n.flatRate) j.flatRate = n.flatRate;
+      if (n.autoRead) j.autoRead = true;
+      if (qs.length) j.asks = qs;
+      jobs.push(j); added++;
+    });
+    return { added, filled, skipped };
+  }
+  $('bill').addEventListener('click', async (e) => {
+    const t = e.target, id = +(t.dataset.hadd || t.dataset.hign || t.dataset.hatt || 0); if (!id) return;
+    const r = helperRows.find((x) => x.id === id); if (!r) return;
+    if (t.dataset.hign) { if (confirm('Ignore this? It will not be shown again.') && await markHelper(id, 'ignored')) renderBill(); return; }
+    if (t.dataset.hadd) {
+      if (r.week_start && r.week_start !== weekStart) { await loadWeek(r.week_start); if (weekFinal) { alert('That week is marked final. Reopen it as a draft first.'); return; } }
+      const res = addNotes(r);
+      if (!(await markHelper(id, 'added'))) return;
+      saveWeek(); renderBill();
+      alert(`Added ${res.added} job${res.added === 1 ? '' : 's'}` + (res.filled ? `, filled in ${res.filled} already on the bill` : '') + (res.skipped.length ? `.\n\nAlready on the bill with work, not changed: ${res.skipped.join(', ')}` : '.'));
+      return;
+    }
+    // attach an estimate: the job becomes estimate-on-file with its SO number
+    const j = findJob(r.address || r.data.address), d = r.data;
+    if (!j) return;
+    j.so = d.so || j.so; j.status = 'estimate_on_file';
+    j.estimate = { so: d.so, total: d.total, tax: d.tax, lines: d.lines || [], date: d.date };
+    const vinylLine = (d.lines || []).find((l) => /vinyl|lvt|lvp/i.test(l.desc || '') && /sq/i.test(l.unit || '') && l.rate != null);
+    (j.items || []).forEach((it) => { if (it.type === 'vinyl' && vinylLine && it.estimateRate == null) it.estimateRate = Number(vinylLine.rate); });
+    if (await markHelper(id, 'added')) { saveWeek(); renderBill(); toast('Estimate attached to ' + j.address); }
+  });
+
+  // ---------- Load Installer Notes: paste the installer's weekly email, the software splits it into jobs ----------
+  // The numbers are a best guess from the installer's shorthand; every job is marked so the office checks it.
+  const DAY_RE = /^\s*(mon|tues?|wed(nes)?|thu(rs)?|fri|sat(ur)?|sun)(day)?\s*[:.-]?\s*$/i;
+  const DAY_NAME = { mon: 'Monday', tue: 'Tuesday', wed: 'Wednesday', thu: 'Thursday', fri: 'Friday', sat: 'Saturday', sun: 'Sunday' };
+  const TOWNS = { lkwd: 'Lakewood', philly: 'Philadelphia', tr: 'Toms River' };
+  function parseInstallerNotes(text) {
+    const buildings = Object.keys(B.getBuildings()).map((b) => b.toLowerCase());
+    const startsJob = (l) => /^\s*\d/.test(l) || buildings.some((b) => l.trim().toLowerCase().startsWith(b)) || /^\s*(bala|repair|bucks|avalon|royal park)\b/i.test(l);
+    const out = []; let day = 'Monday', cur = null, prevLen = 0;
+    text.replace(/\r/g, '').split('\n').forEach((raw) => {
+      const l = raw.trim();
+      if (!l) { cur = null; prevLen = 0; return; }
+      if (DAY_RE.test(l)) { day = DAY_NAME[l.toLowerCase().slice(0, 3)]; cur = null; prevLen = 0; return; }
+      // the email wraps long lines: after a long line, the next line is the same job even if it starts with a number
+      const wrapped = prevLen >= 60; prevLen = l.length;
+      if (cur && (wrapped || !startsJob(l))) { cur.note += ' ' + l; return; }
+      if (!cur && !startsJob(l) && !/\d/.test(l)) return; // greetings, "ty", sign-off
+      cur = { day, note: l }; out.push(cur);
+    });
+    return out.map((j) => ({ ...j, address: guessAddress(j.note), items: guessItems(j.note) }));
+  }
+  // the address is the start of the line, before the work ("t2", "52 yrds", "rip up"...)
+  function guessAddress(note) {
+    const prods = Object.keys(B.getRates().carpet || {}).map((p) => p.toLowerCase().split(' ')[0]);
+    // a customer's name after the address ("s&s construction", "yochi k") ends the address too
+    const names = B.getCustomers().flatMap((c) => [c.name].concat(c.aliases || [])).map((x) => String(x).toLowerCase().split(/[\s/]+/)[0].replace(/[^a-z0-9&]/g, '')).filter((x) => x.length >= 3);
+    const STOP = /^(sqf|sf|ft|feet|yrds?|yds?|syrds|patch|luans?|shoe|box|steps?|flights?|rip|carpet|vinyl|click|glue|basement|repair|reinstall|one|room|brs?|mbr|cove|com|needs|plus|prime|t2|m1|m2|lb|cut|check|jimmy|diablo|said|didnt|want|moved|apploances|appliances|toilet|color|over)$/;
+    const words = note.replace(/[,;]+/g, ' , ').split(/\s+/), keep = [];
+    for (let i = 0; i < words.length && keep.length < 9; i++) {
+      const w = words[i], lw = w.toLowerCase().replace(/[^a-z0-9&]/g, '');
+      const next = (words[i + 1] || '').toLowerCase().replace(/[^a-z0-9&]/g, '');
+      if (w === ',' ) { if (keep.length >= 2) break; continue; }
+      if (i > 0 && (/^\d+(\.\d+)?(sqf|sf|ft|yrds?|yds?|lf)/i.test(w) || STOP.test(lw) || prods.includes(lw) || (i > 2 && names.includes(lw)))) break;
+      const prevW = (words[i - 1] || '').toLowerCase();
+      if (i > 1 && /^\d+(\.\d+)?$/.test(lw) && STOP.test(next) && !/^(unit|apt|lb|#)$/.test(prevW)) break; // "2 Galassi 800 sqf" -> "2 Galassi"
+      if (i > 1 && /^\d$/.test(lw) && /^(br|brs)$/i.test((words[i + 1] || '').replace(/[^a-z]/gi, ''))) break;
+      keep.push(w.replace(/[.\-]+$/, ''));
+    }
+    return keep.map((w) => TOWNS[w.toLowerCase()] || (/^[a-z]/.test(w) && !/^(st|ave|dr|ln|rd|ct|unit|apt)$/i.test(w) ? w[0].toUpperCase() + w.slice(1) : w.replace(/^(st|ave|dr|ln|rd|ct)$/i, (s) => s[0].toUpperCase() + s.slice(1).toLowerCase()))).join(' ').trim();
+  }
+  function guessItems(note) {
+    const n = note.toLowerCase().replace(/(\d),(\d{3})/g, '$1$2'), items = [];
+    const num = (re) => { const m = n.match(re); return m ? Number(m[1]) : undefined; };
+    const prods = Object.keys(B.getRates().carpet || {});
+    const has = (p) => new RegExp('\\b' + p.toLowerCase().replace(/[^a-z0-9 ]/g, '') + '\\b').test(n);
+    // full name first ("toffee cream"), then a first word on its own ("prime" = Prime 193)
+    const prod = prods.find(has) || prods.find((p) => { const f = p.split(' ')[0]; return f.length >= 4 && p.includes(' ') && !/^(carpet|vinyl)$/i.test(f) && has(f) && !prods.includes(f); });
+    const ripAt = n.search(/rip (up|out)/);
+    const before = ripAt >= 0 ? n.slice(0, ripAt) : n, after = ripAt >= 0 ? n.slice(ripAt) : '';
+    const yds = (s) => { const m = s.match(/(\d+(?:\.\d+)?)\s*s?(?:yrds?|yds?|yards)\b/); return m ? Number(m[1]) : undefined; };
+    const feet = num(/(\d+(?:\.\d+)?)\s*(?:ft|feet)\s*\)?\s*=/) ?? num(/\((\d+(?:\.\d+)?)\s*ft\)/);
+    const unit = (n.match(/\b([123])\s*br\b/) || [])[1];
+    const bld = Object.keys(B.getBuildings()).some((b) => n.includes(b.toLowerCase())) || /\bbucks\b/.test(n);
+    const cy = yds(before);
+    if (prod || cy != null || feet != null || (bld && unit)) {
+      const c = { type: 'carpet' };
+      if (prod) c.product = prod; if (cy != null) c.installerQty = cy; if (feet != null) c.feet = feet;
+      if (bld && unit) c.unitLabel = unit + 'BR';
+      if (/glue/.test(n) && !/sqf|sq ?ft/.test(before)) c.glueDown = true;
+      if (/our pad/.test(n)) c.padding = 'ours'; if (/no pad/.test(n)) c.padding = 'none';
+      items.push(c);
+    }
+    const sq = (s) => { const m = s.match(/(\d+(?:\.\d+)?)\s*(?:sqf|sq\.? ?f(?:ee)?t|sf)\b/); return m ? Number(m[1]) : undefined; };
+    const vq = sq(before) ?? (/vinyl/.test(n) ? num(/(\d+(?:\.\d+)?)\s*ft\s*(?:of\s*)?vinyl/) : undefined);
+    if (vq != null) items.push({ type: 'vinyl', installerQty: vq, ...(/20\s*mil|glue/.test(n) ? { glueDown20mil: true } : {}) });
+    if (ripAt >= 0) {
+      const r = { type: 'ripup' }, rs = sq(after.slice(0, 40)), ry = yds(after.slice(0, 40));
+      if (rs != null) { r.material = /vct|tile/.test(n) ? 'vct' : 'vinyl'; r.installerQty = rs; } else { r.material = 'carpet'; if (ry != null) r.installerQty = ry; }
+      if (/no haul|dumpster|leave/.test(after)) r.noHaul = true;
+      items.push(r);
+    }
+    const patch = num(/(\d+)\s*(?:bags?\s*(?:of\s*)?)?patch/); if (patch != null) items.push({ type: 'patch', bags: patch });
+    const luan = num(/(\d+)\s*luans?/); if (luan != null) items.push({ type: 'luan', count: luan });
+    const shoe = num(/(\d+)\s*(?:lf\s*)?shoe/); if (shoe != null) items.push({ type: 'shoe', installerQty: shoe });
+    if (/cove/.test(n)) { const cv = num(/(\d+)\s*lf/) ?? (/1 box cove/.test(n) ? 120 : undefined); items.push({ type: 'cove', ...(cv != null ? { installerQty: cv } : {}) }); }
+    const fl = num(/(\d+)\s*floating/);
+    if (fl != null) items.push({ type: 'steps', style: 'floating', steps: fl });
+    else if (/step|flight/.test(n.replace(/no steps?/g, ''))) {
+      const s = { type: 'steps' }, flights = num(/(\d+)\s*flights?/), few = num(/(\d+)\s*box steps/);
+      if (/x cap|mixed/.test(n)) s.style = 'mixed'; else if (/cap/.test(n)) s.style = 'cap'; else if (/box/.test(n)) s.style = 'box';
+      if (flights != null) s.flights = flights; else if (few != null && few <= 8) { s.style = 'box'; s.flights = 1; s.steps = few; }
+      items.push(s);
+    }
+    if (/stringer/.test(n)) { const st = num(/(\d+)\s*stringers?/); items.push({ type: 'stringers', ...(st != null ? { count: st } : {}) }); }
+    const ap = num(/(\d+)\s*app?l[a-z]*/); if (ap != null) items.push({ type: 'appliance', count: ap, payRequested: true });
+    if (/toilet/.test(n)) items.push({ type: 'appliance', count: num(/(\d+)\s*toilets?/) ?? 1, payRequested: true });
+    if (/com(mon)? hall/.test(n)) items.push({ type: 'hallway' });
+    if (/\brepair\b/.test(n) && !items.length) items.push({ type: 'repair', label: 'repair' });
+    if (/restre?a?tch/.test(n)) items.push({ type: 'custom', label: 'Restretch' });
+    return items;
+  }
+  const itemWords = (it) => (ITEMS()[it.type]?.name || it.type) + [it.product, it.unitLabel, it.material !== 'carpet' && it.material, it.style,
+    it.installerQty != null && it.installerQty + ({ carpet: ' yds', vinyl: ' sqf', shoe: ' lf', cove: ' ft' }[it.type] || (it.type === 'ripup' ? (it.material === 'carpet' ? ' yds' : ' sqf') : '')),
+    it.feet != null && it.feet + ' ft', it.bags != null && it.bags + ' bags', it.count != null && '× ' + it.count, it.flights != null && it.flights + ' flight' + (it.flights === 1 ? '' : 's'), it.steps != null && it.steps + ' steps'].filter(Boolean).map((x) => ' ' + x).join('');
+  let notesDraft = [];
+  function openNotesLoader() {
+    $('form').innerHTML = '<h2>Load Installer Notes</h2><p class="hint">Paste the installer\'s weekly email (for example "jobs done oct 26-30"). The jobs go on the bill for the week of <b>' + esc(weekLabel(weekStart)) + '</b> — use ‹ › first to pick another week.</p>' +
+      '<textarea id="nText" rows="12" style="width:100%;font:inherit;font-size:.85rem;padding:8px;border:1px solid var(--line);border-radius:8px" placeholder="monday&#10;2 Galassi 800 sqf glue, rip up 400sqf, 8 patch&#10;&#10;325 7th st lkwd unit 301 3 br badman t2 39ft=52 yrds rip up haul"></textarea>' +
+      '<div class="acts"><button class="btn" type="button" id="nCancel">Cancel</button><button class="btn main" type="button" id="nRead">Read the Notes</button></div><div id="nPreview"></div>';
+    $('modal').classList.add('open');
+    $('nCancel').onclick = () => $('modal').classList.remove('open');
+    $('nRead').onclick = () => {
+      notesDraft = parseInstallerNotes($('nText').value);
+      if (!notesDraft.length) { $('nPreview').innerHTML = '<p class="hint">No jobs found. Check that the email text was pasted.</p>'; return; }
+      $('nPreview').innerHTML = '<div class="label">' + notesDraft.length + ' jobs found — fix any address, untick anything that shouldn\'t go on the bill</div><div class="scroll ed"><table><tr><th></th><th>Day</th><th>Address</th><th>Read from the note</th></tr>' +
+        notesDraft.map((j, i) => '<tr><td><input type="checkbox" data-nk="' + i + '" checked></td><td>' + esc(j.day.slice(0, 3)) + '</td><td><input type="text" data-na="' + i + '" value="' + esc(j.address) + '"></td><td>' +
+          (j.items.length ? esc(j.items.map(itemWords).join(' · ')) : '<span class="fixed">nothing read — fill in with Edit</span>') + '<small>' + esc(j.note) + '</small></td></tr>').join('') +
+        '</table></div><div class="acts"><button class="btn main" type="button" id="nAdd">Add to This Week\'s Bill</button></div>';
+      $('nAdd').onclick = () => {
+        const pick = notesDraft.map((j, i) => ({ ...j, address: document.querySelector('[data-na="' + i + '"]').value.trim() || j.address, autoRead: true }))
+          .filter((j, i) => document.querySelector('[data-nk="' + i + '"]').checked);
+        const res = addNotes({ id: 'p' + Date.now(), data: { jobs: pick } });
+        $('modal').classList.remove('open'); saveWeek(); renderBill();
+        alert(`Added ${res.added} job${res.added === 1 ? '' : 's'}` + (res.filled ? `, filled in ${res.filled} already on the bill` : '') + (res.skipped.length ? `.\n\nAlready on the bill with work, not changed: ${res.skipped.join(', ')}` : '.') + '\n\nThe numbers were read automatically — check each job (marked "check the numbers").');
+      };
+    };
+  }
+  $('btnNotes').onclick = openNotesLoader;
 
   // Jobs installed this week: CRM jobs with an install date, plus other calendar entries
   async function addFromCalendar() {
@@ -502,6 +741,7 @@ input.rate.changed { background:#fff6d6; border-color:var(--orange); }
     if (old.answers) job.answers = old.answers;
     if (old.edits) job.edits = old.edits;
     if (old.asks) job.asks = old.asks;
+    if (old.estimate) job.estimate = old.estimate;
     if (val('fBuilding')) job.building = val('fBuilding');
     if (old.customerEmail && old.customer === job.customer) job.customerEmail = old.customerEmail;
     if (val('fClass')) job.rateClass = val('fClass');
@@ -799,6 +1039,7 @@ input.rate.changed { background:#fff6d6; border-color:var(--orange); }
     const { data: m, error } = await db.from('billing_manual').select('*').eq('id', 'current').maybeSingle();
     if (error || !m) { gate('<h2>Bookkeeping</h2><p>The price list could not be loaded' + (error ? ': ' + esc(error.message) : ' — it has not been set up yet.') + '</p>'); return; }
     manual = m; B.setManual(manual);
+    await Promise.all([loadHelper(), loadRequest()]);
     $('billView').style.display = '';
     const fromUrl = new URLSearchParams(location.search).get('week');
     await loadWeek(mondayOf(fromUrl ? parseDay(fromUrl) : new Date(Date.now() - 7 * 864e5)));

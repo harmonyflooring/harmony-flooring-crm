@@ -272,7 +272,7 @@
         }
         if (mat === 'carpet') {
           const custQ = customerCarpetYds || it.qty; // customer rip-up always matches customer carpet yardage
-          const officeQ = it.qty ?? customerCarpetYds;
+          const officeQ = has(it.qty) ? it.qty : (customerCarpetYds || undefined); // no carpet on the job: go by the installer's number
           const instQ = it.installerQty ?? (carpetItems[0] && lower(carpetItems[0].qty, carpetItems[0].installerQty));
           const payQ = lower(officeQ, instQ), ripNote = lowNote(officeQ, it.installerQty, 'yds');
           if (it.noHaul) {
