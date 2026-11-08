@@ -180,7 +180,7 @@ input.rate.changed { background:#fff6d6; border-color:var(--orange); }
   const $ = (id) => document.getElementById(id);
   const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;' }[c]));
   const money = (n) => (n < 0 ? '-$' : '$') + Math.abs(n).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-  const STATUS = { estimate_on_file:'Estimate on file', create_invoice:'Create invoice', create_estimate:'Create estimate', hold:'Hold', bookkeeper_handles:'Israel handling', correction:'Correction / add to past bill' };
+  const STATUS = { estimate_on_file:'Estimate on file', create_invoice:'Create invoice', create_estimate:'Create estimate', hold:'Hold', bookkeeper_handles:'Yisroel handling', correction:'Correction / add to past bill' };
   const DAYS = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday','Hold','Corrections'];
   // Database step numbers: 1 = Customer Selection, 5/6 = Estimate Approved / order, 9 = Schedule Installation
   const DB_SELECTION = '1', DB_SCHED = '9';
@@ -332,8 +332,10 @@ input.rate.changed { background:#fff6d6; border-color:var(--orange); }
     const desc = ask ? (ITEMS()[ask.item.type]?.name || ask.item.type) + (ask.item.qty ? ' ' + ask.item.qty + (ask.item.type === 'cove' ? ' ft' : '') : '') : '';
     // work not on the estimate is already on the customer's charge: confirm it, or take it off
     const chg = (cj.chargeAsks || []).find((a) => a.q === q);
+    const payQ = (cj.payAsks || []).find((a) => a.q === q);
     box.innerHTML = (ask && !cur ? '<div style="justify-content:flex-start"><button class="btn small green" data-act="yes">Yes — add ' + esc(desc) + '</button><button class="btn small" data-act="no">No</button></div>' : '') +
       (chg && !cur ? '<div style="justify-content:flex-start"><button class="btn small green" data-act="charge">Confirm — keep the charge</button><button class="btn small" data-act="nocharge">No — don\'t charge the customer</button></div>' : '') +
+      (payQ && !cur ? '<div style="justify-content:flex-start"><button class="btn small green" data-act="pay">Yes — pay it</button><button class="btn small" data-act="nopay">No — don\'t pay</button></div>' : '') +
       '<textarea rows="2" placeholder="Type your answer…">' + esc(cur) + '</textarea>' +
       '<label><input type="checkbox" class="toRule"> This can come up again on other jobs — add it to the manual\'s rules</label><div>' +
       '<button class="btn small" data-act="line" style="margin-right:auto">+ Add a line to this job</button>' + (cur ? '<button class="btn small red" data-act="clear">Remove answer</button>' : '') +
@@ -344,6 +346,12 @@ input.rate.changed { background:#fff6d6; border-color:var(--orange); }
       const act = e.target.dataset.act; if (!act) return;
       if (act === 'cancel') { box.remove(); return; }
       if (act === 'line') { box.remove(); openForm(job); return; }
+      if (act === 'pay' || act === 'nopay') {
+        const it = job.items[payQ.i];
+        if (it) { delete it[payQ.key]; delete it.noPay; it[act === 'pay' ? payQ.key : 'noPay'] = true; }
+        job.answers = { ...(job.answers || {}), [q]: act === 'pay' ? 'Yes — paid' : 'No — not paid' };
+        saveWeek(); renderBill(); return;
+      }
       if (act === 'charge' || act === 'nocharge') {
         const it = job.items[chg.i];
         if (it) { delete it.chargeConfirmed; delete it.noCharge; it[act === 'charge' ? 'chargeConfirmed' : 'noCharge'] = true; }
@@ -522,14 +530,14 @@ input.rate.changed { background:#fff6d6; border-color:var(--orange); }
     });
     // going back to finish a past job: whose issue it was decides the $100 minimum, so it gets asked
     const RETURN = /\b(return(ed)? (trip|to finish)|go(ing)? back|went back|came back|back to finish|finish(ed)? (the )?(job|up))\b/i;
-    return out.map((j) => ({ ...j, address: guessAddress(j.note), items: guessItems(j.note), ...(RETURN.test(j.note) ? { returnTrip: 'ask' } : {}) }));
+    return out.map((j) => ({ ...j, address: guessAddress(j.note), items: guessItems(j.note), ...(RETURN.test(j.note) ? { returnTrip: 'ask' } : {}), ...(/\bmynor\b/i.test(j.note) ? { installer: 'Mynor' } : {}) }));
   }
   // the address is the start of the line, before the work ("t2", "52 yrds", "rip up"...)
   function guessAddress(note) {
     const prods = Object.keys(B.getRates().carpet || {}).map((p) => p.toLowerCase().split(' ')[0]);
     // a customer's name after the address ("s&s construction", "yochi k") ends the address too
     const names = B.getCustomers().flatMap((c) => [c.name].concat(c.aliases || [])).map((x) => String(x).toLowerCase().split(/[\s/]+/)[0].replace(/[^a-z0-9&]/g, '')).filter((x) => x.length >= 3);
-    const STOP = /^(sqf|sf|ft|feet|yrds?|yds?|syrds|patch|luans?|shoe|box|steps?|flights?|rip|carpet|vinyl|click|glue|basement|repair|reinstall|one|room|brs?|mbr|cove|com|needs|plus|prime|t2|m1|m2|lb|cut|check|jimmy|diablo|said|didnt|want|moved|apploances|appliances|toilet|color|over)$/;
+    const STOP = /^(sqf|sf|ft|feet|yrds?|yds?|syrds|patch|luans?|shoe|box|steps?|flights?|rip|carpet|vinyl|click|glue|basement|repair|reinstall|one|room|brs?|mbr|cove|com|needs|plus|prime|t2|m1|m2|lb|cut|check|jimmy|diablo|mynor|wrap|said|didnt|want|moved|apploances|appliances|toilet|color|over)$/;
     const words = note.replace(/[,;]+/g, ' , ').split(/\s+/), keep = [];
     for (let i = 0; i < words.length && keep.length < 9; i++) {
       const w = words[i], lw = w.toLowerCase().replace(/[^a-z0-9&]/g, '');
@@ -592,8 +600,12 @@ input.rate.changed { background:#fff6d6; border-color:var(--orange); }
     const ap = num(/(\d+)\s*app?l[a-z]*/); if (ap != null) items.push({ type: 'appliance', count: ap, payRequested: true });
     if (/toilet/.test(n)) items.push({ type: 'appliance', count: num(/(\d+)\s*toilets?/) ?? 1, payRequested: true });
     if (/com(mon)? hall/.test(n)) items.push({ type: 'hallway' });
+    if (/\bwrap/.test(n)) { const w = num(/(\d+)\s*(?:steps?\s*)?(?:concrete\s*)?wrap/); items.push({ type: 'extra', name: 'Concrete step wrap', ...(w != null ? { qty: w } : {}) }); }
     if (/\brepair\b/.test(n) && !items.length) items.push({ type: 'repair', label: 'repair' });
     if (/restre?a?tch/.test(n)) items.push({ type: 'custom', label: 'Restretch' });
+    // grinding has no set price: take a "$" figure from the note if there is one, otherwise it gets flagged
+    if (/\bgrind/.test(n)) { const g = num(/grind[a-z]*\s*\$?\s*(\d+(?:\.\d+)?)/) ?? num(/\$\s*(\d+(?:\.\d+)?)\s*grind/); items.push({ type: 'custom', label: 'Grinding', ...(g != null ? { payAmount: g } : {}) }); }
+    if (/\btrip\b/.test(n) && !/return(ed)? trip/.test(n)) items.push({ type: 'trip' });
     return items;
   }
   const itemWords = (it) => (ITEMS()[it.type]?.name || it.type) + [it.product, it.unitLabel, it.material !== 'carpet' && it.material, it.style,
@@ -672,9 +684,9 @@ input.rate.changed { background:#fff6d6; border-color:var(--orange); }
     transition:{ name:'Transition', f:[sel('kind','Kind',['metal','rubber','matching']), n('count','Count')] },
     cove:{ name:'Cove base', f:[n('qty','Office ft'), n('installerQty','Installer ft'), chk('special','Special order'), n('chargeRate','Charge rate override')] },
     patch:{ name:'Patch / prep', f:[n('bags','Bags'), n('chargePerBag','Charge per bag'), n('flatCharge','Flat charge')] },
-    appliance:{ name:'Toilet / appliance', f:[n('count','Count'), chk('payRequested','Installer asked for pay'), sel('reinstalled','Reinstalled?',[['','Yes'],['no','No']])] },
-    furniture:{ name:'Furniture', f:[n('charge','Customer charge'), chk('onEstimate','On estimate'), n('estimateAmount','Estimate amount'), n('installerAmount','Installer asked'), chk('confirmed','Israel confirmed')] },
-    gas:{ name:'Gas', f:[n('amount','Amount (blank = standard)')] },
+    appliance:{ name:'Toilet / appliance', f:[n('count','Count'), chk('payRequested','Installer asked for pay'), chk('onEstimate','On estimate'), chk('confirmed','Yisroel OK\'d pay (not on estimate)'), sel('reinstalled','Reinstalled?',[['','Yes'],['no','No']])] },
+    furniture:{ name:'Furniture', f:[n('charge','Customer charge'), chk('onEstimate','On estimate'), n('estimateAmount','Estimate amount'), n('installerAmount','Installer asked'), chk('confirmed','Yisroel confirmed')] },
+    gas:{ name:'Gas', f:[n('amount','Amount (blank = standard)'), chk('approved','Approved')] },
     repair:{ name:'Repair', f:[txt('label','What'), n('charge','Customer charge $'), n('pay','Installer pay $')] },
     extra:{ name:'Priced work (from the manual)', f:[sel('name','Work',((B.getRates().extras || []).map((x) => x.name))), n('qty','Quantity'), n('chargeAmount','Customer charge $ (if set per job)'), n('payAmount','Installer pay $ (if set per job)')] },
     custom:{ name:'Other work', f:[{ k:'label', l:'Work', t:'text', list:'otherList' }, n('qty','Quantity'), txt('unit','Unit, e.g. sqf'), n('chargeAmount','Customer charge $'), n('payAmount','Installer pay $'), txt('rateText','No price yet? Text for the Rate column, e.g. Same as past job')] },
@@ -717,7 +729,7 @@ input.rate.changed { background:#fff6d6; border-color:var(--orange); }
       fieldHTML(sel('building','Building',[['','Found from the address']].concat(Object.keys(B.getBuildings()))), j.building, 'id="fBuilding"') +
       '<label class="fld">Flat rate: charge $<input id="fFlatC" type="number" step="any" value="' + esc(j.flatRate?.charge) + '"></label>' +
       '<label class="fld">Flat rate: pay $<input id="fFlatP" type="number" step="any" value="' + esc(j.flatRate?.pay) + '"></label>' +
-      '<label class="fld">Israel\'s pay figure $<input id="fOverride" type="number" step="any" value="' + esc(j.payOverride) + '"></label>' +
+      '<label class="fld">Yisroel\'s pay figure $<input id="fOverride" type="number" step="any" value="' + esc(j.payOverride) + '"></label>' +
       fieldHTML(sel('returnTrip','Return trip finishing a past job?',[['','No'],['ask','Yes — not sure whose issue yet'],['installer','Yes — installer\'s issue (no minimum)'],['ours','Yes — our mistake ($100 minimum)']]), j.returnTrip, 'id="fReturn"') +
       '<label class="fld chk"><input type="checkbox" id="fEmpty"' + (j.unitEmpty ? ' checked' : '') + '>Unit empty</label>' +
       '<label class="fld full">Bookkeeper note<textarea id="fNote" rows="2">' + esc((j.notes || []).join(' ')) + '</textarea></label>' +

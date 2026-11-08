@@ -6,7 +6,7 @@
    What it does:
      job (what the installer reported + office info)
        -> customer charge lines + installer pay lines
-       -> totals + flags for the bookkeeper / Israel
+       -> totals + flags for the bookkeeper / Yisroel
 
    Rates are loaded from the locked billing_manual table with
    HarmonyBilling.setManual(); this file holds no prices.
@@ -90,7 +90,7 @@
    *   status: 'estimate_on_file' | 'create_invoice' | 'create_estimate' | 'hold' | 'bookkeeper_handles' | 'correction',
    *   so, rateClass ('investor'|'residential'), unitEmpty (bool),
    *   flatRate: { charge, pay, difficult },
-   *   payOverride (Israel's explicit pay figure — wins over everything),
+   *   payOverride (Yisroel's explicit pay figure — wins over everything),
    *   notes: [], items: [ ...see README ]
    * }
    */
@@ -121,9 +121,10 @@
     const cust = named || (!job.customer && (findCustomer(bld?.customer) || customerAtAddress(job.address))) || null;
     if (cust && !named) notes.push(`Customer: ${cust.name} (${bld?.customer ? bName + ' is on file under them' : 'address on file'}).`);
     if (cust?.note) notes.push(`${cust.name}: ${cust.note}`);
+    const payAsks = []; // { q, i, key }: pay held until someone says yes (gas approval, appliance not on the estimate)
     const chargeAsks = []; // { q, i }: "not on the estimate — added to the customer, confirm?" for item i
     const notOnEst = new Set(); // items charged to the customer because they aren't on the estimate
-    const done = (opts) => { const r = finish(job, cls, charge, pay, flags, notes, opts); r.missing = missing; r.chargeAsks = chargeAsks; return r; };
+    const done = (opts) => { const r = finish(job, cls, charge, pay, flags, notes, opts); r.missing = missing; r.chargeAsks = chargeAsks; r.payAsks = payAsks; return r; };
 
     // investor vs residential
     let cls = job.rateClass;
@@ -233,7 +234,7 @@
     return done({});
 
     // ------------------------------------------------------------
-    function applyItem(it) {
+    function applyItem(it, idx) {
       const t = it.type;
       // forces a charge line even on estimate-on-file jobs
       const add = it.addToCustomer ? 'ADD' : notOnEst.has(it) ? 'ADD Not on the estimate' : undefined;
@@ -302,7 +303,7 @@
         // laminate: customer price is per estimate, installer paid the same as vinyl
         if (it.laminate && !has(it.chargeRate)) { if (!onFile) flags.push(`${vName}: customer price is per estimate — enter the charge rate.`); }
         // (label unchanged: changes made on the bill are saved against it)
-        else C(vName, custQty, 'sqf', cRate, null, add, has(it.chargeRate) || has(vOwn) ? undefined : 'vinyl.' + vKey);        if (it.specialDesign && !has(it.payRate)) { flags.push('Special design vinyl — installer pay TBD, ask Israel.'); return; }
+        else C(vName, custQty, 'sqf', cRate, null, add, has(it.chargeRate) || has(vOwn) ? undefined : 'vinyl.' + vKey);        if (it.specialDesign && !has(it.payRate)) { flags.push('Special design vinyl — installer pay TBD, ask Yisroel.'); return; }
         P(vName, payQty, 'sqf', has(it.payRate) ? it.payRate : RATES.vinyl.pay, null,
           it.payInstallerQty ? 'Paid the installer\'s own quantity (per job note)' : lowNote(it.qty, it.installerQty, 'sqf'), has(it.payRate) ? undefined : 'vinyl.pay');
         // The estimate's vinyl price tells whether prep/luan is already in it (manual):
@@ -362,7 +363,6 @@
           } else {
             const rOwn = cust?.ripupRate ?? bld?.ripupRate;
             const cr = has(it.chargeRate) ? it.chargeRate : has(rOwn) ? rOwn : RATES.ripup.carpetHaul[cls];
-            if (cls === 'residential' && !has(it.chargeRate) && !has(rOwn)) flags.push(`Residential rip-up is a range — used $${RATES.ripup.carpetHaul.residential.toFixed(2)}/yd, confirm.`);
             C('Rip up & haul away carpet', custQ, 'yds', cr, null, add, has(it.chargeRate) || has(rOwn) ? undefined : `ripup.carpetHaul.${cls}`);
             if (!it.noPay) P('Rip up & haul away carpet', payQ, 'yds', RATES.ripup.carpetHaul.pay, null, ripNote, 'ripup.carpetHaul.pay');
           }
@@ -392,7 +392,7 @@
           const pk = flo ? 'floatingPerStep' : (hasCarpetRipup || it.ripup) ? 'vinylPerStepRipup' : 'vinylPerStep';
           if (has(it.chargeTotal)) C(`Steps — ${style}`, null, null, null, it.chargeTotal, add);
           else if (flo && has(RATES.steps.floatingChargePerStep)) C('Steps — floating', n, 'steps', RATES.steps.floatingChargePerStep, null, add, 'steps.floatingChargePerStep');
-          else if (!onFile) flags.push(`${style} steps: customer charge is set per job — ask Israel.`);
+          else if (!onFile) flags.push(`${style} steps: customer charge is set per job — ask Yisroel.`);
           P(`Steps — ${style}`, n, 'steps', RATES.steps[pk], null, undefined, `steps.${pk}`);
           return;
         }
@@ -464,7 +464,12 @@
         const n = it.count || 1;
         C('Toilet/appliance removal', n, 'ea', RATES.appliance.charge, null, add, 'appliance.charge');
         const pk = it.reinstalled === false ? 'payNotReinstalled' : 'pay';
-        if (it.payRequested) P('Toilet/appliance removal', n, 'ea', RATES.appliance[pk], null, undefined, `appliance.${pk}`);
+        if (!it.payRequested) return; // installer didn't ask: not paid
+        const onEst = it.onEstimate || (onFile && estLines?.length > 0 && !notOnEst.has(it));
+        if (onEst || it.confirmed || job._final) { P('Toilet/appliance removal', n, 'ea', RATES.appliance[pk], null, onEst ? undefined : 'Not on the estimate — Yisroel confirmed', `appliance.${pk}`); return; }
+        if (it.noPay) { notes.push('Installer asked for appliance pay — not on the estimate, not paid.'); return; }
+        const q = `Installer asked for appliance pay (${n}) but it's not on the estimate — not paid yet. Pay it?`;
+        flags.push(q); payAsks.push({ q, i: idx, key: 'confirmed' });
         return;
       }
 
@@ -476,7 +481,7 @@
         if (x.note) notes.push(`${x.name}: ${x.note}`);
         if (has(it.chargeAmount)) C(x.name, null, null, null, it.chargeAmount, add);
         else if (has(x.charge)) C(x.name, q, x.unit, x.charge, null, add, `extras.${i}.charge`);
-        else if (!onFile && !x.payOnly) flags.push(`${x.name}: no customer price in the manual — ask Israel.`);
+        else if (!onFile && !x.payOnly) flags.push(`${x.name}: no customer price in the manual — ask Yisroel.`);
         if (x.noPay) return; // the manual says do not pay the installer for this
         if (has(it.payAmount)) P(x.name, null, null, null, it.payAmount);
         else if (has(x.pay)) P(x.name, q, x.unit, x.pay, null, undefined, `extras.${i}.pay`);
@@ -490,35 +495,46 @@
         if (it.onEstimate) {
           P('Furniture moving', null, null, null, lower(it.estimateAmount, it.installerAmount));
           if (has(it.installerAmount) && has(it.estimateAmount) && it.installerAmount > it.estimateAmount)
-            flags.push(`Furniture: installer asked $${it.installerAmount}, estimate has $${it.estimateAmount} — paid lower, confirm with Israel.`);
+            flags.push(`Furniture: installer asked $${it.installerAmount}, estimate has $${it.estimateAmount} — paid lower, confirm with Yisroel.`);
         } else if (has(it.installerAmount)) {
-          // asked for but not on the estimate: put in, flagged until Israel confirms
+          // asked for but not on the estimate: put in, flagged until Yisroel confirms
           P('Furniture moving', null, null, null, it.installerAmount, it.confirmed ? undefined : 'Not on the estimate');
-          if (!it.confirmed) flags.push(`Furniture not on the estimate — installer asked $${it.installerAmount}, put in. Confirm with Israel (tick "Israel confirmed").`);
+          if (!it.confirmed) flags.push(`Furniture not on the estimate — installer asked $${it.installerAmount}, put in. Confirm with Yisroel (tick "Yisroel confirmed").`);
         }
         return;
       }
 
-      if (t === 'gas' && bld?.noGas && !has(it.amount)) { flags.push(`${bName}: no gas at this building — not paid. Enter an amount if Israel says to pay it.`); return; }
-      if (t === 'gas') { P('Gas', null, null, null, has(it.amount) ? it.amount : RATES.gasDefault, has(it.amount) ? undefined : `Standard $${RATES.gasDefault}`); return; }
+      if (t === 'gas' && bld?.noGas && !has(it.amount)) { flags.push(`${bName}: no gas at this building — not paid. Enter an amount if Yisroel says to pay it.`); return; }
+      if (t === 'gas') {
+        const amt = has(it.amount) ? it.amount : RATES.gasDefault;
+        if (it.noPay) { notes.push('Gas asked for — not approved, not paid.'); return; }
+        if (!it.approved && !job._final) { const q = `Installer asked for gas ($${amt}) — approved?`; flags.push(q); payAsks.push({ q, i: idx, key: 'approved' }); return; }
+        P('Gas', null, null, null, amt, has(it.amount) ? undefined : `Standard $${RATES.gasDefault}`); return;
+      }
 
       if (t === 'trip') {
         if (has(it.charge)) C('Trip charge', null, null, null, it.charge, add);
         if (it.noPay) notes.push('No extra pay for trip.');
-        else if (has(it.pay)) P('Trip charge', null, null, null, it.pay);
-        else flags.push('Trip charge pay not specified — TBD.');
+        else P('Trip charge', null, null, null, has(it.pay) ? it.pay : TRIP_PAY(), has(it.pay) ? undefined : `Standard $${TRIP_PAY()}`);
         return;
       }
 
+      // repair, grinding and trip ride along with a bigger job: no $100 minimum of their own (they are dollar lines)
       if (t === 'repair') {
-        if (!has(it.charge) || !has(it.pay)) flags.push('Repair: no fixed rate — ask Israel for repair charge and pay.');
         if (has(it.charge)) C(`Repair${it.label ? ' — ' + it.label : ''}`, null, null, null, it.charge, add);
-        P(`Repair${it.label ? ' — ' + it.label : ''}`, null, null, null, has(it.pay) ? it.pay : RATES.repairDefaultPay);
+        else if (!onFile) flags.push('Repair: no customer charge entered — ask Yisroel.');
+        P(`Repair${it.label ? ' — ' + it.label : ''}`, null, null, null, has(it.pay) ? it.pay : REPAIR_PAY(), has(it.pay) ? undefined : `Standard $${REPAIR_PAY()}`);
         return;
       }
 
       if (t === 'custom') {
         const label = it.label || 'Other work';
+        // "Other work" picked from the list: Grinding has no set price, Repair and Trip charge have a standard pay
+        if (!has(it.payAmount) && !has(it.payRate) && !it.noPay) {
+          if (/^grind/i.test(label)) flags.push('Grinding: no set price — enter the installer pay from the installer\'s notes.');
+          else if (/^repair/i.test(label)) it = { ...it, payAmount: REPAIR_PAY() };
+          else if (/^trip/i.test(label)) it = { ...it, payAmount: TRIP_PAY() };
+        }
         if (has(it.chargeAmount) || has(it.chargeRate)) C(label, it.chargeQty ?? it.qty ?? null, it.unit ?? null, it.chargeRate ?? null, it.chargeAmount ?? null, add);
         else if (has(it.rateText)) T(label, it.chargeQty ?? it.qty, it.unit ?? null, it.rateText, add);
         if (has(it.payAmount) || has(it.payRate)) P(label, it.payQty ?? (has(it.payRate) ? it.qty : null) ?? null, it.unit ?? null, it.payRate ?? null, it.payAmount ?? null);
@@ -548,6 +564,7 @@
     return out;
   }
   const sum = (lines) => r2(lines.reduce((s, l) => s + (Number(l.amount) || 0), 0));
+  const REPAIR_PAY = () => RATES.repairDefaultPay ?? 50, TRIP_PAY = () => RATES.tripPay ?? 50;
 
   function finish(job, cls, charge, pay, flags, notes, opts) {
     const used = new Set();
@@ -558,12 +575,12 @@
     let payTotal = sum(pay);
 
     if (has(job.payOverride)) {
-      // Israel's explicit figure wins over itemized calc and the minimum
+      // Yisroel's explicit figure wins over itemized calc and the minimum
       const diff = r2(job.payOverride - payTotal);
-      if (diff !== 0) pay.push({ label: 'Adjustment to agreed pay', amount: diff, note: `Pay set to $${job.payOverride} per Israel` });
+      if (diff !== 0) pay.push({ label: 'Adjustment to agreed pay', amount: diff, note: `Pay set to $${job.payOverride} per Yisroel` });
       payTotal = r2(job.payOverride);
     } else if (!opts.skipMin && !payEdited && job.status !== 'correction' && (!job.returnTrip || job.returnTrip === 'ours') && pay.some((l) => l.qty !== null && l.qty !== undefined)) {
-      // a pay line changed by hand means Israel set the pay, so no minimum top-up
+      // a pay line changed by hand means Yisroel set the pay, so no minimum top-up
       const base = RATES.minPayExcludesGas ? sum(pay.filter((l) => l.label !== 'Gas')) : payTotal;
       if (base < RATES.minInstallerPay) {
         // small job: one flat-rate line instead of the rate lines plus a top-up (gas stays its own line)
@@ -595,9 +612,11 @@
   }
 
   function computeWeek(week) {
-    const jobs = (week.jobs || []).map(computeJob);
-    const byInstaller = {};
-    jobs.forEach((j) => { if (j.payTotal) { const k = j.installer || 'Installer not entered'; byInstaller[k] = r2((byInstaller[k] || 0) + j.payTotal); } });
+    const jobs = (week.jobs || []).map((j) => computeJob(week.final ? { ...j, _final: true } : j));
+    const byInstaller = {}, sep = RATES.separateChecks || ['Mynor'];
+    const words = (x) => " " + String(x || "").toLowerCase().replace(/[^a-z0-9]+/g, " ") + " ";
+    const checkOf = (name) => sep.find((s) => words(name).includes(words(s))) || "Crew check";
+    jobs.forEach((j) => { if (j.payTotal) { const k = checkOf(j.installer); byInstaller[k] = r2((byInstaller[k] || 0) + j.payTotal); } });
     return {
       ...week,
       jobs,
