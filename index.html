@@ -610,6 +610,9 @@ header .hdr-msg-count { top:-5px; right:-5px; }
 
 /* Paste-all-info box on New Job (no AI, simple rules) */
 .paste-box { background:#f3f8f3; border:1.5px solid #cfe3cf; border-radius:9px; margin:0 0 14px; }
+.paste-box.paste-pop { border-color:#e8a020; box-shadow:0 0 0 3px rgba(232,160,32,0.25); animation:pastePop 0.35s ease-out; }
+@keyframes pastePop { from { transform:scale(0.97); opacity:0.6; } to { transform:none; opacity:1; } }
+.paste-pop .paste-head span:first-child::after { content:"  ← paste the text here"; font-weight:600; color:#b07400; font-size:0.78rem; }
 .paste-head { display:flex; justify-content:space-between; padding:10px 12px; font-size:0.86rem; font-weight:700; color:#2c5f2e; cursor:pointer; user-select:none; }
 #pasteBody { padding:0 12px 12px; }
 #pasteBody.closed { display:none; }
@@ -2646,7 +2649,12 @@ function openNewModal(installDate, kind){
   ['newNameSuggest','newAddressSuggest'].forEach(id=>{const box=document.getElementById(id);box.classList.remove('open');box.innerHTML='';});
   if(_newJobKind==='repair') setNewJobCustType('existing');
   document.getElementById('newModal').classList.add('open');
-  setTimeout(()=>document.getElementById('newName').focus(),100);
+  // From the calendar (a day or Pending Jobs): the paste box opens ready to paste into.
+  // Repairs start by looking up the old job, so they keep the cursor on the name.
+  const pasteFirst=(_newJobInstallDate||_newJobKind==='pending');
+  const pb=document.getElementById('pasteBody'); pb.classList.remove('closed'); document.getElementById('pasteArrow').textContent='▾';
+  document.querySelector('#newModal .paste-box').classList.toggle('paste-pop', !!pasteFirst);
+  setTimeout(()=>document.getElementById(pasteFirst?'pasteText':'newName').focus(),100);
 }
 function closeNewModal(){ document.getElementById('newModal').classList.remove('open'); }
 let _creatingJob=false;
