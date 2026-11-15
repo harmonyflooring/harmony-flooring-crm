@@ -2551,6 +2551,23 @@ function pasteChunks(text){
   return out.map(l=>l.trim()).filter(Boolean);
 }
 const NOT_CITY=/^(call|text|thanks|please|carpet|vinyl|tile|wood|kitchen|basement|hall|tomorrow|today)\b/i;
+const PASTE_TOWNS=['lakewood','jackson','toms river','howell','brick','freehold','manalapan','marlboro','monroe','old bridge','edison','woodbridge','east brunswick','new brunswick','piscataway','point pleasant','point pleasant beach','wall','neptune','asbury park','long branch','red bank','middletown','holmdel','hazlet','matawan','aberdeen','keansburg','leonardo','atlantic highlands','highlands','manchester','berkeley','bayville','beachwood','pine beach','ocean','eatontown','tinton falls','colts neck','millstone','englishtown','farmingdale','moorestown','voorhees','cherry hill','mount laurel','marlton','lakehurst','whiting','forked river','lacey','barnegat','waretown','manahawkin','seaside heights','spring lake','belmar','manasquan','passaic','clifton','monsey','spring valley','brooklyn','staten island','philadelphia','trenton','hamilton','princeton','sayreville','south amboy','perth amboy','plainfield','elizabeth','newark','jersey city','union'];
+const TITLE=v=>v.toLowerCase().replace(/(^|[\s\-'])([a-z])/g,(m,a,b)=>a+b.toUpperCase());
+const LOOSE_NOT_STREET=/\b(br|bedrooms?|rooms?|yds|yards|sqf|sq|ft|feet|floors?|steps|stairs|units?|apts?|carpet|vinyl|tile|kitchen|basement|hall)\b/i;
+function pasteLooseAddress(rest){
+  const towns=[...PASTE_TOWNS].sort((a,b)=>b.length-a.length).map(t=>t.replace(/ /g,'\\s+')).join('|');
+  const pre='(?:east|west|north|south|new|old|point|toms|little|long|red|cherry|spring|highland|perth|forked|mount|mt|egg|upper|lower|port|cape|atlantic|seaside|pine|lake|ocean|tinton|colts|asbury|jersey|staten|south)';
+  const res=[new RegExp(`\\b(\\d{1,6}[a-z]?)\\s+((?:[a-z][a-z'.\\-]*\\s+){1,3}?)(${towns})\\b(?:\\s*,?\\s*(nj|ny|pa|ct|de|md)\\b)?(?:\\s+(\\d{5}))?`,'i'),
+             new RegExp(`\\b(\\d{1,6}[a-z]?)\\s+((?:[a-z][a-z'.\\-]*\\s+){1,3}?)((?:${pre}\\s+)?[a-z]+)\\s*,?\\s+(nj|ny|pa|ct|de|md)\\b(?:\\s+(\\d{5}))?`,'i')];
+  for(const re of res){
+    const m=rest.match(re); if(!m) continue;
+    const street=m[2].trim().replace(/[,.]$/,'');
+    if(LOOSE_NOT_STREET.test(street)) continue;
+    const clean=`${m[1]} ${TITLE(street)}, ${TITLE(m[3].replace(/\s+/g,' '))}${m[4]?' '+m[4].toUpperCase():''}${m[5]?' '+m[5]:''}`;
+    return {raw:m[0], clean};
+  }
+  return null;
+}
 function parsePaste(text){
   const found={}, unclear=[], used=[];
   const lines=pasteChunks(text);
@@ -2607,6 +2624,7 @@ function parsePaste(text){
     }
     // Address
     let ad=rest.match(PASTE_STREET);
+    if(!ad){ const fb=pasteLooseAddress(rest); if(fb){ set('address',fb.clean); unclear.push(`Address "${fb.clean}" has no St / Ave / Rd. Check it.`); rest=rest.replace(fb.raw,' '); } }
     while(ad){ const inner=ad[0].slice(1).search(/\s\d{1,6}[a-z]?\s+[A-Za-z]/i); if(inner<0) break; const again=ad[0].slice(inner+2).match(PASTE_STREET); if(!again) break; ad=again; }
     if(ad){
       let full=ad[0];
@@ -2652,6 +2670,15 @@ function parsePaste(text){
     }
   }
   const NOT_NAME=/\b(hi|hello|hey|dear|thanks|thank|please|urgent|asap|wants|needs|kitchen|bath|bathroom|basement|stairs|steps|hall|hallway|bedroom|floor|floors|flooring|room|install|measure|estimate|quote|repair|carpet|tile|vinyl|wood|lvp|plank|tomorrow|today|monday|tuesday|wednesday|thursday|friday|saturday|sunday|yes|no|ok|okay|occupied|vacant|lock|box|code|apt|unit|new|job|call|text|need|asap|sqf|yds|sq|ft|primer|patch|truffle|shadow)\b/i;
+  if(!found.name){
+    for(let i=0;i<leftovers.length&&!found.name;i++){
+      const m=leftovers[i].match(/\b(mr|mrs|ms|miss|dr)\.?\s+([a-z][a-z'\-]{1,24})\b/i);
+      if(!m||NOT_NAME.test(m[2])) continue;
+      guessName(TITLE(m[1])+(m[1].toLowerCase()==='miss'?' ':'. ')+TITLE(m[2]));
+      leftovers[i]=leftovers[i].replace(m[0],' ').replace(/\s{2,}/g,' ').replace(/^[\s,;.\-–]+|[\s,;.\-–]+$/g,'');
+      if(!leftovers[i]) leftovers.splice(i,1);
+    }
+  }
   // Signed at the end: "Thanks, David Stein"
   if(!found.name){
     const i=leftovers.findIndex(l=>/^(?:thanks|thank you|thx|regards|best|sincerely|cheers)[,!.]?\s+[A-Z][a-z'\-]+(?:\s+[A-Z][a-z'\-]+)?$/i.test(l));
