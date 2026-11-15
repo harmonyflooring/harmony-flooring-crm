@@ -1274,18 +1274,6 @@ header .hdr-msg-count { top:-5px; right:-5px; }
     <p style="font-size:0.77rem;color:#aaa;margin-bottom:12px">Same customer, different address? Each address is its own job.</p>
     <div class="info-box" id="newFromCalendar" style="display:none;margin-bottom:12px"></div>
 
-    <div class="paste-box">
-      <div class="paste-head" onclick="togglePasteBox()"><span>📋 Paste all the info at once</span><span id="pasteArrow">▾</span></div>
-      <div id="pasteBody">
-        <textarea id="pasteText" rows="5" placeholder="Paste a text, email or notes here. Example:&#10;John Smith 732-555-1234 john@gmail.com&#10;45 Oak Ave, Unit 3B, Edison NJ&#10;Lock box 4471&#10;Wants vinyl plank in kitchen and hallway"></textarea>
-        <div class="paste-actions">
-          <button type="button" class="btn btn-primary btn-sm" onclick="runPasteFill()">Fill in the form</button>
-          <button type="button" class="btn btn-secondary btn-sm" onclick="clearPasteBox()">Clear</button>
-        </div>
-        <div id="pasteResult"></div>
-      </div>
-    </div>
-
     <div class="slabel">Customer Info</div>
     <div class="seg-toggle" id="custTypeToggle">
       <button type="button" class="active" id="custTypeNewBtn" onclick="setNewJobCustType('new')">+ New Customer</button>
@@ -1325,8 +1313,6 @@ header .hdr-msg-count { top:-5px; right:-5px; }
       </div>
     </div>
 
-    <div class="copy-panel" id="copyPanel"></div>
-
     <div class="slabel">Contractor (if applicable)</div>
     <div class="form-row">
       <div class="form-group"><label>Contractor Name</label><input type="text" id="newContractor" placeholder="Name"></div>
@@ -1340,6 +1326,20 @@ header .hdr-msg-count { top:-5px; right:-5px; }
         <option value="">— Select Salesman —</option>
       </select>
     </div>
+    <div class="copy-panel" id="copyPanel"></div>
+
+    <div class="paste-box">
+      <div class="paste-head" onclick="togglePasteBox()"><span>📋 Paste all the info at once</span><span id="pasteArrow">▾</span></div>
+      <div id="pasteBody">
+        <textarea id="pasteText" rows="5" placeholder="Paste a text, email or notes here. Example:&#10;John Smith 732-555-1234 john@gmail.com&#10;45 Oak Ave, Unit 3B, Edison NJ&#10;Lock box 4471&#10;Wants vinyl plank in kitchen and hallway"></textarea>
+        <div class="paste-actions">
+          <button type="button" class="btn btn-primary btn-sm" onclick="runPasteFill()">Fill in the form</button>
+          <button type="button" class="btn btn-secondary btn-sm" onclick="clearPasteBox()">Clear</button>
+        </div>
+        <div id="pasteResult"></div>
+      </div>
+    </div>
+
     <div class="modal-actions">
       <button class="btn btn-secondary" onclick="closeNewModal()">Cancel</button>
       <button class="btn btn-primary" onclick="createCustomer()">Create Job</button>
@@ -2720,7 +2720,7 @@ function runPasteFill(){
   _pasteNotes=leftovers.join('\n'); _pasteUsed=true; _pasteDescState=''; _pasteStock=new Set(); _pasteStockCands=pasteStockMatches(text);
   const noName=!document.getElementById('newName').value.trim(), co=document.getElementById('newCompany').value.trim();
   out.innerHTML=
-    (filled.length?`<div class="pr-box pr-ok"><b>✓ Filled in (yellow boxes below)</b><ul>${filled.map(x=>`<li>${esc(x)}</li>`).join('')}</ul></div>`:'<div class="pr-box pr-warn"><b>Nothing could be filled in automatically.</b></div>')+
+    (filled.length?`<div class="pr-box pr-ok"><b>✓ Filled in (yellow boxes above)</b><ul>${filled.map(x=>`<li>${esc(x)}</li>`).join('')}</ul></div>`:'<div class="pr-box pr-warn"><b>Nothing could be filled in automatically.</b></div>')+
     (missing.length?`<div class="pr-box pr-warn"><b>⚠ Still missing</b><ul>${missing.map(x=>`<li>${esc(x)}</li>`).join('')}</ul></div>`:'')+
     (unclear.length?`<div class="pr-box pr-warn"><b>? Not clear, please check</b><ul>${unclear.map(x=>`<li>${esc(x)}</li>`).join('')}</ul></div>`:'')+
     (noName?`<div class="pr-box pr-warn"><b>👤 Could not find the customer name.</b> Type it in the Full Name box below${co?`, or <button type="button" class="btn btn-secondary btn-sm" onclick="usePasteCompanyAsName()">Use "${esc(co)}" as the name</button>`:''}.</div>`:'')+
