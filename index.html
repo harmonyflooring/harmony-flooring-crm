@@ -363,6 +363,7 @@ header::-webkit-scrollbar { display: none; }
 .copy-start { font-size:0.8rem; font-weight:700; color:#2c5f2e; margin-top:8px; }
 .rv-head { background:#fdecea; border-radius:7px; padding:9px 12px; font-size:0.84rem; font-weight:700; color:#c62828; margin-bottom:12px; }
 .rv-head.rv-ok { background:#e8f5e9; color:#2c5f2e; }
+.rv-back { display:flex; align-items:center; gap:10px; background:#fff8e1; border:1px solid #f3dca0; border-radius:8px; padding:8px 10px; margin-bottom:14px; font-size:0.8rem; color:#8a6a10; font-weight:600; }
 .rv-step { border:1.5px solid #e8e5e0; border-radius:8px; padding:10px 12px; margin-bottom:10px; }
 .rv-title { display:flex; justify-content:space-between; align-items:center; gap:10px; font-size:0.84rem; font-weight:700; color:#2c5f2e; margin-bottom:6px; }
 .rv-row { display:grid; grid-template-columns:minmax(120px,38%) 1fr; gap:8px; font-size:0.81rem; padding:2px 0; }
@@ -550,6 +551,43 @@ header::-webkit-scrollbar { display: none; }
 .hdr-msg-btn.active { background:white; color:#2c5f2e; }
 .hdr-msg-count { position:absolute; top:-4px; right:-4px; background:#e8a020; color:white; font-size:0.58rem; font-weight:800; min-width:16px; height:16px; border-radius:8px; display:none; align-items:center; justify-content:center; padding:0 3px; border:1.5px solid #2c5f2e; }
 
+
+/* Header buttons with words (Nov 14) */
+.hdr-inline { display:flex; align-items:center; gap:12px; flex-shrink:0; }
+.hdr-view { display:flex; align-items:center; gap:6px; font-size:0.8rem; color:rgba(255,255,255,0.8); white-space:nowrap; }
+.hdr-view select { background:rgba(0,0,0,0.2); color:white; border:1px solid rgba(255,255,255,0.3); border-radius:7px; padding:5px 8px; font-family:inherit; font-size:0.82rem; font-weight:600; cursor:pointer; }
+.hdr-view select option { color:#222; }
+.hdr-nav { display:flex; gap:6px; flex-shrink:0; }
+.hdr-btn { position:relative; display:flex; align-items:center; gap:6px; height:34px; padding:0 12px; border-radius:8px; border:none; background:rgba(255,255,255,0.14); color:white; font-family:inherit; font-size:0.82rem; font-weight:600; cursor:pointer; white-space:nowrap; transition:background 0.15s; }
+.hdr-btn:hover { background:rgba(255,255,255,0.25); }
+.hdr-btn.active { background:white; color:#2c5f2e; }
+.hdr-btn .hi { font-size:0.95rem; line-height:1; }
+.hdr-more { position:relative; flex-shrink:0; }
+.hdr-menu { display:none; position:fixed; top:54px; right:12px; z-index:500; width:250px; background:white; color:#2c2c2c; border-radius:10px; box-shadow:0 8px 28px rgba(0,0,0,0.22); padding:10px; }
+.hdr-menu.open { display:block; }
+.hm-label { font-size:0.68rem; font-weight:800; text-transform:uppercase; letter-spacing:0.6px; color:#888; margin:6px 4px 6px; }
+.hm-item { display:block; width:100%; text-align:left; background:none; border:none; padding:11px 8px; border-radius:7px; font-family:inherit; font-size:0.88rem; color:#2c2c2c; cursor:pointer; }
+.hm-item:hover { background:#f2f0ec; }
+.hdr-menu .zoom-control { display:flex !important; background:#f2f0ec; width:max-content; margin:0 4px 6px; }
+.hdr-menu .zoom-control button, .hdr-menu .zoom-control span { color:#2c5f2e; }
+.hm-phone { display:none; border-bottom:1px solid #eee; margin-bottom:6px; padding-bottom:6px; }
+.hm-views { display:grid; grid-template-columns:repeat(3,1fr); gap:6px; margin:0 4px 6px; }
+.hm-views button { padding:9px 4px; border:1.5px solid #e0ddd8; border-radius:7px; background:white; font-family:inherit; font-size:0.82rem; font-weight:600; color:#444; cursor:pointer; }
+.hm-views button.active { border-color:#2c5f2e; background:#e8f5e9; color:#2c5f2e; }
+header .hdr-msg-count { top:-5px; right:-5px; }
+@media(max-width:1100px){ .logo-long { display:none; } }
+@media(max-width:680px){
+  header { flex-wrap:wrap; overflow:visible; row-gap:8px; }
+  .hdr-inline { display:none; }
+  .hm-phone { display:block; }
+  .hdr-more { order:2; margin-left:auto; }
+  .hdr-more-btn { padding:0 10px; }
+  .hdr-nav { order:3; width:100%; display:grid; grid-auto-flow:column; grid-auto-columns:1fr; gap:6px; }
+  .hdr-nav .hdr-btn { flex-direction:column; justify-content:center; gap:2px; height:50px; padding:0 2px; font-size:0.72rem; }
+  .hdr-nav .hdr-btn .hi { font-size:1.1rem; }
+  .hdr-menu { top:50px; left:12px; right:12px; width:auto; }
+  .header-user span { max-width:110px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+}
 /* EMPTY */
 .empty-state { text-align:center; padding:50px 20px; color:#ccc; }
 .empty-state .big { font-size:2.8rem; }
@@ -784,40 +822,57 @@ header::-webkit-scrollbar { display: none; }
 <div id="app">
   <!-- HEADER -->
   <header>
-    <div class="header-logo">🌿 Harmony Flooring</div>
+    <div class="header-logo">🌿 Harmony<span class="logo-long"> Flooring</span></div>
     <div class="header-user" onclick="switchProfile()" title="Switch profile">
       <div class="user-dot" id="headerDot"></div>
       <span id="headerName"></span>
     </div>
-    <div class="zoom-control" title="Make the whole screen bigger or smaller">
-      <button onclick="stepZoom(-1)" title="Smaller">−</button>
-      <span id="zoomLabel">100%</span>
-      <button onclick="stepZoom(1)" title="Bigger">+</button>
-    </div>
     <div class="header-spacer"></div>
-    <label class="filter-toggle" title="Show only your jobs">
-      <input type="checkbox" id="myJobsToggle" onchange="onMyJobsChange(this)">
-      My Jobs Only
-    </label>
-    <div class="layout-switcher">
-      <button class="layout-btn" onclick="setLayout('grid')" id="lbGrid" title="Card Grid">⊞</button>
-      <button class="layout-btn" onclick="setLayout('sidebar')" id="lbSidebar" title="Sidebar List">☰</button>
-      <button class="layout-btn" onclick="setLayout('kanban')" id="lbKanban" title="Kanban Board">⬜</button>
-      <button class="layout-btn" onclick="setLayout('table')" id="lbTable" title="Table View">≡</button>
-      <button class="layout-btn" onclick="setLayout('chart')" id="lbChart" title="Progress Chart">▶</button>
+    <div class="hdr-inline">
+      <label class="filter-toggle" title="Show only your jobs">
+        <input type="checkbox" id="myJobsToggle" onchange="onMyJobsChange(this)">
+        My Jobs Only
+      </label>
+      <label class="hdr-view">View
+        <select id="viewSelect" onchange="setLayout(this.value)">
+          <option value="grid">Cards</option>
+          <option value="sidebar">List</option>
+          <option value="kanban">Board</option>
+          <option value="table">Table</option>
+          <option value="chart">Chart</option>
+        </select>
+      </label>
     </div>
-    <button class="hdr-msg-btn" id="hdrSchedBtn" onclick="toggleScheduleView()" title="Schedule">📅</button>
-    <button class="hdr-msg-btn" id="hdrMsgBtn" onclick="toggleMsgView()" title="Messages & Tasks">
-      💬
-      <span class="hdr-msg-count" id="hdrMsgCount"></span>
-    </button>
-    <button class="hdr-archive-btn" onclick="openArchive()" title="Archive (completed & lost jobs)">
-      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2.5" y="3.5" width="19" height="5" rx="1.2"/><path d="M4.5 8.5v10a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2v-10"/><path d="M10 12.5h4"/></svg>
-      <span>Archive</span>
-    </button>
-    <button class="hdr-msg-btn" id="hdrBookBtn" onclick="window.open('bookkeeping.html','_blank')" title="Bookkeeping (admin only)" style="display:none">💲</button>
-    <button class="hdr-msg-btn" onclick="openSettings()" title="Settings">⚙️</button>
-    <button class="btn btn-ghost btn-sm" onclick="exportData()">⬇ Export</button>
+    <nav class="hdr-nav">
+      <button class="hdr-btn" id="hdrSchedBtn" onclick="toggleScheduleView()"><span class="hi">📅</span><span>Calendar</span></button>
+      <button class="hdr-btn" id="hdrMsgBtn" onclick="toggleMsgView()"><span class="hi">💬</span><span>Messages</span><span class="hdr-msg-count" id="hdrMsgCount"></span></button>
+      <button class="hdr-btn" onclick="openArchive()"><span class="hi">🗄</span><span>Archive</span></button>
+      <button class="hdr-btn" id="hdrBookBtn" onclick="window.open('bookkeeping.html','_blank')" style="display:none"><span class="hi">💲</span><span>Bookkeeping</span></button>
+    </nav>
+    <div class="hdr-more">
+      <button class="hdr-btn hdr-more-btn" onclick="toggleHdrMenu(event)"><span class="hi">☰</span><span>More</span></button>
+      <div class="hdr-menu" id="hdrMenu" onclick="event.stopPropagation()">
+        <div class="hm-phone">
+          <div class="hm-label">View</div>
+          <div class="hm-views" id="hmViews">
+            <button data-v="grid" onclick="setLayout('grid');closeHdrMenu()">Cards</button>
+            <button data-v="sidebar" onclick="setLayout('sidebar');closeHdrMenu()">List</button>
+            <button data-v="kanban" onclick="setLayout('kanban');closeHdrMenu()">Board</button>
+            <button data-v="table" onclick="setLayout('table');closeHdrMenu()">Table</button>
+            <button data-v="chart" onclick="setLayout('chart');closeHdrMenu()">Chart</button>
+          </div>
+          <button class="hm-item" onclick="document.getElementById('myJobsToggle').click();syncHdrMenu()">👤 My Jobs Only: <b id="hmMyJobs">Off</b></button>
+        </div>
+        <div class="hm-label">Screen size</div>
+        <div class="zoom-control">
+          <button onclick="stepZoom(-1)" title="Smaller">−</button>
+          <span id="zoomLabel">100%</span>
+          <button onclick="stepZoom(1)" title="Bigger">+</button>
+        </div>
+        <button class="hm-item" onclick="closeHdrMenu();openSettings()">⚙️ Settings</button>
+        <button class="hm-item" onclick="closeHdrMenu();exportData()">⬇ Export to spreadsheet</button>
+      </div>
+    </div>
   </header>
 
   <!-- STEP STRIP -->
@@ -1770,13 +1825,21 @@ const LAYOUT_IDS = {grid:'layoutGrid', sidebar:'layoutSidebar', kanban:'layoutKa
 const LAYOUT_BTNS = {grid:'lbGrid', sidebar:'lbSidebar', kanban:'lbKanban', table:'lbTable', chart:'lbChart'};
 const LAYOUT_ICONS = {grid:'⊞', sidebar:'☰', kanban:'⬜', table:'≡', chart:'▶'};
 
+function toggleHdrMenu(e){ e.stopPropagation(); syncHdrMenu(); document.getElementById('hdrMenu').classList.toggle('open'); }
+function closeHdrMenu(){ document.getElementById('hdrMenu').classList.remove('open'); }
+document.addEventListener('click', closeHdrMenu);
+function syncHdrMenu(){
+  const v=document.getElementById('viewSelect'); if(v) v.value=activeLayout;
+  document.querySelectorAll('#hmViews button').forEach(b=>b.classList.toggle('active', b.dataset.v===activeLayout));
+  const m=document.getElementById('hmMyJobs'); if(m) m.textContent=document.getElementById('myJobsToggle').checked?'On':'Off';
+}
 function setLayout(name, skipSave) {
   activeLayout = name;
   if(!skipSave && activeProfile) setPref(activeProfile.name,'layout',name);
   Object.keys(LAYOUT_IDS).forEach(k=>{
     document.getElementById(LAYOUT_IDS[k]).style.display = k===name ? (k==='grid'?'block':'flex') : 'none';
-    document.getElementById(LAYOUT_BTNS[k]).classList.toggle('active', k===name);
   });
+  syncHdrMenu();
   // fix display types per layout
   if(name==='table') document.getElementById('layoutTable').style.display='block';
   if(name==='sidebar') document.getElementById('layoutSidebar').style.display='block';
@@ -2290,7 +2353,7 @@ function copyReviewHtml(c,si){
   let total=0;
   const jobRows=[['Customer',c.name],['Phone',c.phone],['Email',c.email],['Company',c.company],['Job Address',c.address],['Date',fmtDate(c.stepData?.[0]?.job_date)],['Lock Box',c.lockbox==='Yes'?`Yes${c.lockboxCode?': '+c.lockboxCode:''}`:c.lockbox],['Contractor',[c.contractor,c.contractorPhone].filter(Boolean).join(' · ')],['Salesman',c.salesman]]
     .filter(([,v])=>v).map(([l,v])=>reviewRow(l,v)).join('');
-  const section=(i,body)=>`<div class="rv-step"><div class="rv-title"><span>Step ${i+1}: ${esc(STEPS[i].title)}</span><button type="button" class="multichip-change-btn" onclick="switchStep(${i})">✏️ Edit</button></div>${body}</div>`;
+  const section=(i,body)=>`<div class="rv-step"><div class="rv-title"><span>Step ${i+1}: ${esc(STEPS[i].title)}</span><button type="button" class="multichip-change-btn" onclick="editFromReview(${i})">✏️ Edit</button></div>${body}</div>`;
   let sections=section(0,jobRows);
   for(let i=1;i<si;i++){
     if(allStock&&(i===ORDER_STEP||i===RECEIVED_STEP)){ sections+=section(i,'<div class="rv-note">📦 All products are from stock. No order needed.</div>'); continue; }
@@ -2302,7 +2365,13 @@ function copyReviewHtml(c,si){
     ${sections}
     <div class="step-actions"><button class="btn btn-primary" onclick="confirmCopyReview()">✓ Looks good, go to Step ${si+1}: ${esc(STEPS[si].title)}</button></div></div>`;
 }
+// Edit from the review page: after saving that step, come back to the review page
+let _reviewReturn=null;
+function editFromReview(i){ _reviewReturn=currentId; switchStep(i); }
+function backToReview(){ const c=customers().find(x=>x.id===currentId); if(c) switchStep(c.step); }
+function inReviewEdit(c,si){ return _reviewReturn===c.id && !!c.stepData?.[0]?.review_pending && si!==c.step; }
 async function confirmCopyReview(){
+  _reviewReturn=null;
   const i=_customers.findIndex(x=>x.id===currentId); if(i===-1) return;
   const s0={..._customers[i].stepData[0]}; delete s0.review_pending;
   const c={..._customers[i], stepData:{..._customers[i].stepData, 0:s0}};
@@ -2404,6 +2473,7 @@ function showDashboard(){
 }
 
 function openCustomer(id){
+  if(id!==currentId) _reviewReturn=null;
   currentId=id;
   const c=customers().find(x=>x.id===id);
   if(!c)return;
@@ -2646,6 +2716,10 @@ function renderStep(c,si){
 
   const isCurrent=si===c.step;
   const lastStep=STEPS.length-1;
+  if(inReviewEdit(c,si)){
+    document.getElementById('stepContent').innerHTML=`<div class="step-form-inner"><div class="rv-back"><button type="button" class="btn btn-secondary btn-sm" onclick="backToReview()">← Back to Review</button><span>Editing from the review page</span></div><h3>Step ${si+1}: ${step.title}</h3><div class="sdesc">${step.desc}</div>${fieldsHtml}<div class="step-actions"><button class="btn btn-primary" onclick="saveStep()">Save &amp; Back to Review</button><button class="btn btn-secondary" onclick="backToReview()">Cancel</button></div></div>`;
+    handleFieldChange(null, null, si); return;
+  }
   const nextBtn=isCurrent&&si<lastStep?`<button class="btn btn-primary" onclick="saveAndAdvance()">Save & Next Step →</button>`:si===lastStep&&isCurrent?`<button class="btn btn-green" onclick="markComplete()">Save & Mark Complete ✓</button>`:'';
   document.getElementById('stepContent').innerHTML=`<div class="step-form-inner"><h3>Step ${si+1}: ${step.title}</h3><div class="sdesc">${step.desc}</div>${fieldsHtml}<div class="step-actions"><button class="btn btn-secondary" onclick="saveStep()">Save Notes</button>${nextBtn}<span class="saved-note" id="savedNote">✓ Saved</span></div></div>`;
   handleFieldChange(null, null, si);
@@ -3001,6 +3075,7 @@ async function saveStep(){
   Object.assign(c, customerProps);
   await upsertCustomer(c);
   await saveProductsToLibrary(stepData);
+  if(inReviewEdit(c,currentStep)){ const t=STEPS[currentStep].title; switchStep(c.step); showToast(`${t} saved`); return; }
   renderStep(c, currentStep); // re-render so multichip fields lock
   const n=document.getElementById('savedNote'); if(n){n.style.display='flex';setTimeout(()=>n.style.display='none',2000);}
   if(customerProps.name!==undefined) { const dn=document.getElementById('detailName'); if(dn) dn.textContent=c.name; }
