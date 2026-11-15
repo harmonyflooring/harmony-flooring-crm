@@ -2780,10 +2780,8 @@ function runPasteFill(){
 // Project Description from the paste: shown, editable, and confirmed (or not saved)
 function pasteDescHtml(){
   const ok=_pasteDescState==='ok', skip=_pasteDescState==='skip';
-  const head=[document.getElementById('newName').value.trim(), cityOf(document.getElementById('newAddress').value)].filter(Boolean).join(' · ');
   const title=ok?'✓ Confirmed. Will be saved in Project Description (Step 2)':skip?'✗ Will not be saved in Project Description':'📝 Going into Project Description (Step 2)';
   return `<div class="pr-box ${ok?'pr-ok':skip?'pr-skip':'pr-note'}"><b>${title}</b>
-    ${skip?'':`<div class="pr-desc-head">${head?`First line: <b>${esc(head)}</b>`:'First line: the customer name and city'}</div>`}
     ${skip?'':`<textarea id="pasteDesc" rows="3" ${ok?'readonly':''} placeholder="Nothing else from the text" oninput="_pasteNotes=this.value">${esc(_pasteNotes)}</textarea>`}
     <div class="paste-actions">${ok||skip?`<button type="button" class="btn btn-secondary btn-sm" onclick="pasteDescSet('')">Change</button>`:`<button type="button" class="btn btn-primary btn-sm" onclick="pasteDescSet('ok')">✓ Confirm</button><button type="button" class="btn btn-secondary btn-sm" onclick="pasteDescSet('skip')">Don't save it</button>`}</div></div>`;
 }
@@ -2878,9 +2876,8 @@ async function createCustomer(){
   if(fromCalendar) c.stepData[SCHED_STEP]={...c.stepData[SCHED_STEP],confirmed_install_date:fromCalendar};
   if(kind) c.stepData[SCHED_STEP]={...c.stepData[SCHED_STEP],calendar_type:kind};
   if(repairOf) c.stepData[SELECTION_STEP]={...c.stepData[SELECTION_STEP],project_overview:'Repair from old job: '+repairOf.address+' ('+repairOf.name+')'};
-  if(_pasteUsed && _pasteDescState!=='skip'){
-    const head=[name,cityOf(address)].filter(Boolean).join(' · ');
-    const add=[head,(_pasteNotes||'').trim()].filter(Boolean).join('\n');
+  if(_pasteUsed && _pasteDescState!=='skip' && (_pasteNotes||'').trim()){
+    const add=_pasteNotes.trim();
     const po=c.stepData[SELECTION_STEP]?.project_overview;
     c.stepData[SELECTION_STEP]={...c.stepData[SELECTION_STEP],project_overview:po?po+'\n'+add:add};
   }
