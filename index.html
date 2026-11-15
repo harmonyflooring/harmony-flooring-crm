@@ -624,6 +624,14 @@ header .hdr-msg-count { top:-5px; right:-5px; }
 .pr-ok { background:#e8f5e9; color:#24502a; }
 .pr-warn { background:#fff4e0; color:#7a4a00; }
 .pr-note { background:#eef2f7; color:#33475b; }
+.pr-skip { background:#f3f3f3; color:#888; }
+.pr-desc-head { margin:4px 0; }
+#pasteDesc { width:100%; box-sizing:border-box; margin-top:4px; font-family:inherit; font-size:0.82rem; border:1px solid #c9d3de; border-radius:6px; padding:6px 8px; resize:vertical; }
+#pasteDesc[readonly] { background:#f6fbf6; border-color:#cfe3cf; }
+.pr-stock { background:#eef6f6; color:#24504e; }
+.pr-stock-row { display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-top:6px; }
+.pr-stock-row > span:first-child { flex:1; min-width:160px; }
+.pr-yes { color:#2c5f2e; font-weight:700; }
 .paste-filled { background:#fffbe6 !important; box-shadow:0 0 0 2px #f1d675 inset; }
 
 /* Calendar List view (Nov 14) */
@@ -2484,7 +2492,7 @@ function renderCopyPanel(){
     const opts=[];
     for(let i=1;i<=COPY_LAST_START;i++) opts.push(`<option value="${i}">Step ${i+1}: ${esc(STEPS[i].title)}${i===1?' (normal start)':''}</option>`);
     panel.style.display='block';
-    panel.innerHTML=`<div class="copy-head"><span>⏩ Job already further along?</span></div>
+    panel.innerHTML=`<div class="copy-head"><span>⏩ Jump ahead</span></div>
       <div class="copy-sub">Pick a later step. You'll get one page with ✏️ Edit on every step before it, to fill them in quickly.</div>
       <label class="copy-start" style="margin-top:0">Start this job at<select id="jumpStartStep">${opts.join('')}</select></label>`;
     return;
@@ -2504,9 +2512,9 @@ function renderCopyPanel(){
 // PASTE ALL INFO (New Job form). Plain rules, no AI:
 // fills empty boxes it is sure about and lists everything it is not sure about.
 // ════════════════════════════════════════════
-let _pasteNotes='', _pasteUsed=false;
+let _pasteNotes='', _pasteUsed=false, _pasteDescState='', _pasteStockCands=[], _pasteStock=new Set();
 function togglePasteBox(){ const b=document.getElementById('pasteBody'); b.classList.toggle('closed'); document.getElementById('pasteArrow').textContent=b.classList.contains('closed')?'▸':'▾'; }
-function clearPasteBox(){ document.getElementById('pasteText').value=''; document.getElementById('pasteResult').innerHTML=''; _pasteNotes=''; _pasteUsed=false; document.querySelectorAll('#newModal .paste-filled').forEach(e=>e.classList.remove('paste-filled')); }
+function clearPasteBox(){ document.getElementById('pasteText').value=''; document.getElementById('pasteResult').innerHTML=''; _pasteNotes=''; _pasteUsed=false; _pasteDescState=''; _pasteStockCands=[]; _pasteStock=new Set(); document.querySelectorAll('#newModal .paste-filled').forEach(e=>e.classList.remove('paste-filled')); }
 function fmtPhoneDigits(d){ d=d.replace(/\D/g,''); if(d.length===11&&d[0]==='1') d=d.slice(1); return d.length===10?`(${d.slice(0,3)}) ${d.slice(3,6)}-${d.slice(6)}`:d; }
 const PASTE_LABELS=[
   ['name',/^((customer|client|homeowner|owner|tenant|contact|full|buyer)\s+)?(name|customer|client|homeowner|owner|tenant|contact|buyer)$/],
@@ -2709,15 +2717,43 @@ function runPasteFill(){
   const req=[['newName','Customer name'],['newPhone','Phone'],['newAddress','Job address'],['newLockbox','Lock box (yes or no)'],['newSalesman','Salesman']];
   const missing=req.filter(([id])=>!document.getElementById(id).value.trim()).map(([,l])=>l);
   if(document.getElementById('newLockbox').value==='Yes'&&!document.getElementById('newLockboxCode').value.trim()) missing.push('Lock box code');
-  _pasteNotes=leftovers.join('\n'); _pasteUsed=true;
+  _pasteNotes=leftovers.join('\n'); _pasteUsed=true; _pasteDescState=''; _pasteStock=new Set(); _pasteStockCands=pasteStockMatches(text);
   const noName=!document.getElementById('newName').value.trim(), co=document.getElementById('newCompany').value.trim();
   out.innerHTML=
     (filled.length?`<div class="pr-box pr-ok"><b>✓ Filled in (yellow boxes below)</b><ul>${filled.map(x=>`<li>${esc(x)}</li>`).join('')}</ul></div>`:'<div class="pr-box pr-warn"><b>Nothing could be filled in automatically.</b></div>')+
     (missing.length?`<div class="pr-box pr-warn"><b>⚠ Still missing</b><ul>${missing.map(x=>`<li>${esc(x)}</li>`).join('')}</ul></div>`:'')+
     (unclear.length?`<div class="pr-box pr-warn"><b>? Not clear, please check</b><ul>${unclear.map(x=>`<li>${esc(x)}</li>`).join('')}</ul></div>`:'')+
     (noName?`<div class="pr-box pr-warn"><b>👤 Could not find the customer name.</b> Type it in the Full Name box below${co?`, or <button type="button" class="btn btn-secondary btn-sm" onclick="usePasteCompanyAsName()">Use "${esc(co)}" as the name</button>`:''}.</div>`:'')+
-    (_pasteNotes?`<div class="pr-box pr-note"><b>📝 Didn't know where these go. They will be saved in Project Description (Step 2):</b>${esc(_pasteNotes).replace(/\n/g,'<br>')}</div>`:'');
+    `<div id="pasteStockBox">${pasteStockHtml()}</div><div id="pasteDescBox">${pasteDescHtml()}</div>`;
 }
+// Project Description from the paste: shown, editable, and confirmed (or not saved)
+function pasteDescHtml(){
+  const ok=_pasteDescState==='ok', skip=_pasteDescState==='skip';
+  const head=[document.getElementById('newName').value.trim(), cityOf(document.getElementById('newAddress').value)].filter(Boolean).join(' · ');
+  const title=ok?'✓ Confirmed. Will be saved in Project Description (Step 2)':skip?'✗ Will not be saved in Project Description':'📝 Going into Project Description (Step 2)';
+  return `<div class="pr-box ${ok?'pr-ok':skip?'pr-skip':'pr-note'}"><b>${title}</b>
+    ${skip?'':`<div class="pr-desc-head">${head?`First line: <b>${esc(head)}</b>`:'First line: the customer name and city'}</div>`}
+    ${skip?'':`<textarea id="pasteDesc" rows="3" ${ok?'readonly':''} placeholder="Nothing else from the text" oninput="_pasteNotes=this.value">${esc(_pasteNotes)}</textarea>`}
+    <div class="paste-actions">${ok||skip?`<button type="button" class="btn btn-secondary btn-sm" onclick="pasteDescSet('')">Change</button>`:`<button type="button" class="btn btn-primary btn-sm" onclick="pasteDescSet('ok')">✓ Confirm</button><button type="button" class="btn btn-secondary btn-sm" onclick="pasteDescSet('skip')">Don't save it</button>`}</div></div>`;
+}
+function pasteDescSet(st){ _pasteDescState=st; document.getElementById('pasteDescBox').innerHTML=pasteDescHtml(); }
+// Stock library: a color / style / brand named in the text
+function pasteStockMatches(text){
+  const t=text.toLowerCase();
+  const has=w=>{ w=(w||'').trim().toLowerCase(); return w.length>=3 && new RegExp('(^|[^a-z0-9])'+w.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+'($|[^a-z0-9])').test(t); };
+  const typeWords={'Carpet':/\bcarpet/i,'LVP / Luxury Vinyl':/\b(vinyl|lvp|plank)/i,'Tile':/\btile/i,'Laminate':/\blaminate/i};
+  const hits=_stockProducts.filter(x=>libKind(x)==='stock').map(x=>({x,score:(has(x.color)?2:0)+(has(x.style)?2:0)+(has(x.manufacturer)?1:0)+(typeWords[x.type]?.test(text)?1:0)})).filter(h=>h.score>=2);
+  if(!hits.length) return [];
+  const best=Math.max(...hits.map(h=>h.score));
+  return hits.filter(h=>h.score===best).slice(0,4).map(h=>h.x);
+}
+function pasteStockHtml(){
+  if(!_pasteStockCands.length) return '';
+  return `<div class="pr-box pr-stock"><b>📦 Found in the stock library. Is it this?</b>${_pasteStockCands.map((x,i)=>`<div class="pr-stock-row"><span>${esc(x.type)}: <b>${esc(productText(x))}</b></span>${_pasteStock.has(i)
+    ?`<span class="pr-yes">✓ Will be added to Step 2 as stock</span><button type="button" class="btn btn-secondary btn-sm" onclick="pasteStockPick(${i})">Undo</button>`
+    :`<button type="button" class="btn btn-primary btn-sm" onclick="pasteStockPick(${i})">✓ Yes, from stock</button>`}</div>`).join('')}</div>`;
+}
+function pasteStockPick(i){ _pasteStock.has(i)?_pasteStock.delete(i):_pasteStock.add(i); document.getElementById('pasteStockBox').innerHTML=pasteStockHtml(); }
 function usePasteCompanyAsName(){ const n=document.getElementById('newName'); n.value=document.getElementById('newCompany').value.trim(); n.classList.add('paste-filled'); runPasteFill(); }
 // City from an address: "56 Westbrook Dr, Moorestown 08057" → Moorestown; "83 Iron St Toms River" → Toms River
 function cityOf(addr){
@@ -2791,11 +2827,19 @@ async function createCustomer(){
   if(fromCalendar) c.stepData[SCHED_STEP]={...c.stepData[SCHED_STEP],confirmed_install_date:fromCalendar};
   if(kind) c.stepData[SCHED_STEP]={...c.stepData[SCHED_STEP],calendar_type:kind};
   if(repairOf) c.stepData[SELECTION_STEP]={...c.stepData[SELECTION_STEP],project_overview:'Repair from old job: '+repairOf.address+' ('+repairOf.name+')'};
-  if(_pasteUsed){
+  if(_pasteUsed && _pasteDescState!=='skip'){
     const head=[name,cityOf(address)].filter(Boolean).join(' · ');
-    const add=[head,_pasteNotes].filter(Boolean).join('\n');
+    const add=[head,(_pasteNotes||'').trim()].filter(Boolean).join('\n');
     const po=c.stepData[SELECTION_STEP]?.project_overview;
     c.stepData[SELECTION_STEP]={...c.stepData[SELECTION_STEP],project_overview:po?po+'\n'+add:add};
+  }
+  if(_pasteStock.size){ // stock items confirmed from the paste box go into Step 2's products
+    const sd={...(c.stepData[SELECTION_STEP]||{})}, types=typesOf(sd), prods=parseJSON(sd.flooring_products,{});
+    [..._pasteStock].map(i=>_pasteStockCands[i]).filter(Boolean).forEach(x=>{
+      if(!types.includes(x.type)) types.push(x.type);
+      (prods[x.type]=prods[x.type]||[]).push({manufacturer:x.manufacturer||'',style:x.style||'',color:x.color||'',stock:true});
+    });
+    sd.flooring_type=types.join(','); sd.flooring_products=JSON.stringify(prods); c.stepData[SELECTION_STEP]=sd;
   }
   _creatingJob=true;
   const saved=await upsertCustomer(c);
