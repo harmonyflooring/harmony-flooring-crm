@@ -4688,7 +4688,7 @@ function crmCalendarJob(c) {
       return {
         id: 'crm_' + c.id,
         address: c.address || c.name,
-        notes: c.name + (sd10.crew_assigned ? ' · ' + sd10.crew_assigned : '') + (sd10.schedule_notes ? ' · ' + sd10.schedule_notes : ''),
+        notes: c.name + (sd10.schedule_notes ? ' · ' + sd10.schedule_notes : ''),
         calendarNotes: sd10.schedule_notes || '',
         lockbox: c.lockbox === 'Yes' ? (c.lockboxCode || 'no code entered') : '',
         installer: sd10.crew_assigned || '',
@@ -4934,7 +4934,7 @@ function schedListRow(e){
   const who = e.type === 'crm' ? [e.customer, e.company, e.contractor ? 'GC: '+e.contractor : ''].filter(v=>{ const k=(v||'').toLowerCase().replace(/^gc: /,''); if(!v||seen.has(k)) return false; seen.add(k); return true; }) : [];
   const bits = [];
   if(isRepair) bits.push('<span class="sl-tag sl-repair">🔧 Repair</span>');
-  if(e.lockbox) bits.push(`<span class="sl-lock">🔒 ${esc(e.lockbox)}</span>`);
+  if(e.lockbox) who.push(lbText(e));
   if(who.length) bits.push(`<span class="sl-who">${esc(who.join(' · '))}</span>`);
   if(e.flooring) bits.push(`<b class="sl-floor">${esc(e.flooring)}</b>`);
   const note = e.type === 'crm' ? e.calendarNotes : e.notes;
@@ -5050,13 +5050,14 @@ function switchToWeekOfDate(ds) {
 }
 
 // Flooring type + project description (from Customer Selection) for CRM jobs
+function lbText(e){ return e.lockbox ? 'lb ' + (e.lockbox === 'no code entered' ? '(no code)' : e.lockbox) : ''; }
+function schedNameLine(e){ return [e.notes, lbText(e)].filter(Boolean).join(' · '); }
 function schedJobDetailsHtml(e) {
   const parts = [];
   if(e.flooring) parts.push(`<b>${esc(e.flooring)}</b>`);
   if(e.description) parts.push(esc(e.description));
   const rep = e.calendarType === 'repair' ? '<div class="sched-job-lockbox" style="color:#c0392b">🔧 Repair</div>' : '';
-  const lock = e.lockbox ? `<div class="sched-job-lockbox">🔒 Lock Box: ${esc(e.lockbox)}</div>` : '';
-  return rep + lock + (parts.length ? `<div class="sched-job-details">${parts.join(' — ')}</div>` : '');
+  return rep + (parts.length ? `<div class="sched-job-details">${parts.join(' — ')}</div>` : '');
 }
 
 // ── JOB CARD ──
@@ -5075,7 +5076,7 @@ function schedJobCard(e) {
       onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();}">
   </div>`;
 
-  const notesHtml = (e.notes ? `<div class="sched-job-notes">${esc(e.notes)}</div>` : '') + schedJobDetailsHtml(e);
+  const notesHtml = (schedNameLine(e) ? `<div class="sched-job-notes">${esc(schedNameLine(e))}</div>` : '') + schedJobDetailsHtml(e);
   const btns = `<div class="sched-job-btns">
     <button class="sched-job-btn" title="Edit" onclick="openSchedModal('${e.type}','${e.scheduled_date||''}','${e.id}')">✏️</button>
     <button class="sched-job-btn" title="Delete" onclick="deleteSchedEntry('${e.id}')">🗑</button>
@@ -5338,7 +5339,7 @@ function openDayDetail(ds) {
           </div>
           <div style="flex:1;padding:12px 14px;padding-right:88px">
             <div style="font-size:0.95rem;font-weight:700;color:#2c2c2c;margin-bottom:4px">${esc(e.address)}</div>
-            ${e.notes?`<div style="font-size:0.82rem;color:#888;line-height:1.5">${esc(e.notes)}</div>`:''}
+            ${schedNameLine(e)?`<div style="font-size:0.82rem;color:#888;line-height:1.5">${esc(schedNameLine(e))}</div>`:''}
             ${schedJobDetailsHtml(e).replace('class="sched-job-details"', 'class="sched-job-details" style="font-size:0.82rem;line-height:1.5"')}
           </div>
           <div style="position:absolute;top:10px;right:10px;display:flex;gap:5px">
