@@ -1511,7 +1511,7 @@ const STEPS = [
     {key:"_h_consult",    type:"header", label:"Consultation"},
     {key:"flooring_type", label:"Type of Flooring",type:"flooring_rooms",options:["LVP / Luxury Vinyl","Tile","Carpet","Laminate","Other"],
       wholeOptions:["Whole Basement","Whole First Floor","Whole Second Floor"],
-      roomOptions:["Living Room","Kitchen","Master Bedroom","Bedroom","Dining Room","Hallway","Stairs","Basement","Office","Bathroom","Laundry","Other"]},
+      roomOptions:["Entry","Living Room","Kitchen","Master Bedroom","Bedroom","Dining Room","Hallway","Stairs","Basement","Office","Bathroom","Laundry","Other"]},
     {key:"project_overview",label:"Project Description",type:"textarea",placeholder:"Timeline, scope, any special details…"},
     {key:"special_requirements",label:"Special Requirements",type:"textarea",placeholder:"Pets, allergies, subfloor concerns, transitions…"},
     {key:"_h_more",       type:"header", label:"Additional Information"},
@@ -2512,9 +2512,9 @@ function renderCopyPanel(){
 // PASTE ALL INFO (New Job form). Plain rules, no AI:
 // fills empty boxes it is sure about and lists everything it is not sure about.
 // ════════════════════════════════════════════
-let _pasteNotes='', _pasteUsed=false, _pasteDescState='', _pasteStockCands=[], _pasteStock=new Set();
+let _pasteFloor={types:[],rooms:[]}, _pasteNotes='', _pasteUsed=false, _pasteDescState='', _pasteStockCands=[], _pasteStock=new Set();
 function togglePasteBox(){ const b=document.getElementById('pasteBody'); b.classList.toggle('closed'); document.getElementById('pasteArrow').textContent=b.classList.contains('closed')?'▸':'▾'; }
-function clearPasteBox(){ document.getElementById('pasteText').value=''; document.getElementById('pasteResult').innerHTML=''; _pasteNotes=''; _pasteUsed=false; _pasteDescState=''; _pasteStockCands=[]; _pasteStock=new Set(); document.querySelectorAll('#newModal .paste-filled').forEach(e=>e.classList.remove('paste-filled')); }
+function clearPasteBox(){ document.getElementById('pasteText').value=''; document.getElementById('pasteResult').innerHTML=''; _pasteNotes=''; _pasteUsed=false; _pasteFloor={types:[],rooms:[]}; _pasteDescState=''; _pasteStockCands=[]; _pasteStock=new Set(); document.querySelectorAll('#newModal .paste-filled').forEach(e=>e.classList.remove('paste-filled')); }
 function fmtPhoneDigits(d){ d=d.replace(/\D/g,''); if(d.length===11&&d[0]==='1') d=d.slice(1); return d.length===10?`(${d.slice(0,3)}) ${d.slice(3,6)}-${d.slice(6)}`:d; }
 const PASTE_LABELS=[
   ['name',/^((customer|client|homeowner|owner|tenant|contact|full|buyer)\s+)?(name|customer|client|homeowner|owner|tenant|contact|buyer)$/],
@@ -2567,6 +2567,22 @@ function pasteLooseAddress(rest){
     return {raw:m[0], clean};
   }
   return null;
+}
+const PASTE_TYPES=[['LVP / Luxury Vinyl',/\b(luxury\s*vinyl|vinyl|lvp|lvt|planks?)\b/i],['Carpet',/\bcarpet(?:s|ed|ing)?\b/i],['Tile',/\btiles?\b/i],['Laminate',/\blaminate\b/i]];
+const PASTE_ROOMS=[['Master Bedroom',/\bmaster\s*(?:bed\s*rooms?|bedrooms?|br|suite)\b/i],['Entry',/\b(?:entry(?:way)?|entrance|foyer)\b/i],['Living Room',/\bliving\s*(?:rooms?|rm)?\b/i],['Kitchen',/\bkitchens?\b/i],
+  ['Dining Room',/\bdining\s*(?:rooms?|rm)?\b/i],['Bedroom',/\b(?:\d+\s*)?(?:bed\s*rooms?|bedrooms?|bdrms?|br)\b/i],['Hallway',/\bhall\s*(?:ways?)?\b|\bhalls\b/i],['Stairs',/\b(?:stairs?|staircase|steps)\b/i],
+  ['Basement',/\bbasements?\b/i],['Office',/\boffices?\b/i],['Bathroom',/\b(?:bath\s*rooms?|bathrooms?|baths?)\b/i],['Laundry',/\blaundry(?:\s*room)?\b/i]];
+// Words that mean nothing once the rooms and flooring are taken out ("measure ... for vinyl")
+const PASTE_FILLER=/^(?:\s|[,.;&\/+\-]|\b(?:measure|measuring|estimate|quote|needs?|wants?|for|in|and|the|a|an|of|on|to|with|new|install|installation|please|pls|also|plus|floors?|flooring)\b)*$/i;
+function pasteFloor(leftovers){
+  const all=leftovers.join(' ');
+  const types=PASTE_TYPES.filter(([,re])=>re.test(all)).map(([t])=>t);
+  const rooms=[]; let rest=leftovers.map(l=>l);
+  PASTE_ROOMS.forEach(([r,re])=>{ if(rest.some(l=>new RegExp(re.source,'i').test(l))) rooms.push(r); rest=rest.map(l=>l.replace(new RegExp(re.source,'gi'),' ')); });
+  rest=rest.map(l=>{ PASTE_TYPES.forEach(([,re])=>{ l=l.replace(new RegExp(re.source,'gi'),' '); }); return l; });
+  // A line that was only rooms / flooring (plus small words) is fully used, so it leaves the notes
+  const keep=leftovers.filter((l,i)=>!PASTE_FILLER.test(rest[i]));
+  return {types, rooms, keep};
 }
 function parsePaste(text){
   const found={}, unclear=[], used=[];
@@ -2710,6 +2726,12 @@ function parsePaste(text){
     l=l.replace(/^[\s,;.\-–]+|[\s,;.\-–]+$/g,'').replace(/^(at|and|or|but|so|also)\s+/i,'');
     if(!l||/^(hi|hello|hey|thanks|thank you|my|and|or|call|text|call or text)?\s*(my\s+)?(cell|phone|number|email|mobile|tel)?(\s+(is|#|me|at))?$/i.test(l)) leftovers.splice(i,1); else leftovers[i]=l;
   }
+  // Flooring type and rooms go to Customer Selection (Step 2)
+  const fl=pasteFloor(leftovers);
+  if(fl.types.length) found.floorTypes=fl.types;
+  if(fl.rooms.length) found.floorRooms=fl.rooms;
+  if(fl.types.length>1&&fl.rooms.length) unclear.push(`More than one flooring (${fl.types.join(', ')}). The rooms were not split between them; pick them in Customer Selection (Step 2).`);
+  if(fl.types.length<2) leftovers.splice(0,leftovers.length,...fl.keep); // two floorings: keep the words that say which rooms get which
   // Dates: don't guess what they are for
   const dates=text.match(PASTE_DATE);
   if(dates) unclear.push(`Saw ${dates.length>1?'dates':'a date'} (${[...new Set(dates)].join(', ')}). Not sure what for (measure? install?), so it was not entered. It stays in the notes.`);
@@ -2744,6 +2766,8 @@ function runPasteFill(){
   const req=[['newName','Customer name'],['newPhone','Phone'],['newAddress','Job address'],['newLockbox','Lock box (yes or no)'],['newSalesman','Salesman']];
   const missing=req.filter(([id])=>!document.getElementById(id).value.trim()).map(([,l])=>l);
   if(document.getElementById('newLockbox').value==='Yes'&&!document.getElementById('newLockboxCode').value.trim()) missing.push('Lock box code');
+  _pasteFloor={types:found.floorTypes||[], rooms:found.floorRooms||[]};
+  if(_pasteFloor.types.length||_pasteFloor.rooms.length) filled.push(`Customer Selection (Step 2): ${_pasteFloor.types.join(', ')||'flooring not said'}${_pasteFloor.rooms.length?' in '+_pasteFloor.rooms.join(', '):''}`);
   _pasteNotes=leftovers.join('\n'); _pasteUsed=true; _pasteDescState=''; _pasteStock=new Set(); _pasteStockCands=pasteStockMatches(text);
   const noName=!document.getElementById('newName').value.trim(), co=document.getElementById('newCompany').value.trim();
   out.innerHTML=
@@ -2859,6 +2883,14 @@ async function createCustomer(){
     const add=[head,(_pasteNotes||'').trim()].filter(Boolean).join('\n');
     const po=c.stepData[SELECTION_STEP]?.project_overview;
     c.stepData[SELECTION_STEP]={...c.stepData[SELECTION_STEP],project_overview:po?po+'\n'+add:add};
+  }
+  if(_pasteFloor.types.length||_pasteFloor.rooms.length){
+    const sd={...(c.stepData[SELECTION_STEP]||{})}, types=typesOf(sd), rooms=parseJSON(sd.flooring_rooms,{});
+    _pasteFloor.types.forEach(t=>{ if(!types.includes(t)) types.push(t); });
+    if(types.length===1&&_pasteFloor.rooms.length&&!rooms[types[0]]) rooms[types[0]]=_pasteFloor.rooms.join(',');
+    else if(!types.length&&_pasteFloor.rooms.length) sd.rooms_involved=_pasteFloor.rooms.join(',');
+    if(types.length) sd.flooring_type=types.join(',');
+    sd.flooring_rooms=JSON.stringify(rooms); c.stepData[SELECTION_STEP]=sd;
   }
   if(_pasteStock.size){ // stock items confirmed from the paste box go into Step 2's products
     const sd={...(c.stepData[SELECTION_STEP]||{})}, types=typesOf(sd), prods=parseJSON(sd.flooring_products,{});
