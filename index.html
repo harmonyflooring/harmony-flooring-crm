@@ -629,6 +629,7 @@ header .hdr-msg-count { top:-5px; right:-5px; }
 #pasteDesc { width:100%; box-sizing:border-box; margin-top:4px; font-family:inherit; font-size:0.82rem; border:1px solid #c9d3de; border-radius:6px; padding:6px 8px; resize:vertical; }
 #pasteDesc[readonly] { background:#f6fbf6; border-color:#cfe3cf; }
 .pr-stock { background:#eef6f6; color:#24504e; }
+.pr-exist { background:#fff3e0; color:#7a4a00; border:1.5px solid #f0b860; }
 .pr-stock-row { display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-top:6px; }
 .pr-stock-row > span:first-child { flex:1; min-width:160px; }
 .pr-yes { color:#2c5f2e; font-weight:700; }
@@ -2763,12 +2764,8 @@ function runPasteFill(){
     filled.push(`${pasteLabel(k)[0].toUpperCase()+pasteLabel(k).slice(1)}: ${k==='lockbox'?(found[k]==='Yes'?'Yes':'No lock box'):found[k]}`);
   });
   if(found.lockbox) toggleLockboxCode();
-  // Same phone as a customer already in the system?
-  if(found.phone){
-    const d=found.phone.replace(/\D/g,'');
-    const match=customers().find(c=>(c.phone||'').replace(/\D/g,'').endsWith(d.slice(-10)));
-    if(match) unclear.push(`This phone matches an existing customer: ${match.name} (${match.address||'no address'}). If it's the same person, tap 🔍 Existing Customer above.`);
-  }
+  // Already a customer? (same phone, email, name or job address)
+  _pasteExisting=_selectedExistingCustKey?[]:pasteExistingMatches(found);
   // Required boxes still empty
   const req=[['newName','Customer name'],['newPhone','Phone'],['newAddress','Job address'],['newLockbox','Lock box (yes or no)'],['newSalesman','Salesman']];
   const missing=req.filter(([id])=>!document.getElementById(id).value.trim()).map(([,l])=>l);
@@ -2777,12 +2774,80 @@ function runPasteFill(){
   if(_pasteFloor.types.length||_pasteFloor.rooms.length) filled.push(`Customer Selection (Step 2): ${_pasteFloor.types.join(', ')||'flooring not said'}${_pasteFloor.rooms.length?' in '+_pasteFloor.rooms.join(', '):''}`);
   _pasteNotes=leftovers.join('\n'); _pasteUsed=true; _pasteDescState=''; _pasteStock=new Set(); _pasteStockCands=pasteStockMatches(text);
   const noName=!document.getElementById('newName').value.trim(), co=document.getElementById('newCompany').value.trim();
-  out.innerHTML=
+  out.innerHTML=`<div id="pasteExistBox">${pasteExistingHtml()}</div><div id="pasteInfoBox">`+
     (filled.length?`<div class="pr-box pr-ok"><b>✓ Filled in (yellow boxes below)</b><ul>${filled.map(x=>`<li>${esc(x)}</li>`).join('')}</ul></div>`:'<div class="pr-box pr-warn"><b>Nothing could be filled in automatically.</b></div>')+
     (missing.length?`<div class="pr-box pr-warn"><b>⚠ Still missing</b><ul>${missing.map(x=>`<li>${esc(x)}</li>`).join('')}</ul></div>`:'')+
     (unclear.length?`<div class="pr-box pr-warn"><b>? Not clear, please check</b><ul>${unclear.map(x=>`<li>${esc(x)}</li>`).join('')}</ul></div>`:'')+
     (noName?`<div class="pr-box pr-warn"><b>👤 Could not find the customer name.</b> Type it in the Full Name box below${co?`, or <button type="button" class="btn btn-secondary btn-sm" onclick="usePasteCompanyAsName()">Use "${esc(co)}" as the name</button>`:''}.</div>`:'')+
-    `<div id="pasteStockBox">${pasteStockHtml()}</div><div id="pasteDescBox">${pasteDescHtml()}</div>`;
+    `</div><div id="pasteStockBox">${pasteStockHtml()}</div><div id="pasteDescBox">${pasteDescHtml()}</div>`;
+}
+// ── Existing customer from the paste ──
+let _pasteExisting=[];
+function pasteNameKey(n){ return (n||'').toLowerCase().replace(/\b(mr|mrs|ms|miss|dr)\b\.?/g,' ').replace(/[^a-z ]/g,' ').replace(/\s+/g,' ').trim(); }
+function pasteAddrKey(a){ return splitUnit(a||'').base.toLowerCase().replace(/\b(nj|ny|pa)\b|\d{5}/g,' ').replace(/[^a-z0-9 ]/g,' ').replace(/\b(street|avenue|road|drive|lane|court|place|boulevard|terrace|circle)\b/g,m=>({street:'st',avenue:'ave',road:'rd',drive:'dr',lane:'ln',court:'ct',place:'pl',boulevard:'blvd',terrace:'ter',circle:'cir'}[m])).replace(/\s+/g,' ').trim(); }
+function pasteExistingMatches(found){
+  const out=new Map(); // custKey → {c, why:[]}
+  const add=(c,why)=>{ const k=custKey(c); if(!out.has(k)) out.set(k,{c,why:[]}); if(!out.get(k).why.includes(why)) out.get(k).why.push(why); };
+  const all=existingCustomersUnique();
+  const ph=(found.phone||'').replace(/\D/g,'').slice(-10);
+  const em=(found.email||'').toLowerCase();
+  const nm=pasteNameKey(found.name);
+  const ad=found.address?pasteAddrKey(found.address):'';
+  const adStreet=ad.split(' ').slice(0,2).join(' '); // "14 mirta"
+  all.forEach(c=>{
+    if(ph.length===10 && (c.phone||'').replace(/\D/g,'').endsWith(ph)) add(c,'same phone');
+    if(em && (c.email||'').toLowerCase()===em) add(c,'same email');
+    if(nm){ const cn=pasteNameKey(c.name);
+      if(cn===nm || (!nm.includes(' ') && cn.split(' ').pop()===nm)) add(c, cn===nm?'same name':'same last name'); }
+  });
+  if(ad) customers().forEach(j=>{ const jk=pasteAddrKey(j.address); if(jk && (jk===ad || jk.startsWith(adStreet+' ') || jk===adStreet)){ const c=all.find(x=>custKey(x)===custKey(j)); if(c) add(c,'same address'); } });
+  const strong=w=>w.some(x=>x==='same phone'||x==='same email'||x==='same address'||x==='same name');
+  return [...out.values()].filter(m=>strong(m.why)||m.why.length>1||out.size<=3).sort((a,b)=>b.why.length-a.why.length).slice(0,3);
+}
+function pasteExistingHtml(){
+  if(_selectedExistingCustKey){ const c=existingCustomersUnique().find(x=>custKey(x)===_selectedExistingCustKey); return c?`<div class="pr-box pr-ok"><b>👤 Existing customer: ${esc(c.name)}</b></div>`:''; }
+  if(!_pasteExisting.length) return '';
+  return `<div class="pr-box pr-exist"><b>👤 Already a customer? Is it the same person?</b>${_pasteExisting.map(({c,why},i)=>{
+    const jobs=getCustomerJobs(custKey(c)).map(j=>j.address).filter(Boolean);
+    return `<div class="pr-stock-row"><span><b>${esc(c.name)}</b>${c.phone?' · '+esc(c.phone):''}<br><small>${esc(why.join(', '))}${jobs.length?' · past jobs: '+esc([...new Set(jobs)].slice(0,3).join('; ')):''}</small></span><button type="button" class="btn btn-primary btn-sm" onclick="usePasteExisting(${i})">✓ Yes, same customer</button></div>`;
+  }).join('')}<div class="pr-desc-head"><small>Not them? Just keep going, it will be a new customer.</small></div></div>`;
+}
+// Switch the form to the existing customer, but keep what the text said about this job
+function usePasteExisting(i){
+  const m=_pasteExisting[i]; if(!m) return;
+  const ids=['newAddress','newAddress2','newLockbox','newLockboxCode','newContractor','newContractorPhone','newEmail','newCompany'];
+  const before=Object.fromEntries(ids.map(id=>[id,document.getElementById(id).value.trim()]));
+  const textPhone=document.getElementById('newPhone').value.trim();
+  document.getElementById('newAddress').value=''; // so all their past buildings are listed
+  selectExistingCustomer(m.c.id);
+  if(before.newAddress){
+    // Same building as one of their past jobs? Pick it so the copy / jump options show
+    const want=pasteAddrKey(before.newAddress), st=want.split(' ').slice(0,2).join(' ');
+    const k=_addressSuggestCache.findIndex(([j])=>{ const jk=pasteAddrKey(j.address); return jk===want||jk.startsWith(st+' ')||jk===st; });
+    if(k>-1) selectExistingAddress(k);
+    else { clearCopySource(); document.getElementById('newAddress').value=before.newAddress; }
+  }
+  document.getElementById('newAddressSuggest').classList.remove('open');
+  // What the text said wins for this job; the customer's saved info fills the rest
+  ['newAddress2','newLockbox','newLockboxCode','newContractor','newContractorPhone'].forEach(id=>{ if(before[id]) document.getElementById(id).value=before[id]; });
+  ['newEmail','newCompany'].forEach(id=>{ const el=document.getElementById(id); if(!el.value.trim()&&before[id]) el.value=before[id]; });
+  toggleLockboxCode();
+  // A different phone in the text is kept in the notes, not lost
+  if(textPhone && textPhone.replace(/\D/g,'').slice(-10)!==(m.c.phone||'').replace(/\D/g,'').slice(-10)){
+    _pasteNotes=[_pasteNotes,'Other phone: '+textPhone].filter(Boolean).join('\n');
+    const d=document.getElementById('pasteDescBox'); if(d) d.innerHTML=pasteDescHtml();
+  }
+  // The text already says the flooring, so don't copy the old job's Step 2 over it
+  if(_copySource && (_pasteFloor.types.length||_pasteFloor.rooms.length)) clearCopySource();
+  _pasteExisting=[];
+  document.getElementById('pasteExistBox').innerHTML=pasteExistingHtml();
+  // The earlier lists are out of date now: show only what is still missing
+  const req=[['newName','Customer name'],['newPhone','Phone'],['newAddress','Job address'],['newLockbox','Lock box (yes or no)'],['newSalesman','Salesman']];
+  const missing=req.filter(([id])=>!document.getElementById(id).value.trim()).map(([,l])=>l);
+  if(document.getElementById('newLockbox').value==='Yes'&&!document.getElementById('newLockboxCode').value.trim()) missing.push('Lock box code');
+  document.getElementById('pasteInfoBox').innerHTML=`<div class="pr-box pr-ok">Name, phone and address are from ${esc(m.c.name)}'s file. Check the boxes below.</div>`+
+    (missing.length?`<div class="pr-box pr-warn"><b>⚠ Still missing</b><ul>${missing.map(x=>`<li>${esc(x)}</li>`).join('')}</ul></div>`:'');
+  showToast(`Using existing customer ${m.c.name}`);
 }
 // Project Description from the paste: shown, editable, and confirmed (or not saved)
 function pasteDescHtml(){
