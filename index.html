@@ -2579,6 +2579,8 @@ function pasteFloor(leftovers){
   const types=PASTE_TYPES.filter(([,re])=>re.test(all)).map(([t])=>t);
   const rooms=[]; let rest=leftovers.map(l=>l);
   PASTE_ROOMS.forEach(([r,re])=>{ if(rest.some(l=>new RegExp(re.source,'i').test(l))) rooms.push(r); rest=rest.map(l=>l.replace(new RegExp(re.source,'gi'),' ')); });
+  const at=r=>{ const i=all.search(PASTE_ROOMS.find(x=>x[0]===r)[1]); return i<0?1e9:i; };
+  rooms.sort((a,b)=>at(a)-at(b)); // same order as typed
   rest=rest.map(l=>{ PASTE_TYPES.forEach(([,re])=>{ l=l.replace(new RegExp(re.source,'gi'),' '); }); return l; });
   // A line that was only rooms / flooring (plus small words) is fully used, so it leaves the notes
   const keep=leftovers.filter((l,i)=>!PASTE_FILLER.test(rest[i]));
@@ -2731,7 +2733,12 @@ function parsePaste(text){
   if(fl.types.length) found.floorTypes=fl.types;
   if(fl.rooms.length) found.floorRooms=fl.rooms;
   if(fl.types.length>1&&fl.rooms.length) unclear.push(`More than one flooring (${fl.types.join(', ')}). The rooms were not split between them; pick them in Customer Selection (Step 2).`);
-  if(fl.types.length<2) leftovers.splice(0,leftovers.length,...fl.keep); // two floorings: keep the words that say which rooms get which
+  if(fl.types.length<2 && fl.keep.length<leftovers.length){
+    // Lines that were only flooring + rooms become one clean line: "Vinyl: Entry, Kitchen, Living Room"
+    const tn=fl.types.map(t=>t==='LVP / Luxury Vinyl'?'Vinyl':t).join('');
+    const line=[tn,fl.rooms.join(', ')].filter(Boolean).join(': ');
+    leftovers.splice(0,leftovers.length,...(line?[line]:[]),...fl.keep);
+  } // two floorings: keep the words that say which rooms get which
   // Dates: don't guess what they are for
   const dates=text.match(PASTE_DATE);
   if(dates) unclear.push(`Saw ${dates.length>1?'dates':'a date'} (${[...new Set(dates)].join(', ')}). Not sure what for (measure? install?), so it was not entered. It stays in the notes.`);
