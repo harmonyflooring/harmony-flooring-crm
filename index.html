@@ -625,6 +625,42 @@ header .hdr-msg-count { top:-5px; right:-5px; }
 .pr-warn { background:#fff4e0; color:#7a4a00; }
 .pr-note { background:#eef2f7; color:#33475b; }
 .paste-filled { background:#fffbe6 !important; box-shadow:0 0 0 2px #f1d675 inset; }
+
+/* Calendar List view (Nov 14) */
+.sl-wrap { flex:1; min-width:0; display:flex; flex-direction:column; gap:12px; }
+.sl-day { background:white; border:1px solid #e6e2dc; border-radius:10px; overflow:hidden; }
+.sl-today { border-color:#2c5f2e; box-shadow:0 0 0 2px rgba(44,95,46,0.15); }
+.sl-day-hdr { display:flex; align-items:center; gap:10px; padding:8px 12px; background:#f6f5f2; border-bottom:1px solid #ece8e2; }
+.sl-today .sl-day-hdr { background:#e8f5e9; }
+.sl-day-name { font-size:1rem; font-weight:800; color:#2c2c2c; }
+.sl-day-date { font-size:0.85rem; color:#777; font-weight:600; }
+.sl-count { font-size:0.72rem; color:#888; background:white; border:1px solid #e0ddd8; border-radius:10px; padding:1px 8px; }
+.sl-add { background:#2c5f2e; color:white; border:none; border-radius:6px; padding:5px 10px; font-family:inherit; font-size:0.76rem; font-weight:700; cursor:pointer; }
+.sl-row { display:flex; align-items:flex-start; gap:8px; padding:6px 12px; border-bottom:1px solid #f1eee9; border-left:3px solid #4d7b79; }
+.sl-row:last-child { border-bottom:none; }
+.sl-row:hover { background:#fbfaf8; }
+.sl-row-repair { border-left-color:#c0392b; }
+.sl-installer { width:78px; flex-shrink:0; border:1px solid transparent; border-radius:5px; background:#f0faf0; padding:3px 6px; font-family:inherit; font-size:0.76rem; font-weight:700; color:#2c5f2e; }
+.sl-installer:placeholder-shown { background:#faf7f0; color:#aaa; font-weight:400; }
+.sl-installer:focus { border-color:#2c5f2e; outline:none; background:white; }
+.sl-main { flex:1; min-width:0; font-size:0.84rem; line-height:1.45; color:#333; cursor:pointer; padding-top:2px; }
+.sl-addr { font-weight:800; color:#1f1f1f; }
+.sl-lock { font-weight:800; color:#e65100; white-space:nowrap; }
+.sl-who { color:#4d7b79; font-weight:600; }
+.sl-floor { color:#2c5f2e; }
+.sl-text { color:#555; }
+.sl-note { background:#fff4e0; color:#8a5200; font-weight:700; border-radius:4px; padding:0 5px; }
+.sl-tag { font-size:0.7rem; font-weight:800; border-radius:4px; padding:1px 5px; white-space:nowrap; }
+.sl-repair { background:#fdecea; color:#c0392b; }
+.sl-empty { padding:10px 12px; color:#bbb; font-size:0.8rem; }
+.sl-week-total { text-align:right; font-size:0.76rem; color:#999; padding:0 4px; }
+.sl-panels { margin-top:12px; }
+@media(max-width:680px){
+  .sl-day-hdr { flex-wrap:wrap; gap:6px; }
+  .sl-row { padding:7px 10px; }
+  .sl-installer { width:64px; }
+  .sl-main { font-size:0.82rem; }
+}
 /* EMPTY */
 .empty-state { text-align:center; padding:50px 20px; color:#ccc; }
 .empty-state .big { font-size:2.8rem; }
@@ -1085,6 +1121,7 @@ header .hdr-msg-count { top:-5px; right:-5px; }
       <div class="sched-view-toggle">
         <button class="sched-view-btn active" id="schedBtnWeek" onclick="setSchedView('week')">Week</button>
         <button class="sched-view-btn" id="schedBtnMonth" onclick="setSchedView('month')">Month</button>
+        <button class="sched-view-btn" id="schedBtnList" onclick="setSchedView('list')">List</button>
       </div>
       <button class="sched-side-toggle" id="schedSideBtn" onclick="toggleSchedSidePanel()" title="Show calendar alongside dashboard">⬛ Side Panel</button>
     </div>
@@ -4589,7 +4626,7 @@ db.auth.onAuthStateChange(event => {
 // SCHEDULING CALENDAR
 // ════════════════════════════════════════════
 
-let _schedViewMode  = 'week'; // 'week' | 'month'
+let _schedViewMode  = (()=>{ try{ return localStorage.getItem('schedViewMode')||'week'; }catch(e){ return 'week'; } })(); // 'week' | 'month' | 'list'
 let _schedSidePanel = false;
 let _schedMonthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
 
@@ -4657,6 +4694,8 @@ function crmCalendarJob(c) {
         installer: sd10.crew_assigned || '',
         scheduled_date: sd10.confirmed_install_date,
         customer: c.name,
+        company: c.company || '',
+        contractor: c.contractor || '',
         flooring,
         description: (sel.project_overview || '').trim(),
         calendarType: sd10.calendar_type || '',
@@ -4669,6 +4708,8 @@ function setSchedView(mode) {
   _schedViewMode = mode;
   document.getElementById('schedBtnWeek').classList.toggle('active', mode === 'week');
   document.getElementById('schedBtnMonth').classList.toggle('active', mode === 'month');
+  document.getElementById('schedBtnList').classList.toggle('active', mode === 'list');
+  try{ localStorage.setItem('schedViewMode', mode); }catch(e){}
   renderScheduleView();
 }
 
@@ -4809,7 +4850,9 @@ function stopSchedDrag() {
 
 // ── Main render dispatcher ──
 function renderScheduleView() {
+  ['week','month','list'].forEach(m=>document.getElementById('schedBtn'+m[0].toUpperCase()+m.slice(1))?.classList.toggle('active', _schedViewMode===m));
   if(_schedViewMode === 'month') renderMonthView();
+  else if(_schedViewMode === 'list') renderListView();
   else renderWeekView();
 }
 
@@ -4883,6 +4926,69 @@ function renderWeekView() {
     </div>`;
 }
 
+
+// ── LIST VIEW: the whole week, one line per job, everything visible (like the old spreadsheet) ──
+function schedListRow(e){
+  const isRepair = e.type === 'repair' || e.calendarType === 'repair';
+  const seen = new Set();
+  const who = e.type === 'crm' ? [e.customer, e.company, e.contractor ? 'GC: '+e.contractor : ''].filter(v=>{ const k=(v||'').toLowerCase().replace(/^gc: /,''); if(!v||seen.has(k)) return false; seen.add(k); return true; }) : [];
+  const bits = [];
+  if(isRepair) bits.push('<span class="sl-tag sl-repair">🔧 Repair</span>');
+  if(e.lockbox) bits.push(`<span class="sl-lock">🔒 ${esc(e.lockbox)}</span>`);
+  if(who.length) bits.push(`<span class="sl-who">${esc(who.join(' · '))}</span>`);
+  if(e.flooring) bits.push(`<b class="sl-floor">${esc(e.flooring)}</b>`);
+  const note = e.type === 'crm' ? e.calendarNotes : e.notes;
+  if(note) bits.push(`<span class="sl-note">${esc(note)}</span>`);
+  const text = e.description ? esc(e.description) : '';
+  return `<div class="sl-row${isRepair?' sl-row-repair':''}" id="sle_${e.id}" ${schedDragAttrs(e)}>
+    <input class="sl-installer" type="text" value="${esc(e.installer||'')}" placeholder="installer"
+      title="Click to assign installer" onclick="event.stopPropagation()"
+      onblur="saveInstallerInline('${e.id}',this.value)" onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();}">
+    <div class="sl-main" onclick="openSchedModal('${e.type}','${e.scheduled_date||''}','${e.id}')" title="Click to edit">
+      <span class="sl-addr">${esc(e.address||'')}</span>${bits.length?' '+bits.join(' '):''}${text?` <span class="sl-text">${text}</span>`:''}
+    </div>
+  </div>`;
+}
+function renderListView(){
+  const todayStr = dateStr(new Date());
+  const days = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+  const dates = days.map((_,i)=>{ const d=new Date(_schedWeekStart); d.setDate(d.getDate()+i); return d; });
+  const fmtOpts = { month:'short', day:'numeric' };
+  document.getElementById('schedWeekLabel').textContent =
+    dates[0].toLocaleDateString('en-US', fmtOpts) + ' – ' + dates[5].toLocaleDateString('en-US', {...fmtOpts, year:'numeric'});
+  const crmJobs = getCrmCalendarJobs();
+  let total = 0;
+  const sections = days.map((day,i)=>{
+    const ds = dateStr(dates[i]);
+    const jobs = [
+      ..._scheduleEntries.filter(e => e.type === 'job' && e.scheduled_date === ds).sort((a,b)=>(a.sort_order||0)-(b.sort_order||0)),
+      ...crmJobs.filter(e => e.scheduled_date === ds)
+    ];
+    total += jobs.length;
+    if(!jobs.length && i===5) return ''; // hide an empty Saturday
+    return `<div class="sl-day${ds===todayStr?' sl-today':''}" ${schedDropAttrs(ds)}>
+      <div class="sl-day-hdr">
+        <span class="sl-day-name">${day}</span><span class="sl-day-date">${dates[i].toLocaleDateString('en-US', fmtOpts)}</span>
+        <span class="sl-count">${jobs.length} job${jobs.length!==1?'s':''}</span>
+        <span style="flex:1"></span>
+        <button class="sched-copy-btn" onclick="copyDaySchedule('${ds}','${day}')">📋 Copy</button>
+        <button class="sl-add" onclick="openNewModal('${ds}')">+ Add Job</button>
+      </div>
+      ${jobs.map(schedListRow).join('') || '<div class="sl-empty">No jobs</div>'}
+    </div>`;
+  }).join('');
+  const pending = [..._scheduleEntries.filter(e => e.type === 'pending'), ...getCrmPanelJobs('pending')];
+  const repairs = [..._scheduleEntries.filter(e => e.type === 'repair'), ...getCrmPanelJobs('repair')];
+  const panel = (title, cls, list, add) => `<div class="sl-day sl-panel ${cls}">
+      <div class="sl-day-hdr"><span class="sl-day-name">${title}</span><span class="sl-count">${list.length}</span><span style="flex:1"></span>
+      <button class="sl-add" onclick="${add}">+ Add</button></div>
+      ${list.map(schedListRow).join('') || '<div class="sl-empty">None</div>'}
+    </div>`;
+  document.getElementById('schedWeek').innerHTML = `<div class="sl-wrap">${sections}
+    <div class="sl-week-total">${total} job${total!==1?'s':''} this week</div></div>`;
+  document.getElementById('schedBottom').innerHTML = `<div class="sl-wrap sl-panels">${panel('⏳ Pending Jobs','sl-pending',pending,"openNewModal(null,'pending')")}${panel('🔧 Repairs','sl-repairs',repairs,"openNewModal(null,'repair')")}</div>`;
+}
+
 // ── MONTH VIEW ──
 function renderMonthView() {
   const year     = _schedMonthStart.getFullYear();
@@ -4939,6 +5045,7 @@ function switchToWeekOfDate(ds) {
   _schedViewMode = 'week';
   document.getElementById('schedBtnWeek').classList.add('active');
   document.getElementById('schedBtnMonth').classList.remove('active');
+  document.getElementById('schedBtnList').classList.remove('active');
   renderScheduleView();
 }
 
