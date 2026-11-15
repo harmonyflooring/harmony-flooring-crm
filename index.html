@@ -584,8 +584,12 @@ header .hdr-msg-count { top:-5px; right:-5px; }
 .hdr-archive .hi { display:flex; }
 .hm-phone-zoom { display:none; }
 @media(max-width:680px){
-  .hdr-zoom { display:none !important; }
-  .hm-phone-zoom { display:block; }
+  .hdr-zoom { display:flex !important; order:1; margin-left:auto; padding:2px; }
+  .hdr-zoom button { width:30px; height:30px; }
+  .hdr-zoom span { min-width:38px; }
+  .logo-mid, .more-word { display:none; }
+  .hdr-more-btn { width:40px; padding:0; justify-content:center; }
+  .hdr-more-btn .hi { font-size:1.15rem; }
   .hdr-archive { border-radius:8px; border:none; background:rgba(255,255,255,0.14); }
   .hdr-archive svg { width:20px; height:20px; }
 }
@@ -595,7 +599,7 @@ header .hdr-msg-count { top:-5px; right:-5px; }
   header { flex-wrap:wrap; overflow:visible; row-gap:8px; }
   .hdr-inline { display:none; }
   .hm-phone { display:block; }
-  .hdr-more { order:2; margin-left:auto; }
+  .hdr-more { order:2; }
   .hdr-more-btn { padding:0 10px; }
   .hdr-nav { order:3; width:100%; display:grid; grid-auto-flow:column; grid-auto-columns:1fr; gap:6px; }
   .hdr-nav .hdr-btn { flex-direction:column; justify-content:center; gap:2px; height:50px; padding:0 2px; font-size:0.72rem; }
@@ -852,7 +856,7 @@ header .hdr-msg-count { top:-5px; right:-5px; }
 <div id="app">
   <!-- HEADER -->
   <header>
-    <div class="header-logo">🌿 Harmony<span class="logo-long"> Flooring</span></div>
+    <div class="header-logo">🌿<span class="logo-mid"> Harmony</span><span class="logo-long"> Flooring</span></div>
     <div class="header-user" onclick="switchProfile()" title="Switch profile">
       <div class="user-dot" id="headerDot"></div>
       <span id="headerName"></span>
@@ -889,7 +893,7 @@ header .hdr-msg-count { top:-5px; right:-5px; }
       <button class="hdr-btn" id="hdrBookBtn" onclick="window.open('bookkeeping.html','_blank')" style="display:none"><span class="hi">💲</span><span>Bookkeeping</span></button>
     </nav>
     <div class="hdr-more">
-      <button class="hdr-btn hdr-more-btn" onclick="toggleHdrMenu(event)"><span class="hi">☰</span><span>More</span></button>
+      <button class="hdr-btn hdr-more-btn" onclick="toggleHdrMenu(event)" title="More"><span class="hi">☰</span><span class="more-word">More</span></button>
       <div class="hdr-menu" id="hdrMenu" onclick="event.stopPropagation()">
         <div class="hm-phone">
           <div class="hm-label">View</div>
