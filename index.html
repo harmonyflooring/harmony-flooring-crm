@@ -575,6 +575,21 @@ header::-webkit-scrollbar { display: none; }
 .hm-views button { padding:9px 4px; border:1.5px solid #e0ddd8; border-radius:7px; background:white; font-family:inherit; font-size:0.82rem; font-weight:600; color:#444; cursor:pointer; }
 .hm-views button.active { border-color:#2c5f2e; background:#e8f5e9; color:#2c5f2e; }
 header .hdr-msg-count { top:-5px; right:-5px; }
+.hdr-viewwrap { position:relative; }
+.hdr-viewmenu { width:220px; right:auto; }
+#vmList .hm-item.active { background:#e8f5e9; color:#2c5f2e; font-weight:700; }
+#vmList .hm-item.active::after { content:" ✓"; }
+.hdr-archive { border-radius:17px; border:1.5px solid rgba(255,255,255,0.45); background:rgba(255,255,255,0.1); }
+.hdr-archive:hover { border-color:white; }
+.hdr-archive .hi { display:flex; }
+.hm-phone-zoom { display:none; }
+@media(max-width:680px){
+  .hdr-zoom { display:none !important; }
+  .hm-phone-zoom { display:block; }
+  .hdr-archive { border-radius:8px; border:none; background:rgba(255,255,255,0.14); }
+  .hdr-archive svg { width:20px; height:20px; }
+}
+
 @media(max-width:1100px){ .logo-long { display:none; } }
 @media(max-width:680px){
   header { flex-wrap:wrap; overflow:visible; row-gap:8px; }
@@ -588,6 +603,21 @@ header .hdr-msg-count { top:-5px; right:-5px; }
   .hdr-menu { top:50px; left:12px; right:12px; width:auto; }
   .header-user span { max-width:110px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 }
+
+/* Paste-all-info box on New Job (no AI, simple rules) */
+.paste-box { background:#f3f8f3; border:1.5px solid #cfe3cf; border-radius:9px; margin:0 0 14px; }
+.paste-head { display:flex; justify-content:space-between; padding:10px 12px; font-size:0.86rem; font-weight:700; color:#2c5f2e; cursor:pointer; user-select:none; }
+#pasteBody { padding:0 12px 12px; }
+#pasteBody.closed { display:none; }
+#pasteText { width:100%; border:1.5px solid #d6dcd6; border-radius:7px; padding:9px; font-family:inherit; font-size:0.86rem; resize:vertical; box-sizing:border-box; }
+.paste-actions { display:flex; gap:8px; margin-top:8px; }
+.pr-box { margin-top:10px; border-radius:7px; padding:9px 11px; font-size:0.8rem; line-height:1.45; }
+.pr-box b { display:block; margin-bottom:3px; }
+.pr-box ul { margin:0; padding-left:18px; }
+.pr-ok { background:#e8f5e9; color:#24502a; }
+.pr-warn { background:#fff4e0; color:#7a4a00; }
+.pr-note { background:#eef2f7; color:#33475b; }
+.paste-filled { background:#fffbe6 !important; box-shadow:0 0 0 2px #f1d675 inset; }
 /* EMPTY */
 .empty-state { text-align:center; padding:50px 20px; color:#ccc; }
 .empty-state .big { font-size:2.8rem; }
@@ -827,26 +857,35 @@ header .hdr-msg-count { top:-5px; right:-5px; }
       <div class="user-dot" id="headerDot"></div>
       <span id="headerName"></span>
     </div>
+    <div class="zoom-control hdr-zoom" title="Make the whole screen bigger or smaller">
+      <button onclick="stepZoom(-1)" title="Smaller">−</button>
+      <span id="zoomLabel">100%</span>
+      <button onclick="stepZoom(1)" title="Bigger">+</button>
+    </div>
     <div class="header-spacer"></div>
     <div class="hdr-inline">
       <label class="filter-toggle" title="Show only your jobs">
         <input type="checkbox" id="myJobsToggle" onchange="onMyJobsChange(this)">
         My Jobs Only
       </label>
-      <label class="hdr-view">View
-        <select id="viewSelect" onchange="setLayout(this.value)">
-          <option value="grid">Cards</option>
-          <option value="sidebar">List</option>
-          <option value="kanban">Board</option>
-          <option value="table">Table</option>
-          <option value="chart">Chart</option>
-        </select>
-      </label>
+      <div class="hdr-viewwrap">
+        <button class="hdr-btn" onclick="toggleViewMenu(event)"><span class="hi">▤</span><span>View ▾</span></button>
+        <div class="hdr-menu hdr-viewmenu" id="viewMenu" onclick="event.stopPropagation()">
+          <div class="hm-label">Show jobs as</div>
+          <div id="vmList">
+            <button class="hm-item" data-v="chart" onclick="setLayout('chart');closeHdrMenu()">▶ Progress Chart</button>
+            <button class="hm-item" data-v="grid" onclick="setLayout('grid');closeHdrMenu()">⊞ Cards</button>
+            <button class="hm-item" data-v="sidebar" onclick="setLayout('sidebar');closeHdrMenu()">☰ List</button>
+            <button class="hm-item" data-v="kanban" onclick="setLayout('kanban');closeHdrMenu()">⬜ Board</button>
+            <button class="hm-item" data-v="table" onclick="setLayout('table');closeHdrMenu()">≡ Table</button>
+          </div>
+        </div>
+      </div>
     </div>
     <nav class="hdr-nav">
       <button class="hdr-btn" id="hdrSchedBtn" onclick="toggleScheduleView()"><span class="hi">📅</span><span>Calendar</span></button>
       <button class="hdr-btn" id="hdrMsgBtn" onclick="toggleMsgView()"><span class="hi">💬</span><span>Messages</span><span class="hdr-msg-count" id="hdrMsgCount"></span></button>
-      <button class="hdr-btn" onclick="openArchive()"><span class="hi">🗄</span><span>Archive</span></button>
+      <button class="hdr-btn hdr-archive" onclick="openArchive()"><span class="hi"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2.5" y="3.5" width="19" height="5" rx="1.2"/><path d="M4.5 8.5v10a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2v-10"/><path d="M10 12.5h4"/></svg></span><span>Archive</span></button>
       <button class="hdr-btn" id="hdrBookBtn" onclick="window.open('bookkeeping.html','_blank')" style="display:none"><span class="hi">💲</span><span>Bookkeeping</span></button>
     </nav>
     <div class="hdr-more">
@@ -855,19 +894,21 @@ header .hdr-msg-count { top:-5px; right:-5px; }
         <div class="hm-phone">
           <div class="hm-label">View</div>
           <div class="hm-views" id="hmViews">
+            <button data-v="chart" onclick="setLayout('chart');closeHdrMenu()">Chart</button>
             <button data-v="grid" onclick="setLayout('grid');closeHdrMenu()">Cards</button>
             <button data-v="sidebar" onclick="setLayout('sidebar');closeHdrMenu()">List</button>
             <button data-v="kanban" onclick="setLayout('kanban');closeHdrMenu()">Board</button>
             <button data-v="table" onclick="setLayout('table');closeHdrMenu()">Table</button>
-            <button data-v="chart" onclick="setLayout('chart');closeHdrMenu()">Chart</button>
           </div>
           <button class="hm-item" onclick="document.getElementById('myJobsToggle').click();syncHdrMenu()">👤 My Jobs Only: <b id="hmMyJobs">Off</b></button>
         </div>
-        <div class="hm-label">Screen size</div>
-        <div class="zoom-control">
-          <button onclick="stepZoom(-1)" title="Smaller">−</button>
-          <span id="zoomLabel">100%</span>
-          <button onclick="stepZoom(1)" title="Bigger">+</button>
+        <div class="hm-phone-zoom">
+          <div class="hm-label">Screen size</div>
+          <div class="zoom-control">
+            <button onclick="stepZoom(-1)" title="Smaller">−</button>
+            <span class="zoomLabelMirror">100%</span>
+            <button onclick="stepZoom(1)" title="Bigger">+</button>
+          </div>
         </div>
         <button class="hm-item" onclick="closeHdrMenu();openSettings()">⚙️ Settings</button>
         <button class="hm-item" onclick="closeHdrMenu();exportData()">⬇ Export to spreadsheet</button>
@@ -1180,6 +1221,18 @@ header .hdr-msg-count { top:-5px; right:-5px; }
     <h2>New Customer / Job</h2>
     <p style="font-size:0.77rem;color:#aaa;margin-bottom:12px">Same customer, different address? Each address is its own job.</p>
     <div class="info-box" id="newFromCalendar" style="display:none;margin-bottom:12px"></div>
+
+    <div class="paste-box">
+      <div class="paste-head" onclick="togglePasteBox()"><span>📋 Paste all the info at once</span><span id="pasteArrow">▾</span></div>
+      <div id="pasteBody">
+        <textarea id="pasteText" rows="5" placeholder="Paste a text, email or notes here. Example:&#10;John Smith 732-555-1234 john@gmail.com&#10;45 Oak Ave, Unit 3B, Edison NJ&#10;Lock box 4471&#10;Wants vinyl plank in kitchen and hallway"></textarea>
+        <div class="paste-actions">
+          <button type="button" class="btn btn-primary btn-sm" onclick="runPasteFill()">Fill in the form</button>
+          <button type="button" class="btn btn-secondary btn-sm" onclick="clearPasteBox()">Clear</button>
+        </div>
+        <div id="pasteResult"></div>
+      </div>
+    </div>
 
     <div class="slabel">Customer Info</div>
     <div class="seg-toggle" id="custTypeToggle">
@@ -1518,7 +1571,7 @@ let _selectedNewColor = SALESMAN_COLORS[0];
 
 let activeProfile = null; // {name, color, initial}
 let isTeamAdmin = false;
-let activeLayout = 'grid';
+let activeLayout = 'chart';
 let activeStepFilter = null;
 let hiddenSteps = [];
 let activeSidebarId = null;
@@ -1766,7 +1819,7 @@ function doLogin(name) {
   const sm = SALESMEN.find(s=>s.name===name) || {name, color:'#555', initial:name[0].toUpperCase()};
   activeProfile = sm;
   setLastProfile(name);
-  const savedLayout = getPref(name,'layout','grid');
+  const savedLayout = getPref(name,'layout2','chart');
   // Everyone starts on all jobs; the toggle narrows to their own
   const savedMyJobs = getPref(name,'onlyMyJobs', false);
   hiddenSteps = getPref(name,'hiddenSteps',[]);
@@ -1796,7 +1849,7 @@ function applyZoom(pct){
   root.style.zoom=zoomScale();
   root.style.setProperty('--zoom',zoomScale());
   root.classList.toggle('zoomed-in',pageZoom>100);
-  document.getElementById('zoomLabel').textContent=pageZoom+'%';
+  document.querySelectorAll('#zoomLabel, .zoomLabelMirror').forEach(e=>e.textContent=pageZoom+'%');
   const sv=document.getElementById('scheduleView');
   if(sv.classList.contains('side-panel')) fitSchedSidePanel(sv);
 }
@@ -1825,17 +1878,17 @@ const LAYOUT_IDS = {grid:'layoutGrid', sidebar:'layoutSidebar', kanban:'layoutKa
 const LAYOUT_BTNS = {grid:'lbGrid', sidebar:'lbSidebar', kanban:'lbKanban', table:'lbTable', chart:'lbChart'};
 const LAYOUT_ICONS = {grid:'⊞', sidebar:'☰', kanban:'⬜', table:'≡', chart:'▶'};
 
-function toggleHdrMenu(e){ e.stopPropagation(); syncHdrMenu(); document.getElementById('hdrMenu').classList.toggle('open'); }
-function closeHdrMenu(){ document.getElementById('hdrMenu').classList.remove('open'); }
+function toggleHdrMenu(e){ e.stopPropagation(); syncHdrMenu(); const m=document.getElementById('hdrMenu'); const open=m.classList.contains('open'); closeHdrMenu(); if(!open) m.classList.add('open'); }
+function closeHdrMenu(){ document.getElementById('hdrMenu').classList.remove('open'); document.getElementById('viewMenu')?.classList.remove('open'); }
+function toggleViewMenu(e){ e.stopPropagation(); syncHdrMenu(); const m=document.getElementById('viewMenu'); const open=m.classList.contains('open'); closeHdrMenu(); if(open) return; const r=e.currentTarget.getBoundingClientRect(), z=zoomScale?zoomScale():1; m.style.top=(r.bottom/z+6)+'px'; m.style.left=(r.left/z)+'px'; m.classList.add('open'); }
 document.addEventListener('click', closeHdrMenu);
 function syncHdrMenu(){
-  const v=document.getElementById('viewSelect'); if(v) v.value=activeLayout;
-  document.querySelectorAll('#hmViews button').forEach(b=>b.classList.toggle('active', b.dataset.v===activeLayout));
+  document.querySelectorAll('#hmViews button, #vmList button').forEach(b=>b.classList.toggle('active', b.dataset.v===activeLayout));
   const m=document.getElementById('hmMyJobs'); if(m) m.textContent=document.getElementById('myJobsToggle').checked?'On':'Off';
 }
 function setLayout(name, skipSave) {
   activeLayout = name;
-  if(!skipSave && activeProfile) setPref(activeProfile.name,'layout',name);
+  if(!skipSave && activeProfile) setPref(activeProfile.name,'layout2',name);
   Object.keys(LAYOUT_IDS).forEach(k=>{
     document.getElementById(LAYOUT_IDS[k]).style.display = k===name ? (k==='grid'?'block':'flex') : 'none';
   });
@@ -2391,6 +2444,181 @@ function renderCopyPanel(){
     ${_copyJobs.length>1?`<label class="copy-start" style="margin:0 0 10px">Copy from past job<select onchange="onCopyFromChange(this)">${_copyJobs.map((j,i)=>`<option value="${i}"${j===_copySource?' selected':''}>${esc(j.address)} (${esc(fmtDate(localDateStr(new Date(j.created))))})</option>`).join('')}</select></label>`:''}${rows||'<div class="copy-sub">This past job has nothing saved to copy.</div>'}<label class="copy-start">Start this job at<select id="copyStartStep" onchange="onCopyStartChange()"></select></label>`:'';
   if(_copySource) updateCopyStart();
 }
+
+// ════════════════════════════════════════════
+// PASTE ALL INFO (New Job form). Plain rules, no AI:
+// fills empty boxes it is sure about and lists everything it is not sure about.
+// ════════════════════════════════════════════
+let _pasteNotes='';
+function togglePasteBox(){ const b=document.getElementById('pasteBody'); b.classList.toggle('closed'); document.getElementById('pasteArrow').textContent=b.classList.contains('closed')?'▸':'▾'; }
+function clearPasteBox(){ document.getElementById('pasteText').value=''; document.getElementById('pasteResult').innerHTML=''; _pasteNotes=''; document.querySelectorAll('#newModal .paste-filled').forEach(e=>e.classList.remove('paste-filled')); }
+function fmtPhoneDigits(d){ d=d.replace(/\D/g,''); if(d.length===11&&d[0]==='1') d=d.slice(1); return d.length===10?`(${d.slice(0,3)}) ${d.slice(3,6)}-${d.slice(6)}`:d; }
+const PASTE_LABELS=[
+  ['name',/^(name|customer|client|homeowner|owner|tenant)$/],
+  ['phone',/^(phone|cell|mobile|tel|telephone|ph|number|#)$/],
+  ['email',/^(e-?mail)$/],
+  ['company',/^(company|business|mgmt|management|property|building)$/],
+  ['address',/^(address|addr|job address|location|site|property address|job site)$/],
+  ['unit',/^(unit|apt|apartment|suite|ste)$/],
+  ['lockbox',/^(lock ?box|lb|lockbox code|code|box code|key)$/],
+  ['contractor',/^(contractor|gc|general contractor|super|superintendent)$/],
+  ['contractorPhone',/^(contractor phone|gc phone|super phone|contractor cell)$/],
+  ['salesman',/^(salesman|sales|rep|sales rep|salesperson)$/],
+];
+const PASTE_STREET=/\b\d{1,6}[a-z]?\s+(?:[NSEW]\.?\s+)?[A-Za-z0-9.'\- ]{1,40}?\s(?:st|street|ave|avenue|rd|road|blvd|boulevard|dr|drive|ln|lane|ct|court|pl|place|way|pkwy|parkway|hwy|highway|ter|terrace|cir|circle|sq|square|tpke|turnpike|route|rt)\b\.?(?:\s*,?\s*(?:(?:apt|unit|suite|ste|#)\.?\s*[\w-]+))?(?:\s*,\s*[A-Za-z .]{2,30})?(?:\s*,?\s*[A-Z]{2}\b)?(?:\s*\d{5})?/i;
+const PASTE_PHONE=/(?:\+?1[\s.-]?)?\(?\b\d{3}\)?[\s.-]?\d{3}[\s.-]?\d{4}\b/g;
+const PASTE_EMAIL=/[\w.+-]+@[\w-]+\.[\w.-]+/g;
+const PASTE_DATE=/\b(?:\d{1,2}\/\d{1,2}(?:\/\d{2,4})?|(?:jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]*\.?\s+\d{1,2}(?:st|nd|rd|th)?|(?:mon|tues?|wed(?:nes)?|thu(?:rs)?|fri|sat(?:ur)?|sun)(?:day)?|tomorrow|next week)\b/gi;
+const PASTE_COMPANY=/\b(llc|inc|corp|co\.|company|construction|builders|contracting|management|mgmt|properties|realty|group|associates|homes|development)\b/i;
+
+
+// Split pasted text into pieces: lines, then sentences (not after St. / Ave. etc.),
+// and a sentence that mentions the contractor is split at commas so "gc is Tom 646.., my cell 917.." separates
+function pasteChunks(text){
+  const out=[];
+  text.split(/\r?\n/).forEach(line=>{
+    const parts=line.split(/(?<=[.!?;])\s+/);
+    const merged=[];
+    parts.forEach(pt=>{ if(merged.length&&/\b(st|ave|rd|dr|ln|ct|blvd|apt|ste|mr|mrs|ms|dr|no|n|s|e|w)\.$/i.test(merged[merged.length-1])) merged[merged.length-1]+=' '+pt; else merged.push(pt); });
+    merged.forEach(m=>{
+      if(/\b(contractor|gc|super|superintendent)\b/i.test(m)) m.split(/,\s*/).forEach(x=>out.push(x));
+      else out.push(m);
+    });
+  });
+  return out.map(l=>l.trim()).filter(Boolean);
+}
+function parsePaste(text){
+  const found={}, unclear=[], used=[];
+  const lines=pasteChunks(text);
+  // "this is Dave at Sunrise Property Management"
+  const intro=text.match(/\b(?:[Tt]his is|[Mm]y name is|I'm|I am|[Nn]ame's)\s+([A-Za-z][a-z'\-]+(?:\s+[A-Z][a-z'\-]+)?)/);
+  const firm=text.match(/\b(?:at|from|with|of)\s+([A-Za-z&'.\- ]{2,40}?\b(?:llc|inc|corp|management|mgmt|properties|realty|construction|builders|contracting|group|homes|development|associates))\b\.?/i);
+  if(firm) found.company=firm[1].trim().replace(/\b\w/g,c=>c.toUpperCase());
+  const leftovers=[];
+  const salesmen=SALESMEN.map(x=>x.name);
+  const set=(k,v)=>{ v=(v||'').trim().replace(/[,;.]+$/,''); if(!v) return; if(found[k]&&found[k]!==v) unclear.push(`Found two different ${pasteLabel(k)}s: "${found[k]}" and "${v}". Used the first one.`); else found[k]=v; };
+  const phones=[], emails=[];
+  lines.forEach(line=>{
+    let rest=line;
+    // "Label: value" lines are the surest thing
+    const m=line.match(/^([A-Za-z #\-]{1,24})\s*[:=\-–]\s*(.+)$/);
+    if(m){
+      const lab=m[1].trim().toLowerCase(), val=m[2].trim();
+      const hit=PASTE_LABELS.find(([,re])=>re.test(lab));
+      if(hit){
+        const k=hit[0];
+        if(k==='phone'){ const ph=val.match(PASTE_PHONE); if(ph) phones.push({v:ph[0],contractor:false}); else unclear.push(`"${line}": could not read a phone number.`); }
+        else if(k==='contractorPhone'){ const ph=val.match(PASTE_PHONE); if(ph) set('contractorPhone',fmtPhoneDigits(ph[0])); }
+        else if(k==='contractor'){ const ph=val.match(PASTE_PHONE); if(ph){ set('contractorPhone',fmtPhoneDigits(ph[0])); } const nm=val.replace(PASTE_PHONE,'').replace(/[,\-–]+\s*$/,'').trim(); if(nm) set('contractor',nm); }
+        else if(k==='lockbox'){ if(/^no\b|none|n\/a/i.test(val)) set('lockbox','No'); else { set('lockbox','Yes'); const code=val.match(/\b[\dA-Z]{3,8}\b/i); if(code) set('lockboxCode',code[0]); } }
+        else if(k==='salesman'){ const sm=salesmen.find(n=>new RegExp('\\b'+n.split(' ')[0]+'\\b','i').test(val)); if(sm) set('salesman',sm); else unclear.push(`Salesman "${val}" is not on the salesman list.`); }
+        else if(k==='email'){ const em=val.match(PASTE_EMAIL); if(em) set('email',em[0]); }
+        else set(k,val);
+        return;
+      }
+    }
+    // Contractor line without a label word in front ("GC Mike 555-...")
+    const isContractorLine=/\b(contractor|gc|super|superintendent)\b/i.test(line);
+    (rest.match(PASTE_EMAIL)||[]).forEach(e=>emails.push(e)); rest=rest.replace(PASTE_EMAIL,' ');
+    (rest.match(PASTE_PHONE)||[]).forEach(ph=>phones.push({v:ph,contractor:isContractorLine})); rest=rest.replace(PASTE_PHONE,' ');
+    if(isContractorLine){
+      const after=rest.replace(/.*\b(contractor|gc|super|superintendent)\b\s*(is|:|-)?\s*/i,'').trim();
+      const nm=(after.match(/^[A-Za-z][A-Za-z'\-]*(?:\s+[A-Z][a-z'\-]+)?/)||[''])[0];
+      if(nm && !/^(and|or|the|will|is|has|said|needs|wants)$/i.test(nm)) set('contractor',nm.replace(/^\w/,c=>c.toUpperCase()));
+      rest='';
+    }
+    // Lock box
+    if(/\bno\s+lock\s*-?box\b/i.test(rest)){ set('lockbox','No'); rest=rest.replace(/\bno\s+lock\s*-?box\b/i,' '); }
+    else if(/\block\s*-?box\b|\blb\b/i.test(rest)){
+      set('lockbox','Yes');
+      const code=rest.match(/(?:lock\s*-?box|lb)\s*(?:code)?\s*(?:is|:|#|-)?\s*([\dA-Z]{3,8})\b/i);
+      if(code&&/\d/.test(code[1])) set('lockboxCode',code[1]);
+      else unclear.push('It says there is a lock box but I could not find the code.');
+      rest=rest.replace(/(?:lock\s*-?box|lb)\s*(?:code)?\s*(?:is|:|#|-)?\s*([\dA-Z]{3,8})?\b/i,' ');
+    }
+    // Address
+    let ad=rest.match(PASTE_STREET);
+    while(ad){ const inner=ad[0].slice(1).search(/\s\d{1,6}[a-z]?\s+[A-Za-z]/i); if(inner<0) break; const again=ad[0].slice(inner+2).match(PASTE_STREET); if(!again) break; ad=again; }
+    if(ad){ set('address',ad[0]); rest=rest.replace(ad[0],' '); }
+    const un=rest.match(/\b(?:apt|unit|suite|ste)\.?\s*#?\s*([a-z]?\d+[a-z]?(?:-\d+)?)\b|(?:^|\s)#\s*([a-z]?\d+[a-z]?)\b/i);
+    if(un){ set('unit',un[0].trim()); rest=rest.replace(un[0],' '); }
+    // Salesman named anywhere
+    salesmen.forEach(n=>{ const first=n.split(' ')[0]; const re=new RegExp('\\b(?:salesman|sales|rep)\\b[^a-z]*'+first+'\\b','i'); if(re.test(rest)){ set('salesman',n); rest=rest.replace(re,' '); } });
+    // Company words
+    if(!found.company && PASTE_COMPANY.test(rest) && rest.replace(/[^A-Za-z]/g,'').length<50){ set('company',rest.replace(/\s{2,}/g,' ')); rest=''; }
+    rest=rest.replace(/\s{2,}/g,' ').replace(/^[\s,;.\-–]+|[\s,;.\-–]+$/g,'');
+    if(rest) leftovers.push(rest);
+  });
+  // Phones: first non-contractor one is the customer's
+  const cust=phones.filter(x=>!x.contractor), cont=phones.filter(x=>x.contractor);
+  if(cust.length) set('phone',fmtPhoneDigits(cust[0].v));
+  if(cust.length>1) unclear.push(`More than one phone number: ${cust.map(x=>fmtPhoneDigits(x.v)).join(', ')}. Used the first one for the customer. Is another one the contractor's?`);
+  if(cont.length) set('contractorPhone',fmtPhoneDigits(cont[0].v));
+  if(emails.length) set('email',emails[0]);
+  if(emails.length>1) unclear.push(`More than one email: ${emails.join(', ')}. Used the first one.`);
+  // Name: "this is Dave", else a short line of only words, usually the first leftover
+  if(!found.name && intro && !/^(calling|from|with|at|the|a|an|interested|looking|reaching)$/i.test(intro[1].split(' ')[0])){
+    set('name',intro[1].replace(/\b\w/g,c=>c.toUpperCase()));
+    unclear.push(`Guessed the customer name is "${found.name}"${found.name.includes(' ')?'':' (first name only)'}. Check it.`);
+    for(let i=leftovers.length-1;i>=0;i--){ leftovers[i]=leftovers[i].replace(/^.*?\b(?:[Tt]his is|[Mm]y name is|I'm|I am|[Nn]ame's)\s+[A-Za-z'\-]+(?:\s+[A-Z][a-z'\-]+)?\s*(?:(?:at|from|with|of)\s+[^,.]*)?[,.]?\s*/,''); if(!leftovers[i]) leftovers.splice(i,1); }
+  }
+  if(!found.name){
+    const i=leftovers.findIndex(l=>/^[A-Za-z][A-Za-z.'\-]+(?:\s+[A-Za-z][A-Za-z.'\-]+){1,3}$/.test(l)&&!/\b(wants|needs|kitchen|bath|floor|room|install|measure|carpet|tile|vinyl|wood|lvp|plank)\b/i.test(l));
+    if(i>-1){ const nm=leftovers.splice(i,1)[0]; set('name',nm.replace(/\b\w/g,c=>c.toUpperCase())); unclear.push(`Guessed the customer name is "${found.name}". Check it.`); }
+    else {
+      // "John Smith wants vinyl..." — first two capitalised words at the start of a line
+      const j=leftovers.findIndex(l=>/^[A-Z][a-z'\-]+\s+[A-Z][a-z'\-]+\b/.test(l));
+      if(j>-1){ const nm=leftovers[j].match(/^[A-Z][a-z'\-]+\s+[A-Z][a-z'\-]+/)[0]; leftovers[j]=leftovers[j].slice(nm.length).replace(/^[\s,;.\-–]+/,''); if(!leftovers[j]) leftovers.splice(j,1); set('name',nm); unclear.push(`Guessed the customer name is "${nm}". Check it.`); }
+    }
+  }
+  for(let i=leftovers.length-1;i>=0;i--){
+    let l=leftovers[i];
+    if(found.company) l=l.replace(new RegExp(found.company.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'),'i'),'');
+    l=l.replace(/^[\s,;.\-–]+|[\s,;.\-–]+$/g,'').replace(/^(at|and|or|but|so|also)\s+/i,'');
+    if(!l||/^(hi|hello|hey|thanks|thank you|my|and|or)?\s*(my\s+)?(cell|phone|number|email|mobile|tel)?(\s+(is|#))?$/i.test(l)) leftovers.splice(i,1); else leftovers[i]=l;
+  }
+  // Dates: don't guess what they are for
+  const dates=text.match(PASTE_DATE);
+  if(dates) unclear.push(`Saw ${dates.length>1?'dates':'a date'} (${[...new Set(dates)].join(', ')}). Not sure what for (measure? install?), so it was not entered. It stays in the notes.`);
+  return {found, unclear, leftovers};
+}
+function pasteLabel(k){ return {name:'name',phone:'phone',email:'email',company:'company',address:'address',unit:'unit',lockbox:'lock box',lockboxCode:'lock box code',contractor:'contractor',contractorPhone:'contractor phone',salesman:'salesman'}[k]||k; }
+
+function runPasteFill(){
+  const text=document.getElementById('pasteText').value.trim();
+  const out=document.getElementById('pasteResult');
+  if(!text){ out.innerHTML='<div class="pr-box pr-warn">Paste something in the box first.</div>'; return; }
+  document.querySelectorAll('#newModal .paste-filled').forEach(e=>e.classList.remove('paste-filled'));
+  const {found, unclear, leftovers}=parsePaste(text);
+  const MAP={name:'newName',phone:'newPhone',email:'newEmail',company:'newCompany',address:'newAddress',unit:'newAddress2',lockbox:'newLockbox',lockboxCode:'newLockboxCode',contractor:'newContractor',contractorPhone:'newContractorPhone',salesman:'newSalesman'};
+  const filled=[];
+  Object.entries(MAP).forEach(([k,id])=>{
+    if(!found[k]) return;
+    const el=document.getElementById(id), cur=(el.value||'').trim();
+    // Salesman is pre-set to whoever is logged in, so a named salesman replaces it
+    if(cur && cur!==found[k] && k!=='salesman'){ unclear.push(`${pasteLabel(k)[0].toUpperCase()+pasteLabel(k).slice(1)} already says "${cur}"; the text says "${found[k]}". Kept what was there.`); return; }
+    el.value=found[k]; el.classList.add('paste-filled');
+    filled.push(`${pasteLabel(k)[0].toUpperCase()+pasteLabel(k).slice(1)}: ${k==='lockbox'?(found[k]==='Yes'?'Yes':'No lock box'):found[k]}`);
+  });
+  if(found.lockbox) toggleLockboxCode();
+  // Same phone as a customer already in the system?
+  if(found.phone){
+    const d=found.phone.replace(/\D/g,'');
+    const match=customers().find(c=>(c.phone||'').replace(/\D/g,'').endsWith(d.slice(-10)));
+    if(match) unclear.push(`This phone matches an existing customer: ${match.name} (${match.address||'no address'}). If it's the same person, tap 🔍 Existing Customer above.`);
+  }
+  // Required boxes still empty
+  const req=[['newName','Customer name'],['newPhone','Phone'],['newAddress','Job address'],['newLockbox','Lock box (yes or no)'],['newSalesman','Salesman']];
+  const missing=req.filter(([id])=>!document.getElementById(id).value.trim()).map(([,l])=>l);
+  if(document.getElementById('newLockbox').value==='Yes'&&!document.getElementById('newLockboxCode').value.trim()) missing.push('Lock box code');
+  _pasteNotes=leftovers.join('\n');
+  out.innerHTML=
+    (filled.length?`<div class="pr-box pr-ok"><b>✓ Filled in (yellow boxes below)</b><ul>${filled.map(x=>`<li>${esc(x)}</li>`).join('')}</ul></div>`:'<div class="pr-box pr-warn"><b>Nothing could be filled in automatically.</b></div>')+
+    (missing.length?`<div class="pr-box pr-warn"><b>⚠ Still missing</b><ul>${missing.map(x=>`<li>${esc(x)}</li>`).join('')}</ul></div>`:'')+
+    (unclear.length?`<div class="pr-box pr-warn"><b>? Not clear, please check</b><ul>${unclear.map(x=>`<li>${esc(x)}</li>`).join('')}</ul></div>`:'')+
+    (_pasteNotes?`<div class="pr-box pr-note"><b>📝 Didn't know where these go. They will be saved in Project Description (Step 2):</b>${esc(_pasteNotes).replace(/\n/g,'<br>')}</div>`:'');
+}
+
 let _newJobInstallDate=null, _newJobKind=null;
 // installDate: the day clicked on the calendar, so the new job lands on it
 // kind: 'pending' or 'repair' when added from those calendar panels
@@ -2408,6 +2636,7 @@ function openNewModal(installDate, kind){
   document.getElementById('newJobDate').value=localDateStr(new Date());
   document.getElementById('lockboxCodeGroup').style.display='none';
   _selectedExistingCustKey=null;
+  clearPasteBox();
   clearCopySource();
   setActiveToggle('new');
   ['newNameSuggest','newAddressSuggest'].forEach(id=>{const box=document.getElementById(id);box.classList.remove('open');box.innerHTML='';});
@@ -2441,6 +2670,7 @@ async function createCustomer(){
   if(fromCalendar) c.stepData[SCHED_STEP]={...c.stepData[SCHED_STEP],confirmed_install_date:fromCalendar};
   if(kind) c.stepData[SCHED_STEP]={...c.stepData[SCHED_STEP],calendar_type:kind};
   if(repairOf) c.stepData[SELECTION_STEP]={...c.stepData[SELECTION_STEP],project_overview:'Repair from old job: '+repairOf.address+' ('+repairOf.name+')'};
+  if(_pasteNotes){ const po=c.stepData[SELECTION_STEP]?.project_overview; c.stepData[SELECTION_STEP]={...c.stepData[SELECTION_STEP],project_overview:po?po+'\n'+_pasteNotes:_pasteNotes}; }
   _creatingJob=true;
   const saved=await upsertCustomer(c);
   _creatingJob=false;
