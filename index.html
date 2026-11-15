@@ -2456,8 +2456,9 @@ function copyReviewHtml(c,si){
     if(allStock&&(i===ORDER_STEP||i===RECEIVED_STEP)){ sections+=section(i,'<div class="rv-note">📦 All products are from stock. No order needed.</div>'); continue; }
     const {html,missing}=reviewStep(c,i); total+=missing; sections+=section(i,html);
   }
-  return `<div class="step-form-inner"><h3>Review Copied Job</h3>
-    <div class="sdesc">Copied from ${esc(c.stepData?.[0]?.copied_from||'a past job')}. Check everything before continuing.</div>
+  const copied=c.stepData?.[0]?.copied_from;
+  return `<div class="step-form-inner"><h3>${copied?'Review Copied Job':'Review Job'}</h3>
+    <div class="sdesc">${copied?`Copied from ${esc(copied)}. Check everything before continuing.`:`This job was started at Step ${si+1}. Use ✏️ Edit to fill in the steps before it, then continue.`}</div>
     <div class="rv-head${total?'':' rv-ok'}">${total?`⚠ ${total} ${total===1?'thing is':'things are'} missing below`:'✓ Nothing is missing'}</div>
     ${sections}
     <div class="step-actions"><button class="btn btn-primary" onclick="confirmCopyReview()">✓ Looks good, go to Step ${si+1}: ${esc(STEPS[si].title)}</button></div></div>`;
@@ -2476,8 +2477,18 @@ async function confirmCopyReview(){
   renderStep(c,currentStep);
 }
 function renderCopyPanel(){
-  if(_newJobKind==='repair'){ document.getElementById('copyPanel').innerHTML=''; return; }
+  if(_newJobKind==='repair'){ document.getElementById('copyPanel').innerHTML=''; document.getElementById('copyPanel').style.display='none'; return; }
   const panel=document.getElementById('copyPanel');
+  if(!_copySource){
+    // No past job to copy: still let them start further along and fill the earlier steps from the review page
+    const opts=[];
+    for(let i=1;i<=COPY_LAST_START;i++) opts.push(`<option value="${i}">Step ${i+1}: ${esc(STEPS[i].title)}${i===1?' (normal start)':''}</option>`);
+    panel.style.display='block';
+    panel.innerHTML=`<div class="copy-head"><span>⏩ Job already further along?</span></div>
+      <div class="copy-sub">Pick a later step. You'll get one page with ✏️ Edit on every step before it, to fill them in quickly.</div>
+      <label class="copy-start" style="margin-top:0">Start this job at<select id="jumpStartStep">${opts.join('')}</select></label>`;
+    return;
+  }
   const rows=_copySource?COPY_STEPS.map(si=>{
     const data=stepCopyData(_copySource,si); if(!data) return '';
     return `<label class="copy-step"><input type="checkbox" data-si="${si}"${si<=COPY_DEFAULT_THROUGH?' checked':''} onchange="updateCopyStart()">Step ${si+1}: ${esc(STEPS[si].title)}<div class="copy-lines">${esc(copyLines(_copySource,si,data))}</div></label>`;
@@ -2493,23 +2504,23 @@ function renderCopyPanel(){
 // PASTE ALL INFO (New Job form). Plain rules, no AI:
 // fills empty boxes it is sure about and lists everything it is not sure about.
 // ════════════════════════════════════════════
-let _pasteNotes='';
+let _pasteNotes='', _pasteUsed=false;
 function togglePasteBox(){ const b=document.getElementById('pasteBody'); b.classList.toggle('closed'); document.getElementById('pasteArrow').textContent=b.classList.contains('closed')?'▸':'▾'; }
-function clearPasteBox(){ document.getElementById('pasteText').value=''; document.getElementById('pasteResult').innerHTML=''; _pasteNotes=''; document.querySelectorAll('#newModal .paste-filled').forEach(e=>e.classList.remove('paste-filled')); }
+function clearPasteBox(){ document.getElementById('pasteText').value=''; document.getElementById('pasteResult').innerHTML=''; _pasteNotes=''; _pasteUsed=false; document.querySelectorAll('#newModal .paste-filled').forEach(e=>e.classList.remove('paste-filled')); }
 function fmtPhoneDigits(d){ d=d.replace(/\D/g,''); if(d.length===11&&d[0]==='1') d=d.slice(1); return d.length===10?`(${d.slice(0,3)}) ${d.slice(3,6)}-${d.slice(6)}`:d; }
 const PASTE_LABELS=[
-  ['name',/^(name|customer|client|homeowner|owner|tenant)$/],
-  ['phone',/^(phone|cell|mobile|tel|telephone|ph|number|#)$/],
-  ['email',/^(e-?mail)$/],
+  ['name',/^((customer|client|homeowner|owner|tenant|contact|full|buyer)\s+)?(name|customer|client|homeowner|owner|tenant|contact|buyer)$/],
+  ['phone',/^((cell|mobile|home|work|customer|contact|best|client)\s+)?(phone|cell|mobile|tel|telephone|ph|number|#)(\s*(number|#|no))?$/],
+  ['email',/^(e-?mail)(\s+address)?$/],
   ['company',/^(company|business|mgmt|management|property|building)$/],
-  ['address',/^(address|addr|job address|location|site|property address|job site)$/],
+  ['address',/^(address|addr|street|street address|job address|location|job location|site|property address|job site|service address|install address|installation address|address of job)$/],
   ['unit',/^(unit|apt|apartment|suite|ste)$/],
   ['lockbox',/^(lock ?box|lb|lockbox code|code|box code|key)$/],
   ['contractor',/^(contractor|gc|general contractor|super|superintendent)$/],
   ['contractorPhone',/^(contractor phone|gc phone|super phone|contractor cell)$/],
   ['salesman',/^(salesman|sales|rep|sales rep|salesperson)$/],
 ];
-const PASTE_STREET=/\b\d{1,6}[a-z]?\s+(?:[NSEW]\.?\s+)?[A-Za-z0-9.'\- ]{1,40}?\s(?:st|street|ave|avenue|rd|road|blvd|boulevard|dr|drive|ln|lane|ct|court|pl|place|way|pkwy|parkway|hwy|highway|ter|terrace|cir|circle|sq|square|tpke|turnpike|route|rt)\b\.?(?:\s*,?\s*(?:(?:apt|unit|suite|ste|#)\.?\s*[\w-]+))?(?:\s*,\s*[A-Za-z .]{2,30})?(?:\s*,?\s*[A-Z]{2}\b)?(?:\s*\d{5})?/i;
+const PASTE_STREET=/\b\d{1,6}[a-z]?\s+(?:[NSEW]\.?\s+)?[A-Za-z0-9.'\- ]{1,40}?\s(?:st|street|ave|avenue|rd|road|blvd|boulevard|dr|drive|ln|lane|ct|court|pl|place|way|pkwy|parkway|hwy|highway|ter|terrace|cir|circle|sq|square|tpke|turnpike|route|rt)\b\.?(?:\s*,?\s*(?:(?:apt|unit|suite|ste|#)\.?\s*[\w-]+))?(?:\s*,\s*(?!(?:for|and|the|call|with|at|to|in|on|text|needs?|wants?)\b)[A-Za-z.]+(?: (?!(?:for|and|the|call|with|at|to|in|on|text|needs?|wants?)\b)[A-Za-z.]+){0,2})?(?:\s*,?\s*[A-Z]{2}\b)?(?:\s*\d{5})?/i;
 const PASTE_PHONE=/(?:\+?1[\s.-]?)?\(?\b\d{3}\)?[\s.-]?\d{3}[\s.-]?\d{4}\b/g;
 const PASTE_EMAIL=/[\w.+-]+@[\w-]+\.[\w.-]+/g;
 const PASTE_DATE=/\b(?:\d{1,2}\/\d{1,2}(?:\/\d{2,4})?|(?:jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]*\.?\s+\d{1,2}(?:st|nd|rd|th)?|(?:mon|tues?|wed(?:nes)?|thu(?:rs)?|fri|sat(?:ur)?|sun)(?:day)?|tomorrow|next week)\b/gi;
@@ -2531,6 +2542,7 @@ function pasteChunks(text){
   });
   return out.map(l=>l.trim()).filter(Boolean);
 }
+const NOT_CITY=/^(call|text|thanks|please|carpet|vinyl|tile|wood|kitchen|basement|hall|tomorrow|today)\b/i;
 function parsePaste(text){
   const found={}, unclear=[], used=[];
   const lines=pasteChunks(text);
@@ -2557,7 +2569,12 @@ function parsePaste(text){
         else if(k==='lockbox'){ if(/^no\b|none|n\/a/i.test(val)) set('lockbox','No'); else { set('lockbox','Yes'); const code=val.match(/\b[\dA-Z]{3,8}\b/i); if(code) set('lockboxCode',code[0]); } }
         else if(k==='salesman'){ const sm=salesmen.find(n=>new RegExp('\\b'+n.split(' ')[0]+'\\b','i').test(val)); if(sm) set('salesman',sm); else unclear.push(`Salesman "${val}" is not on the salesman list.`); }
         else if(k==='email'){ const em=val.match(PASTE_EMAIL); if(em) set('email',em[0]); }
-        else set(k,val);
+        else {
+          let v=val;
+          (v.match(PASTE_EMAIL)||[]).forEach(e=>emails.push(e)); v=v.replace(PASTE_EMAIL,' ');
+          (v.match(PASTE_PHONE)||[]).forEach(ph=>phones.push({v:ph,contractor:false})); v=v.replace(PASTE_PHONE,' ');
+          set(k,v.replace(/\s{2,}/g,' ').replace(/[\s,;\-–]+$/,''));
+        }
         return;
       }
     }
@@ -2583,7 +2600,15 @@ function parsePaste(text){
     // Address
     let ad=rest.match(PASTE_STREET);
     while(ad){ const inner=ad[0].slice(1).search(/\s\d{1,6}[a-z]?\s+[A-Za-z]/i); if(inner<0) break; const again=ad[0].slice(inner+2).match(PASTE_STREET); if(!again) break; ad=again; }
-    if(ad){ set('address',ad[0]); rest=rest.replace(ad[0],' '); }
+    if(ad){
+      let full=ad[0];
+      const at=rest.indexOf(ad[0]);
+      const after=rest.slice(at+ad[0].length).match(/^\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)(?:\s+[A-Z]{2})?(?:\s+\d{5})?\s*(?=[.,;]|$)/);
+      let clean=ad[0];
+      if(!full.includes(',') && after && !NOT_CITY.test(after[1])){ full=rest.slice(at, at+ad[0].length+after[0].length); clean=ad[0].trim()+', '+after[0].trim(); }
+      set('address',clean);
+      rest=rest.replace(full,' ');
+    }
     const un=rest.match(/\b(?:apt|unit|suite|ste)\.?\s*#?\s*([a-z]?\d+[a-z]?(?:-\d+)?)\b|(?:^|\s)#\s*([a-z]?\d+[a-z]?)\b/i);
     if(un){ set('unit',un[0].trim()); rest=rest.replace(un[0],' '); }
     // Salesman named anywhere
@@ -2606,20 +2631,49 @@ function parsePaste(text){
     unclear.push(`Guessed the customer name is "${found.name}"${found.name.includes(' ')?'':' (first name only)'}. Check it.`);
     for(let i=leftovers.length-1;i>=0;i--){ leftovers[i]=leftovers[i].replace(/^.*?\b(?:[Tt]his is|[Mm]y name is|I'm|I am|[Nn]ame's)\s+[A-Za-z'\-]+(?:\s+[A-Z][a-z'\-]+)?\s*(?:(?:at|from|with|of)\s+[^,.]*)?[,.]?\s*/,''); if(!leftovers[i]) leftovers.splice(i,1); }
   }
+  const guessName=(nm,why)=>{ set('name',nm.trim().replace(/\b\w/g,c=>c.toUpperCase())); unclear.push(`Guessed the customer name is "${found.name}"${why?' ('+why+')':''}. Check it.`); };
+  // "customer is Dave Stein", "client name Stein", "name is ...", "for Mrs. Stein"
   if(!found.name){
-    const i=leftovers.findIndex(l=>/^[A-Za-z][A-Za-z.'\-]+(?:\s+[A-Za-z][A-Za-z.'\-]+){1,3}$/.test(l)&&!/\b(wants|needs|kitchen|bath|floor|room|install|measure|carpet|tile|vinyl|wood|lvp|plank)\b/i.test(l));
+    const NAMEWORDS="((?:(?:Mr|Mrs|Ms|Dr)\\.?\\s+)?[A-Z][A-Za-z'\\-]+(?:\\s+[A-Z][A-Za-z'\\-]+)?)";
+    const res=[new RegExp("\\b(?:[Cc]ustomer|[Cc]lient|[Hh]omeowner|[Tt]enant|[Cc]ontact|[Oo]wner)(?:'s)?(?:\\s+[Nn]ame)?\\s*(?:is|:|-)?\\s+"+NAMEWORDS),
+               new RegExp("\\b[Nn]ame\\s*(?:is|:|-)?\\s+"+NAMEWORDS),
+               /\b(?:for|call|contact|ask for)\s+((?:Mr|Mrs|Ms|Dr)\.?\s+[A-Z][A-Za-z'\-]+)/];
+    for(let i=0;i<leftovers.length&&!found.name;i++){
+      for(const re of res){ const m=leftovers[i].match(re); if(!m) continue;
+        guessName(m[1]); leftovers[i]=leftovers[i].replace(m[0],' ').replace(/\s{2,}/g,' ').trim(); if(!leftovers[i]) leftovers.splice(i,1); break; }
+    }
+  }
+  const NOT_NAME=/\b(hi|hello|hey|dear|thanks|thank|please|urgent|asap|wants|needs|kitchen|bath|bathroom|basement|stairs|steps|hall|hallway|bedroom|floor|floors|flooring|room|install|measure|estimate|quote|repair|carpet|tile|vinyl|wood|lvp|plank|tomorrow|today|monday|tuesday|wednesday|thursday|friday|saturday|sunday|yes|no|ok|okay|occupied|vacant|lock|box|code|apt|unit|new|job|call|text|need|asap|sqf|yds|sq|ft|primer|patch|truffle|shadow)\b/i;
+  // Signed at the end: "Thanks, David Stein"
+  if(!found.name){
+    const i=leftovers.findIndex(l=>/^(?:thanks|thank you|thx|regards|best|sincerely|cheers)[,!.]?\s+[A-Z][a-z'\-]+(?:\s+[A-Z][a-z'\-]+)?$/i.test(l));
+    if(i>-1) guessName(leftovers.splice(i,1)[0].replace(/^(?:thanks|thank you|thx|regards|best|sincerely|cheers)[,!.]?\s+/i,''),'from who signed the text');
+  }
+  if(!found.name){
+    const i=leftovers.findIndex(l=>/^[A-Za-z][A-Za-z.'\-]+(?:\s+[A-Za-z][A-Za-z.'\-]+){1,3}$/.test(l)&&!NOT_NAME.test(l));
     if(i>-1){ const nm=leftovers.splice(i,1)[0]; set('name',nm.replace(/\b\w/g,c=>c.toUpperCase())); unclear.push(`Guessed the customer name is "${found.name}". Check it.`); }
     else {
       // "John Smith wants vinyl..." — first two capitalised words at the start of a line
-      const j=leftovers.findIndex(l=>/^[A-Z][a-z'\-]+\s+[A-Z][a-z'\-]+\b/.test(l));
-      if(j>-1){ const nm=leftovers[j].match(/^[A-Z][a-z'\-]+\s+[A-Z][a-z'\-]+/)[0]; leftovers[j]=leftovers[j].slice(nm.length).replace(/^[\s,;.\-–]+/,''); if(!leftovers[j]) leftovers.splice(j,1); set('name',nm); unclear.push(`Guessed the customer name is "${nm}". Check it.`); }
+      const START=/^(?:(?:Mr|Mrs|Ms|Dr)\.?\s+[A-Z][a-z'\-]+|[A-Z][a-z'\-]+\s+[A-Z][a-z'\-]+)\b/;
+      const j=leftovers.findIndex(l=>START.test(l)&&!NOT_NAME.test(l.match(START)[0]));
+      if(j>-1){ const nm=leftovers[j].match(START)[0]; leftovers[j]=leftovers[j].slice(nm.length).replace(/^[\s,;.\-–]+/,''); if(!leftovers[j]) leftovers.splice(j,1); set('name',nm); unclear.push(`Guessed the customer name is "${nm}". Check it.`); }
     }
+  }
+  // A line that is just one capitalised word ("Stein", "Mrs. Stein")
+  if(!found.name){
+    const i=leftovers.findIndex(l=>/^(?:(?:Mr|Mrs|Ms|Dr)\.?\s+)?[A-Z][A-Za-z'\-]{1,24}$/.test(l)&&!NOT_NAME.test(l));
+    if(i>-1) guessName(leftovers.splice(i,1)[0],'last name only?');
+  }
+  // Last try: the email address, "david.stein@..." → David Stein
+  if(!found.name && emails.length){
+    const m=emails[0].split('@')[0].match(/^([a-z]{2,})[._-]([a-z]{2,})\d*$/i);
+    if(m) guessName(m[1]+' '+m[2],'from the email address');
   }
   for(let i=leftovers.length-1;i>=0;i--){
     let l=leftovers[i];
     if(found.company) l=l.replace(new RegExp(found.company.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'),'i'),'');
     l=l.replace(/^[\s,;.\-–]+|[\s,;.\-–]+$/g,'').replace(/^(at|and|or|but|so|also)\s+/i,'');
-    if(!l||/^(hi|hello|hey|thanks|thank you|my|and|or)?\s*(my\s+)?(cell|phone|number|email|mobile|tel)?(\s+(is|#))?$/i.test(l)) leftovers.splice(i,1); else leftovers[i]=l;
+    if(!l||/^(hi|hello|hey|thanks|thank you|my|and|or|call|text|call or text)?\s*(my\s+)?(cell|phone|number|email|mobile|tel)?(\s+(is|#|me|at))?$/i.test(l)) leftovers.splice(i,1); else leftovers[i]=l;
   }
   // Dates: don't guess what they are for
   const dates=text.match(PASTE_DATE);
@@ -2655,12 +2709,27 @@ function runPasteFill(){
   const req=[['newName','Customer name'],['newPhone','Phone'],['newAddress','Job address'],['newLockbox','Lock box (yes or no)'],['newSalesman','Salesman']];
   const missing=req.filter(([id])=>!document.getElementById(id).value.trim()).map(([,l])=>l);
   if(document.getElementById('newLockbox').value==='Yes'&&!document.getElementById('newLockboxCode').value.trim()) missing.push('Lock box code');
-  _pasteNotes=leftovers.join('\n');
+  _pasteNotes=leftovers.join('\n'); _pasteUsed=true;
+  const noName=!document.getElementById('newName').value.trim(), co=document.getElementById('newCompany').value.trim();
   out.innerHTML=
     (filled.length?`<div class="pr-box pr-ok"><b>✓ Filled in (yellow boxes below)</b><ul>${filled.map(x=>`<li>${esc(x)}</li>`).join('')}</ul></div>`:'<div class="pr-box pr-warn"><b>Nothing could be filled in automatically.</b></div>')+
     (missing.length?`<div class="pr-box pr-warn"><b>⚠ Still missing</b><ul>${missing.map(x=>`<li>${esc(x)}</li>`).join('')}</ul></div>`:'')+
     (unclear.length?`<div class="pr-box pr-warn"><b>? Not clear, please check</b><ul>${unclear.map(x=>`<li>${esc(x)}</li>`).join('')}</ul></div>`:'')+
+    (noName?`<div class="pr-box pr-warn"><b>👤 Could not find the customer name.</b> Type it in the Full Name box below${co?`, or <button type="button" class="btn btn-secondary btn-sm" onclick="usePasteCompanyAsName()">Use "${esc(co)}" as the name</button>`:''}.</div>`:'')+
     (_pasteNotes?`<div class="pr-box pr-note"><b>📝 Didn't know where these go. They will be saved in Project Description (Step 2):</b>${esc(_pasteNotes).replace(/\n/g,'<br>')}</div>`:'');
+}
+function usePasteCompanyAsName(){ const n=document.getElementById('newName'); n.value=document.getElementById('newCompany').value.trim(); n.classList.add('paste-filled'); runPasteFill(); }
+// City from an address: "56 Westbrook Dr, Moorestown 08057" → Moorestown; "83 Iron St Toms River" → Toms River
+function cityOf(addr){
+  addr=(addr||'').trim();
+  for(const part of addr.split(',').map(x=>x.trim()).slice(1)){
+    if(/^(apt|apartment|unit|suite|ste|bldg|building|floor|fl)\b|^#|^\d/i.test(part)) continue;
+    const city=part.replace(/\s*\b\d{5}(-\d{4})?$/,'').replace(/\s+[A-Z]{2}$/,'').trim();
+    if(/^[A-Za-z][A-Za-z .'\-]+$/.test(city) && !/^[A-Z]{2}$/.test(city)) return city;
+  }
+  const m=addr.split(',')[0].match(/\b(?:st|street|ave|avenue|rd|road|dr|drive|ln|lane|ct|court|blvd|pl|place|way|ter|terrace|cir|circle)\.?\s+(.+)$/i);
+  const c=m&&m[1].match(/^([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)(?:\s+[A-Z]{2})?(?:\s+\d{5})?$/);
+  return c?c[1]:'';
 }
 
 let _newJobInstallDate=null, _newJobKind=null;
@@ -2713,13 +2782,21 @@ async function createCustomer(){
   if(_copySource&&_newJobKind!=='repair'){
     applyCopy(c,pickedCopySteps(),pickedCopyStart());
     if(c.step>1) Object.assign(c.stepData[0],{review_pending:true,copied_from:_copySource.address});
+  } else if(_newJobKind!=='repair'){
+    const jump=+document.getElementById('jumpStartStep')?.value||1;
+    if(jump>1){ c.step=jump; c.stepData[0].review_pending=true; }
   }
   const fromCalendar=_newJobInstallDate;
   const kind=_newJobKind;
   if(fromCalendar) c.stepData[SCHED_STEP]={...c.stepData[SCHED_STEP],confirmed_install_date:fromCalendar};
   if(kind) c.stepData[SCHED_STEP]={...c.stepData[SCHED_STEP],calendar_type:kind};
   if(repairOf) c.stepData[SELECTION_STEP]={...c.stepData[SELECTION_STEP],project_overview:'Repair from old job: '+repairOf.address+' ('+repairOf.name+')'};
-  if(_pasteNotes){ const po=c.stepData[SELECTION_STEP]?.project_overview; c.stepData[SELECTION_STEP]={...c.stepData[SELECTION_STEP],project_overview:po?po+'\n'+_pasteNotes:_pasteNotes}; }
+  if(_pasteUsed){
+    const head=[name,cityOf(address)].filter(Boolean).join(' · ');
+    const add=[head,_pasteNotes].filter(Boolean).join('\n');
+    const po=c.stepData[SELECTION_STEP]?.project_overview;
+    c.stepData[SELECTION_STEP]={...c.stepData[SELECTION_STEP],project_overview:po?po+'\n'+add:add};
+  }
   _creatingJob=true;
   const saved=await upsertCustomer(c);
   _creatingJob=false;
